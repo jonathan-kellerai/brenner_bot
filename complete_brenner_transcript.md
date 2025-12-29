@@ -70,3 +70,9 @@
 
 ---
 
+## 5. Learning to read from the tablecloth
+
+> I learnt to read at a very early age because round the corner from us, again, there was a... a lady whose husband had been a tailor and she had died. But she had known my mother's family from Latvia because they'd all come from the same time – as it was called there, *Landsleute*; that is, all people who originated from the same thing – and I had gone... and I spent quite a lot of time with her. She lived in a tiny room where she cooked for herself, and she taught me to read from the newspapers that were on the table – which of course in lieu of tablecloths – and this is where I learned to read; so that by the age of four, I could read quite fluently.
+
+---
+
