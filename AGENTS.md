@@ -43,34 +43,29 @@ If that audit trail is missing, then you must act as if the operation never happ
 - Target **latest Node.js**. No need to support old Node versions.
 - **Note:** `bun install -g <pkg>` is valid syntax (alias for `bun add -g`). Do not "fix" it.
 
-### Bun Standalone Executables
+### Bun Standalone Executables (`bun build --compile`)
 
-Bun can compile TypeScript/JavaScript into **standalone portable executables** that bundle:
-- The application source code
-- All imported dependencies
-- A copy of the Bun runtime itself
+Bun’s “single‑file executable” means the output is one native binary file, **not** that your CLI must live in a single `.ts` source file.
 
-The resulting binary requires **no installation** to run—it's completely self-contained.
+From Bun’s docs, `bun build --compile` bundles your entire dependency graph (imported files + used packages) plus a copy of the Bun runtime into one executable:
+- `https://bun.sh/docs/bundler/executables`
 
 ```bash
-# Basic compilation
+# Point at the entrypoint (example uses `./src/cli.ts`; in this repo the current entrypoint is `./brenner.ts`).
+
+# build a self-contained executable for the current platform
+bun build --compile ./src/cli.ts --outfile brenner
+
+# cross-compile for a target platform/arch (examples)
+bun build --compile --target=bun-linux-x64 ./src/cli.ts --outfile brenner
+bun build --compile --target=bun-windows-x64 ./src/cli.ts --outfile brenner.exe
+bun build --compile --target=bun-darwin-arm64 ./src/cli.ts --outfile brenner
+
+# current repo entrypoint
 bun build --compile ./brenner.ts --outfile brenner
-
-# Cross-compile for different platforms
-bun build --compile --target=bun-linux-x64 ./brenner.ts --outfile brenner-linux
-bun build --compile --target=bun-darwin-arm64 ./brenner.ts --outfile brenner-mac
-bun build --compile --target=bun-windows-x64 ./brenner.ts --outfile brenner.exe
-
-# Embed assets into the binary
-bun build --compile ./brenner.ts --outfile brenner --assets ./prompts --assets ./templates
 ```
 
-Key points:
-- Executables are ~50MB+ (includes Bun runtime)
-- All Bun and Node.js APIs are supported
-- Can embed files/assets directly into the binary
-- Cross-compilation supported (Linux, macOS, Windows × x64/arm64)
-- **This is NOT about having a single source file**—it's about producing a single distributable binary
+Targets include libc + CPU variants (e.g. `bun-linux-x64-musl`, `bun-linux-x64-baseline`, `bun-linux-x64-modern`) — use `baseline` if you need compatibility with older x64 CPUs (avoids “Illegal instruction”).
 
 ---
 
