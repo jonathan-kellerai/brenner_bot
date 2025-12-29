@@ -516,3 +516,106 @@
 
 ---
 
+## 37. Microscopy
+
+> There was at that time a rather remarkable person in the... in the histology department called Alf Oettli, and Alf Oettli was a microscopist, and he believed in dark field microscopy, because he had learned this from a very famous man called Adrianus Pijper. Now, Adrianus Pijper was a man who had seen flagellae of bacteria under dark field, and of course it was through Alf Oettli that I really learnt about microscopy as a subject.
+>
+> One of the things that you needed to do this was an intense source of illumination, and so what we built was... is... was a heliostat. This was a mirror which effectively was hooked to a clock so that it followed the sun and would pick up the sun and reflect it into the lab so that we had with this heliostat and in the days of... of brilliant sunshine, especially that you get during the winter in South Africa, this report... this gave us a remarkable set of... gave us a remarkable source of illumination.
+
+---
+
+## 38. Broad academic discussion as a student
+
+> There were... at that time in Johannesburg, there were lots of people who had become great admirers of Ludwig Wittgenstein, and, in fact, many came to Cambridge; Duncan Linney was one of those people who had become... come to sit at the feet of Wittgenstein. And of course logical positivism was 'in' in those days, and we used to have many discussions in this field of which we'd come to the conclusion that the fundamental question in philosophy was: 'define define', which was always a good remark to be said after a long discussion; you could ask, 'Define define'.
+>
+> So there's all that kind of student turmoil, and of course, all of this spilled over into other things; I had very good friends who were highly interested in the arts, Stanley Glasser being one of them, and so music... in fact we actually made a film. All of us together: I wrote the script, my wife played the main part, it was produced by Stan, it was filmed by his brother, and I have to tell you that what we decided to film was a story from a Dylan Thomas book, which... which was *Portrait of the Artist as a Young Man*, one of his portrait... no, that's... that's... is that the book? Anyway, it was a Dylan Thomas book of stories, and of course we tried to recreate this Welsh town in Johannesburg.
+>
+> None of us had ever been abroad, and so from this description... I can't even remember the story, I just wrote the script and the movie was made... it was actually shown. Bill Coker, John Coker's younger brother, played the lead part. Music was composed for it, but... and when I saw it and when I first came... when I then came to England and saw Wales, I just... I just began to realise how wrong we'd got everything, because to try and transform that... however, it was just the picture of the times that you'd try your hand at anything, you see, so we did lots of these things as students; it was all very exciting.
+
+---
+
+## 39. Passing the time with medicine
+
+> I then... I had a good friend called Tony Allison at the time, who was doing science with me, and Le Gros Clark, who was professor of anatomy at Oxford, came out to South Africa in 1946 to see the anatomical remains – the palaeontological remains. And at this stage, he invited me to go back to Oxford to the anatomy department there, where I could continue to do science, because you... you must remember that a little bit later, Harold Daitz went to Le Gros Clark. So there were those connections between Dart and Le Gros Clark and... he also invited Tony Alison.
+>
+> I went to see Raymond Dart and said, 'What shall I do?' And Dart was a very wise man. He was at this time the Dean of the medical school, a great anatomist of the old school, had come from London, had seen Owen and all those people there. So, he said, 'Look, it sounds to me what you're interested in would be called biochemistry, but there are no jobs for people in biochemistry unless they are in medical schools, so what I advise you to do is to go back and finish medicine, and then you can become a biochemist'. And I took a lot of advice from people and everybody said... well, yeah, they agreed; there would be a dead end; there's no future in science as science at that time, because I'm talking about 1947; and the best thing is go back and finish medicine.
+>
+> So I had four years to do. So I stayed on in the department doing research and sort of did medicine part-time and... and what I did was I went on working there and used to just polish off the course in the last six weeks of the year, so... because I just was totally uninterested. The first year of going back wasn't too bad because we did pathology and bacteriology and that was still science, I did very well then. But then we started clinical work, and I... I just wasn't suited to that. I didn't like... I didn't like the whole structure of the teaching hospital; that is, I felt very much that treating patients as things is the wrong thing and that since I thought it was very hard to be a scientist and not do this, then I preferred not to do it at all.
+>
+> So in fact, I think I'm the only person who's ever passed medicine who had never seen a patient until his examination because I never went, and in fact one of the great stories is that I failed my medicine because I was asked to smell this patient's breath, incorrectly diagnosed Maclean's toothpaste, where I should have diagnosed acetone, you see; so the visiting professor from... the examining professor from Cambridge passed me... failed me.
+
+---
+
+## 40. Being the best in Obstetrics and Gynaecology
+
+> However, I got the top first-class in obstetrics and gynaecology, and that was simply because you had to go and do this in residence, and at the time there was... you had to go into residence in a maternity hospital, and at the time of course all the students were trying to get into the white maternity hospital, Florence Nightingale, and be in the professor's firm to further their careers, and I didn't care where they sent me, and so I got a hospital right at the bottom of the list.
+>
+> It was a hospital in Durban, it was a black hospital and it was just on the Congella docks, and the four medical students who were all the kind of... you know, the leftovers, had this hotel room in this hotel where... let me just put it this way: amoebic dysentery was the mildest disease you could catch there. The rest of the hotel, as far as I could work out was taken up by ladies who entertained the sailors from the ship, and we had a telephone that connected us to the black hospital.
+>
+> There was nothing else to do except learn how to deliver babies and study obstetrics. So, since I had to do it, I managed to do it extremely well, and I learnt a lot about life that way and... being stuck out there. So that's part of the thing.
+
+---
+
+## 41. Scientific work undertaken during medical school
+
+> But I went back... after this, I did another six months and finally passed medicine, but I had done research all along and published, in fact one of my papers that I published during this time involved getting down and synthesising a lot of dyes because I... I was interested in mitochondria and thought that the whole supravital staining of mitochondria was due to the oxidising enzymes there and the redox potential and so on. And so I synthesised a lot of dyes in the series... papers published, which differed... which were very similar, but differed in their redox potential and showed that only ones of these below a certain potential would be supravital stains, whereas all the others would be reduced and so bleached, and that's one of the things I did then.
+>
+> I also did another, which... which is an interesting experiment and which laid the basis for much of my later work, and it was a paper that showed that Claude's microsomal particles were the same as what the histologists were calling chromodial substance or ergastoplasm, which is they had to do with protein synthesis.
+>
+> Now I think what's interesting is the way I did this. Right, Claude had fractionated cells, these ribonucleic acid particles in an ultracentrifuge and had showed that they came to occupy a certain band in this, and they contained nucleic acid and they of course are the ribosomes as we now know them, the seat of protein synthesis. All the histologists had stained sections with dyes, of which the famous one was methyl-green pyronine, with a pyronine-stained chromodial substance or... or ergastoplasm, as it was called – red – and of course this... these were also supposed to be ribonucleic acid, but how could you tell if the particles were sub-microscopic – you couldn't see them.
+>
+> So what I did was: there were no ultracentrifuges, so I decided to use each cell as an ultracentrifuge and so I built a Beams and King air turbine ultracentrifuge, took pieces of liver, put them in this ultracentrifuge and spun them at this high velocity which I could get in an air driven turbine, and then cut sections of them so that each cell was like a little ultracentrifuge tube, and showed that the ergastoplasm sedimented in this cell to the same level that it did in a test-tube, above the glycogen, whatever.
+>
+> And there... I was very proud of that experiment... also led to something which I could write about later, the same experiment, which I published later, which was something called the Chromatic Nuclear Membrane, because I showed that there was chromatin that you couldn't spin off a nuclear membrane, which I believe is now coming back into fashion these days. But that was an interesting thing because it's the conception of translating one thing into the other...
+
+*[Q] And then you stained them, of course?*
+
+> Of course, I stained them, I cut sections, I embedded them. I stained them and found a lot of things with this and incidentally I... you know, I intend to use that again in my present research to try to concentrate the ribosome or particles in a cell for in situ localisation, this is just a very old technique. Now, I published that in 1948 in the South African Journal of Medical Sciences and was actually amazed, when I went to America, that people had read this and... and found, you know... so, that I would say is my first connection with what, you know, one would say is the modern molecular biology of ask... modern cell biology of trying to ask which are the parts of the cell doing this and I still think that that wasn't histochemistry.
+
+---
+
+## 42. Experiments: really finding things out
+
+> Of course during this period every one of one's colleagues has always said that the book that influenced them most is *What Is Life*. A little book written by Erwin Schrödinger, which... you know, which people say: 'Were it not for Schrödinger, I would be playing the violin and collecting money on a... in an underground station in... in the tube'.
+>
+> And I actually read this book myself and in fact I have a copy here which you can see was bought in 1944, so I'd read this at a very early stage and I must say that I don't recall getting anything out of it in terms of what other people claim to have got, namely that it introduced them to the concept of the gene as a molecule and so on. I remember reading it as, as very interesting, of course I knew all about genes and chromosomes and this stuff seemed to me to be a bit amateur. I didn't understand the... the entropy part of the argument but in fact I have an inscription in my book which is a quotation from Faraday and, which said... says something and must be my... my impression of it at the time, and it says here:
+>
+> *"Let the imagination go, guarding it by judgement and principle, but holding it in and directing it by experiment."*
+>
+> So that is just the evidence it says... well, it's a great story but you know where are the experiments to tell you that it's true? And I think that that – which is written there, at the time – just says what... what this influenced me, and I think it's been very important, at least in my approach, which is that **you've got to really find out**.
+
+---
+
+## 43. Cambridge or Oxford?
+
+> So during the course of my sort of dual career as a kind of reluctant medical student, together with being a practising scientist and I should say, also later on, a lecturer in physiology and a tutor all at the same time, I have come to the conclusion I've got to go abroad, and after the war, of course, many people did.
+>
+> I had already turned down this offer of Le Gros Clark but thought, this is really what I wanted to do, and in... I think it was 1948, Waddington came out to South Africa and... myself and a very good friend called George Clayton, and... were asked to look after him. We became responsible for this, Waddington was a great physiologist... embryologist and part of the school, and remained after that a friend for life. And he told me about Cambridge and all the interesting things that were going on in biochemistry in Cambridge. He had just moved to Edinburgh to start this – he said of course I could come to Edinburgh but if I wanted to go to Cambridge, that's where biochemistry was going.
+>
+> So I thought: well, I'll apply to Cambridge. So I applied; I wrote to Chibnall, who was then the professor, and I never got a reply.
+>
+> In the meantime, the principal of my university, Humphrey Raikes, a very great man, I had told him that I really wanted to go to England; I wanted to do this. So he said to me, 'Well there is a man at Oxford who is interested in these things; he's called Hinshelwood', because it turned out that Humphrey Raikes was a physical chemist at Oxford and knew about Hinshelwood, and his college was Exeter College and Hinshelwood was a... he... he was Dr Lee's Professor of Physical Chemistry there, and Hinshelwood had written a book called *The Chemical Kinetics of the Bacterial Cell*.
+
+---
+
+## 44. Hunting for future-proof sciences
+
+> I was very active in hunting around as a naive young man for those sciences that could stand me in good stead for the future, which is a ludicrous activity. You know, you kind of say, 'Well, look, I think it's going to be topology that's going to give you the breakthrough', so you go and learn topology, you see. And I had been through things like rheology – I had a great passion on rheology – and I knew everything about thixotropy and rheopexy because I thought trying to find out all about the physical chemistry of cytoplasm wasn't a bad idea and I knew it would have something to do with physical chemistry.
+
+*[Q] Did you have a clear formulation of the problem in your mind?*
+
+> No, I... I just knew that, you know, we had to get in there and do things. I think, at this stage the concept of information as separate from matter had not yet crystallised; that crystallised during this period prior to my going by reading von Neumann and my contacts with Seymour Papert, but I realised that this whole idea that the genes have to carry information and that there was no explanation of that.
+
+*[Q] You came to that before you went? Could you just explain...*
+
+> Yes, yes, in fact I had a theory of protein synthesis before I went to Oxford.
+
+*[Q] I'm afraid you must explain this a little bit.*
+
+> Yeah. So what had happened was I then applied to... to Hinshelwood and was accepted; I read his book *The Chemical Kinetics of the Bacterial Cell*. It's full of equations. It didn't say too much about the stuff that was going on there, which I realised was the important thing, but in the meantime... and I won one of these Royal Commissions for the Exhibition of 1851 Scholarships. There was only one a year to South Africa... for South Africa, and I won it and Seymour got it I think... his... a year or two later and that brought him to Cambridge. This was a great set of scholarships and so that got me to Oxford.
+>
+> But prior to this I had started to grapple with this business with the coding problem, as it's known now, and I got... I read Astbury's paper because I was an assiduous reader of... of symposia. I decided symposia tell you a lot of things and so I read all these articles there because... reading the literature in the sense we know it now. And I read an Astbury in the *Society for Experimental Biology* – the English one, symposium there – in which he pointed out this relationship between the step size of nucleic acid, 3.3Å units, and the step size of amino acids, 3.5Å units, and had discussed there about the amino acids being determined by the nucleic acid. There... yes, it's very early. Okay.
+>
+> And so... and Dounce of course had already written such coding papers. And in fact later I learnt that Hinshelwood had written a coding paper and there was a ferment of business and so I had actually developed, before I went to Oxford, an idea that in fact nucleic acids and amino acid and proteins were co-synthesised through aminoacyl nucleotide intermediates and I'd had the naive idea that they came in this way and in fact the... the base was joined to make a nucleic acid because we knew all that chemistry; had no idea about base pairing. And at the same time the amino acid was joined to make this and it was very crude... idea, but in fact I had a mechanism – what was very hot at that time was actophosphate bonds, and high energy phosphate bonds, and this seemed to me to fit pretty well and I had these great ideas that this is how you make proteins and specify them.
+
+---
