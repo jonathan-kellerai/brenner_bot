@@ -199,7 +199,7 @@ These are long-form writeups produced from transcript excerpts. They're useful a
 
 | Folder | What it contains | When to read it |
 | --- | --- | --- |
-| `gpt_pro_extended_reasoning_responses/` | `brenner_bot__gpt_pro_52__response_batch_{1,2,3}.md` | When you want explicit decision-theory / Bayesian framing |
+| `gpt_pro_extended_reasoning_responses/` | `brenner_bot__gpt_pro_52__response_batch_{1,2,3}.md` + `...response_previously_truncated_batch.md` | When you want explicit decision-theory / Bayesian framing |
 | `opus_45_responses/` | `brenner_bot__opus_45__response_batch_{1,2,3}.md` | When you want coherent "mental architecture" narratives |
 | `gemini_3_deep_think_responses/` | `brenner_bot__gemini3__response_batch_{1,2,3}.md` | When you want alternate clustering and abstractions |
 
