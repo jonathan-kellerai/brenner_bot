@@ -552,6 +552,8 @@ The deepest test of the Brenner Method is whether it applies to itself.
 
 ## Appendix A: Recurring Brenner Vocabulary
 
+See `quote_bank_restored_primitives.md` for a small restored-quote bank keyed by `§` (useful for grounding these terms with verbatim transcript snippets).
+
 | Term | Meaning |
 |------|---------|
 | **Abundance trick** | Bypassing purification by choosing systems where target dominates |
@@ -568,6 +570,17 @@ The deepest test of the Brenner Method is whether it applies to itself.
 | **Occam's broom** | The junk swept under the carpet |
 | **Out of phase** | Misaligned with (or avoiding) fashion |
 | **Productive ignorance** | Fresh eyes unconstrained by expert priors |
+| **Phase problem** | Missing-variable ambiguity that makes inference combinatorially intractable; requires a phase-breaking trick |
+| **Mutational spectra** | Induction/reversion patterns used to classify mechanism classes |
+| **Genetic dissection** | Conditional lethals as switches to localize essential function |
+| **Hierarchical self-assembly** | Staged assembly; reconstitution and sub-assembly perturbations as tests |
+| **Open the box** | Reject pure I/O explanations; mechanism in the box constrains theory |
+| **Grammar of the system** | Intermediate construction rules between genotype and phenotype |
+| **Tooling economics** | Material/instrument access gates progress; build/democratize the kit |
+| **Lineage vs neighbors** | Two computations for development: history/lineage vs spatial neighborhood context |
+| **Plausibility filter** | Logical theories can be wrong if they aren’t “natural”/biologically plausible |
+| **Anti-analogy** | Suspect easy metaphors imported from conscious experience into biology |
+| **Long-horizon slack** | Some programs require freedom from short-term justification to mature |
 | **Seven-cycle log paper** | Test for qualitative, visible differences |
 | **Third alternative** | "Both could be wrong" |
 

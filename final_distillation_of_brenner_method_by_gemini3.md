@@ -6,6 +6,8 @@ This document is not a summary of what Sydney Brenner *knew*. It is a decompilat
 
 To emulate Brenner is to install this Kernel.
 
+For verbatim grounding (quotes keyed by `§`), see `quote_bank_restored_primitives.md`.
+
 ---
 
 ## 1.0. Root Access: The Ontological Stance
@@ -132,8 +134,25 @@ Brenner valued **Ignorance** as an asset.
 He optimized for **Discovery Rate ($dR/dt$)**, not Knowledge Accumulation.
 *   **The Algorithm:**
     *   `IF` Field == "Crowded" (Middle Game/Industrialization)
-    *   `THEN` `GOTO` New_Field (Opening Game).
+*   `THEN` `GOTO` New_Field (Opening Game).
 *   **The Logic:** Competition reduces the marginal value of a discovery. By being "Out of Phase" (half a wavelength ahead or behind), you operate in a **Monopoly Market of Ideas**.
+
+---
+
+## 6.3. Restored Verbatim Primitives (Anchors)
+
+These primitives became clearer after restoring full verbatim transcript text; anchors refer to `complete_brenner_transcript.md`:
+
+- **Phase problem / phase-breaking trick** (combinatorial explosion; solve the missing variable): `§88–§89`
+- **Mutational spectra** (induction/reversion as mechanism typing): `§90`
+- **Open the box / grammar of the system** (anti I/O; intermediate construction rules): `§117`
+- **Tooling economics** (material monopolies gate progress): `§114`
+- **Plausibility filter + anti-analogy** (“logical but non-natural”; distrust easy metaphors): `§164–§165`
+- **Lineage vs neighbors** (history vs spatial computation): `§161`
+- **Long-horizon slack** (freedom from “endless justification”): `§168`
+- **Construction vs function split** (don’t jump genes → behavior): `§132`
+- **Genetic dissection** (conditional switches / lethals): `§123`
+- **Hierarchical self-assembly** (kit + reconstitution tests): `§124`
 
 ---
 
