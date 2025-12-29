@@ -12,13 +12,13 @@ The endgame is to marry this repository with **Agent Mail** (coordination + memo
 
 …all coordinating via Agent Mail, using prompt templates and repeatable workflows grounded in deep study of Brenner’s method.
 
-> **Status**: this repo is currently **documents-only** (corpus + notes). The prompt templates/workflows and the Agent Mail integration are the next layer to be built.
+> **Status**: this repo is documents-first (corpus + notes + syntheses), evolving into a web-based multi-agent “research lab” coordinated via Agent Mail.
 
-**Update (2025‑12‑29):** early scaffolding now exists for:
-- a Next.js web app in `apps/web/`
-- a Bun CLI (`brenner.ts`) that compiles to a standalone portable executable
+Early scaffolding exists for:
+- a Next.js web app in `apps/web/` (corpus browse + session kickoff UI)
+- a Bun CLI entrypoint in `brenner.ts` (prompt composition + Agent Mail orchestration)
 
-These are intentionally minimal starting points (not a finished “bot” yet).
+Deployment target: **`brennerbot.org`** (Cloudflare-managed domain; Vercel-hosted app).
 
 ---
 
@@ -87,17 +87,18 @@ A taste of Brenner's voice (all from the transcripts):
 
 ## What's here today
 
-This repository provides the raw material and early syntheses needed to build “Brenner-style” research workflows.
+This repository provides the raw material and early syntheses needed to build “Brenner-style” research workflows — and the beginnings of the tooling needed to run them as protocols.
 
 ### What you can do immediately
 
 - **Read and search the corpus** to find Brenner’s recurring heuristics, jokes, and sharp conceptual tools.
 - **Compare syntheses across models** to identify consensus themes vs model-specific hallucinations.
 - **Generate additional writeups** by prompting an LLM with `initial_metaprompt.md` + selected transcript excerpts.
+- **Kick off Agent Mail sessions** via the web UI (`apps/web/`) or CLI (`brenner.ts`) if you have Agent Mail running locally.
 
 ### What you cannot do yet
 
-- There is currently **no finished runnable bot** or full workflow runner. The `apps/web/` UI and `brenner.ts` CLI are early scaffolding and will evolve.
+- There is currently **no polished end-to-end “lab IDE”**. The web app and CLI are intentionally minimal scaffolding; the goal is to harden them into a protocol-driven system that produces durable lab artifacts (not chat logs).
 
 ---
 
@@ -123,13 +124,16 @@ The idea is to turn those into **prompt templates + structured research protocol
 flowchart TD
   A[Primary sources\nBrenner transcripts + other sources] --> B[Extraction\nquotes, motifs, heuristics]
   B --> C[Canonical playbook\n"Brenner approach" primitives]
-  C --> D[Prompt templates\nroles, rubrics, protocols]
-  D --> E[Multi-agent research loop\nClaude / Codex / Gemini]
-  E --> F[Artifacts\nhypotheses, experiments, memos, critiques]
-  F --> B
+  C --> D[Protocol kernel\noperators, artifacts, guardrails]
+  D --> E[Prompt templates\nroles, rubrics, deltas]
+  E --> F[Multi-agent loop\nClaude / Codex / Gemini]
+  F --> G[Artifact compiler\nmerge + lint + publish]
+  G --> H[Durable artifacts\nhypotheses, tests, ledgers, critiques]
+  H --> B
+  I[Memory\ncass-memory (optional)] --> E
 
   subgraph AgentMail[Agent Mail coordination layer]
-    E
+    F
   end
 ```
 
@@ -142,10 +146,13 @@ Agent Mail is the coordination substrate that makes “a research group of agent
 The future workflows should produce artifacts that look like what a serious lab would create:
 
 - **Research thread**: a single problem statement that stays stable
-- **Hypothesis slate**: a small set of candidate explanations (explicitly enumerated)
-- **Discriminative tests**: the next best “decision experiments” / observations (ranked)
-- **Assumption ledger**: what we’re assuming, what would break it, and how to test it
-- **Adversarial critique**: what would make this wrong? what’s the “third alternative”?
+- **Hypothesis slate**: 2–5 candidate explanations, always including the “third alternative” (both wrong / misspecification)
+- **Predictions table**: discriminative predictions per hypothesis (in chosen representation / machine language)
+- **Discriminative tests**: ranked “decision experiments”, each stating which hypotheses it separates
+- **Potency checks**: “chastity vs impotence” controls so negative results are interpretable
+- **Assumption ledger**: load-bearing assumptions + at least one explicit scale/physics check
+- **Anomaly register**: exceptions quarantined explicitly (or “none”)
+- **Adversarial critique**: what would make the whole framing wrong? what’s the real third alternative?
 
 ---
 
@@ -176,6 +183,38 @@ The future workflows should produce artifacts that look like what a serious lab 
 If you only read an LLM synthesis, you tend to inherit its narrative biases. If you only read raw transcripts, you’ll drown in volume. Triangulation keeps you grounded while still compressing the search space.
 
 </details>
+
+### Run the web app (local)
+
+```bash
+cd apps/web
+bun install
+bun run dev
+```
+
+Key routes:
+- `/corpus`: browse primary docs (read server-side from repo root)
+- `/sessions/new`: compose a kickoff prompt and send it via Agent Mail (requires local Agent Mail + lab gating)
+
+### Use the CLI (local)
+
+The CLI is the terminal equivalent of the web “lab” flow:
+
+```bash
+./brenner.ts mail tools
+./brenner.ts prompt compose --template metaprompt_by_gpt_52.md --excerpt-file excerpt.md
+./brenner.ts orchestrate start --project-key "$PWD" --sender GreenCastle --to BlueMountain,RedForest --thread-id FEAT-123 --excerpt-file excerpt.md
+```
+
+### Build a self-contained executable (Bun)
+
+Bun can compile the CLI into **one portable executable** (the output is a single native binary that bundles your code + dependencies + the Bun runtime):
+
+```bash
+bun build --compile --outfile brenner ./brenner.ts
+```
+
+The CLI source does **not** need to be a single `.ts` file — Bun follows the import graph and bundles it into one executable.
 
 ---
 
@@ -223,12 +262,16 @@ Each distillation preserves the unique framing of its source model while incorpo
 ### CLI (early scaffolding)
 
 - **`brenner.ts`**
-  - Bun CLI for prompt composition and Agent Mail messaging/orchestration.
+  - Bun CLI entrypoint for prompt composition and Agent Mail messaging/orchestration.
   - Compiles to a **standalone portable executable** via `bun build --compile`:
     ```bash
-    bun build --compile ./brenner.ts --outfile brenner
+    bun build --compile --outfile brenner ./brenner.ts
     ```
-  - The resulting binary bundles the Bun runtime, all dependencies, and the source code into a single ~50MB executable that runs without any installation.
+  - The resulting binary bundles the Bun runtime, all dependencies, and your code into a single executable that runs without installing Node/Bun separately.
+
+### Issue tracking (Beads)
+
+- **`.beads/`**: repo-native issue tracking (dependencies, epics, and a roadmap graph). Use `bd` and `bv --robot-triage`.
 
 ---
 
@@ -408,27 +451,48 @@ By having these models **collaborate via Agent Mail** using shared Brenner proto
 
 This README describes the intended direction, not finished functionality. A realistic build-out likely looks like:
 
-### Phase 1 — Canon extraction (in this repo)
+### Track 1 — Protocol kernel (make Brenner executable)
 
-- Build a “Brenner playbook” from transcript-grounded primitives (quotes + distilled heuristics).
-- Normalize a small number of canonical prompt templates:
-  - motif extraction
-  - hypothesis slate generation
-  - discriminative test ranking
-  - adversarial critique (“third alternative”)
+- Canonical **artifact schema** (stable IDs; mergeable deltas).
+- Operator library (⊘/𝓛/≡/✂/⟂/↑/⊞/ΔE/∿/…): definitions, triggers, failure modes, anchored quotes.
+- Role prompt pack (Codex/Opus/Gemini) that outputs structured deltas (not essays).
+- Guardrails + linter spec (third alternative, potency checks, citations, scale checks).
 
-### Phase 2 — Workflow protocols (Agent Mail + tools)
+### Track 2 — Corpus engine (make primary sources usable as a tool)
 
-- Define the collaboration protocol: roles, message types, thread structure, artifact formats.
-- Teach the agents to:
-  - keep a stable research thread
-  - converge on hypotheses
-  - maintain an assumption ledger
-  - produce ranked next experiments
+- Parse `complete_brenner_transcript.md` into a structured index keyed by `§n`.
+- Fast search across transcript + distillations + quote bank, returning stable anchors and snippets.
+- Normalize/tag the quote bank by operators and motifs.
+- Excerpt builder (web + CLI) that composes cited excerpt blocks for kickoffs.
 
-### Phase 3 — Multi-agent “lab in a box”
+### Track 3 — Orchestration (Agent Mail → compiled artifacts)
 
-- Wire the protocols into Agent Mail threads and run structured “research conversations”:
-  - Claude (Opus) as synthesis + critique
-  - Codex (GPT‑5.2) as formalizer + implementation planner
-  - Gemini as alternative clustering + novelty search
+- Thread protocol contract (message types, required sections, ack semantics).
+- Session runner (kickoff → rounds → publish).
+- Artifact compiler (parse deltas → merge deterministically → lint → render).
+- Persistence policy (minimal file sprawl; explicit writes).
+
+### Track 4 — Web app (brennerbot.org)
+
+- Polished corpus reader (markdown render, TOC, anchors, copy citations).
+- Search + excerpt builder UX.
+- Sessions UI (timeline, artifact panel, linter results).
+- Lab mode auth + gating (fail closed); public mode safe by default.
+
+### Track 5 — CLI/binary (brenner)
+
+- Coherent CLI command surface + config.
+- Inbox/thread tooling for Agent Mail.
+- Session start/status/compile/publish.
+- `bun build --compile` release workflow for a single self-contained executable.
+
+### Track 6 — Memory (optional)
+
+- CLI integration with `cass_memory_system` (`cm context … --json`) to augment kickoffs.
+- (Later) a careful feedback loop from artifacts back into durable memory.
+
+### Track 7 — Deployment & safety
+
+- Vercel deployment for `apps/web` and Cloudflare DNS for `brennerbot.org`.
+- Cloudflare Access (preferred) + app-layer fallback gating for lab mode.
+- Content policy for what can be served publicly (verify transcript source terms; attribute appropriately).
