@@ -569,15 +569,19 @@ See `quote_bank_restored_primitives.md` for a small restored-quote bank keyed by
 | **Materialization** | Translating theory to "what would I see?" |
 | **Occam's broom** | The junk swept under the carpet |
 | **Out of phase** | Misaligned with (or avoiding) fashion |
+| **Heroic vs classical periods** | When a field industrializes; routine work generates new hard problems; know what can/can’t be solved by “normal science” |
 | **Productive ignorance** | Fresh eyes unconstrained by expert priors |
 | **Phase problem** | Missing-variable ambiguity that makes inference combinatorially intractable; requires a phase-breaking trick |
 | **Mutational spectra** | Induction/reversion patterns used to classify mechanism classes |
 | **Genetic dissection** | Conditional lethals as switches to localize essential function |
+| **Genetic surgery** | Mutation-first epistemology: mutants make “wild-type function” legible |
 | **Hierarchical self-assembly** | Staged assembly; reconstitution and sub-assembly perturbations as tests |
 | **Open the box** | Reject pure I/O explanations; mechanism in the box constrains theory |
 | **Grammar of the system** | Intermediate construction rules between genotype and phenotype |
 | **Tooling economics** | Material/instrument access gates progress; build/democratize the kit |
+| **Inside-out genetics** | Tooling flips the direction (gene → phenotype) and removes life-cycle bottlenecks |
 | **Lineage vs neighbors** | Two computations for development: history/lineage vs spatial neighborhood context |
+| **Lineage vs gradients** | Analogue vs digital development coordinate choice |
 | **Plausibility filter** | Logical theories can be wrong if they aren’t “natural”/biologically plausible |
 | **Anti-analogy** | Suspect easy metaphors imported from conscious experience into biology |
 | **Long-horizon slack** | Some programs require freedom from short-term justification to mature |

@@ -41,7 +41,8 @@ Create a table:
 
 Tags are drawn from:
 `problem-choice`, `representation-change`, `inversion`, `HAL`, `digital-handle`, `exclusion`, `paradox`, `assumption-ledger`, `ruthless-kill`, `out-of-phase`, `organism-selection`, `cheap-loop`, `topology/algebra`, `bayesian-ish`,
-`dont-worry`, `conversation`, `open-the-box`, `grammar`, `phase-problem`, `phase-breaking`, `spectra`, `tacit-knowledge`, `tooling`, `initiation-vs-continuation`, `genetic-dissection`, `self-assembly`, `special-exemplar`, `construction-vs-function`, `anti-analogy`, `plausibility-filter`.
+`dont-worry`, `conversation`, `open-the-box`, `grammar`, `phase-problem`, `phase-breaking`, `spectra`, `tacit-knowledge`, `tooling`, `initiation-vs-continuation`, `genetic-dissection`, `self-assembly`, `special-exemplar`, `construction-vs-function`, `anti-analogy`, `plausibility-filter`,
+`lineage-vs-gradients`, `reconstruction`, `heroic-vs-classical`, `normal-science`, `genetic-surgery`, `inside-out-genetics`, `discount-genome`, `integrative`.
 
 ### 2) Brenner Moves (8–12 items, each evidence-backed)
 For each move, produce this exact structure:
@@ -56,7 +57,7 @@ For each move, produce this exact structure:
 
 Moves must be specific (e.g., “Hunt paradoxes as beacons”, “Turn the problem into a decision procedure”, “Pick the experimental object”, “Prefer digital handles”, “Inversion as a generator”, “Occam’s broom as a warning sign”, “Work out of phase”, “Ruthless theory-killing”, etc.).
 
-Also include Brenner-style moves like: “Don’t Worry hypothesis (defer missing mechanisms)”, “Conversation to break deductive loops”, “Open the box / find the grammar of the system”, “Break ambiguity by solving the missing variable (phase)”, “Type mechanisms via spectra / equivalence classes”, “Find the control point (initiation vs continuation)”, “Tooling economics (build/democratize the kit)”, “Reject ‘logical but non-natural’ theories and easy analogies.”
+Also include Brenner-style moves like: “Don’t Worry hypothesis (defer missing mechanisms)”, “Conversation to break deductive loops”, “Open the box / find the grammar of the system”, “Compute the organism (reconstruction as explanation)”, “Gradients vs lineage (analogue vs digital development)”, “Break ambiguity by solving the missing variable (phase)”, “Type mechanisms via spectra / equivalence classes”, “Find the control point (initiation vs continuation)”, “Genetic surgery (mutation-first proof of function)”, “Inside-out genetics (tooling changes feasible experiments)”, “Discount genome / organism choice as technology”, “Heroic → classical periods (routine work generates new problems; what can/can’t be solved by normal science)”, “Tooling economics (build/democratize the kit)”, “Reject ‘logical but non-natural’ theories and easy analogies.”
 
 ### 3) The “Brenner Loop” (a runnable protocol)
 Define an explicit loop a research group can run in 30–90 minutes:

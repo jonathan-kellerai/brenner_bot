@@ -153,6 +153,18 @@ These primitives became clearer after restoring full verbatim transcript text; a
 - **Construction vs function split** (don’t jump genes → behavior): `§132`
 - **Genetic dissection** (conditional switches / lethals): `§123`
 - **Hierarchical self-assembly** (kit + reconstitution tests): `§124`
+- **Gradients vs lineage** (analogue vs digital development coordinate choice): `§205`
+- **Compute the organism** (reconstruction/algorithm as explanation): `§206`
+- **Heroic → classical transition** (routine work generates new hard problems; “normal science” limits): `§210`
+- **Genetic surgery** (mutation-first proof of function): `§215`
+- **Inside-out genetics** (tooling flips gene → phenotype; liberates from life-cycle bottlenecks): `§216`
+- **“Bingo hall” scaling** (decomposable work + instrumentation can scale big tasks): `§218`
+- **Discount genome** (organism choice as technology): `§221–§222`
+- **Regulation as reuse** (“do what you know, but do it here and not there”): `§224`
+- **Creativity = daydreaming + implementation**: `§228`
+- **Ignorance/knowledge transit strategy** (move fields while carrying invariants): `§230`
+- **Anti-petrification rebel stance**: `§231`
+- **Reinvent physiology** (integrate molecules → organism): `§233`
 
 ---
 

@@ -316,3 +316,153 @@ Tags: `anti-analogy`, `epistemic-hygiene`, `mechanism`
 Why it matters: Some programs require long maturation; environment design is part of the method.
 
 Tags: `environment`, `long-horizon`, `infrastructure`
+
+---
+
+## §205 — Gene → behaviour goes through the nervous system
+
+> The connection between genes and behaviour must go through the construction and performance of a nervous system.
+
+Why it matters: Don’t jump from genes to behaviour; force an explicit construction paradigm (build the nervous system, then study its computation).
+
+Tags: `construction-vs-function`, `level-split`, `open-the-box`
+
+---
+
+## §205 — Gradients vs lineage (analogue vs digital development)
+
+> Gradients would be the analogue way of doing it, and lineage would be the digital way of doing it, so to speak.
+
+Why it matters: Choose the right computational frame for development (continuous field variables vs discrete lineage/state).
+
+Tags: `representation-change`, `lineage`, `digital-handle`
+
+---
+
+## §206 — Compute the organism (reconstruction as explanation)
+
+> We would understand the algorithm of how the mouse is built, because we could build it.
+
+Why it matters: Explanation cashes out as an explicit constructive algorithm (not anecdotes or correlations).
+
+Tags: `gedanken-organism`, `reconstruction`, `machine-language`
+
+---
+
+## §210 — Routine work generates the next hard problems
+
+> Routine work itself generates its important problems which you don't see.
+
+Why it matters: “Mopping up” isn’t just boring; it creates new paradoxes—so don’t confuse “outline solved” with “finished.”
+
+Tags: `heroic-vs-classical`, `out-of-phase`, `problem-choice`
+
+---
+
+## §215 — Mutation-first epistemology (“genetic surgery”)
+
+> You are doing surgery at the genetic level.
+
+Why it matters: In genetics, function is proven by loss/perturbation; mutants are the instrument that makes the invisible gene legible.
+
+Tags: `digital-handle`, `genetic-dissection`, `exclusion`
+
+---
+
+## §216 — Inside-out genetics (liberation from life-cycles)
+
+> We have now been liberated from the tyranny of the life-cycles of organisms, from their modes of reproduction. We can do genetics now on everything, anything.
+
+Why it matters: Tooling can change the feasible experiment class; when you’re unblocked by life-cycle time, you can choose organisms for *the question*, not for breeding convenience.
+
+Tags: `tooling`, `cheap-loop`, `organism-selection`
+
+---
+
+## §218 — “Bingo hall” scaling (big work can be decomposed into jobs)
+
+> In fact, I thought we could actually do this by having something that was like a bingo hall.
+
+Why it matters: Some scientific tasks are decomposable labor plus good instrumentation; “big science” can be made legible by the right workflow framing.
+
+Tags: `tooling`, `infrastructure`, `democratize`
+
+---
+
+## §221 — The “discount genome” (organism choice as technology)
+
+> So I think I like to call the fugu the discount genome, because you get 90% discount on sequencing.
+
+Why it matters: Change the object to change the denominator (cost/time); organism choice can substitute for “tenfold tech.”
+
+Tags: `organism-selection`, `representation-change`, `tooling`
+
+---
+
+## §222 — Tiny introns → faster characterization
+
+> Which means that we could characterise genes very quickly.
+
+Why it matters: Compression (less junk) increases throughput; speed is a first-class scientific variable.
+
+Tags: `cheap-loop`, `tooling`, `digital-handle`
+
+---
+
+## §224 — Regulation is reuse: “do what you know, but do it here”
+
+> Do what you know, but do it here and not there.
+
+Why it matters: Evolution often reuses machinery with new deployment/constraints; search for invariants in parts and variation in control.
+
+Tags: `invariants`, `open-the-box`, `construction-vs-function`
+
+---
+
+## §228 — Creativity = daydreaming + implementation
+
+> Daydreaming is terribly important, but the essence of science is to bring it… to realise it, to implement it.
+
+Why it matters: Imagination is only half the loop; the other half is operationalizing into proof-producing experiments.
+
+Tags: `materialize`, `implementation`, `cheap-loop`
+
+---
+
+## §230 — Productive ignorance in transit (old → new)
+
+> It is good to be ignorant about a new field and know a lot about the old ones, as you transit from the old to the new.
+
+Why it matters: Cross-field leaps work when you import strong invariants from the old domain while staying unconstrained by the new domain’s “can’t be done” reflexes.
+
+Tags: `productive-ignorance`, `cross-domain`, `plausibility`
+
+---
+
+## §231 — Rebel stance (anti-petrification)
+
+> Being a rebel has always appealed to me, largely because I'm convinced that the… that the standard parts of any activity are already petrified at the core.
+
+Why it matters: Default practices harden; method requires periodically rejecting “standard parts” and re-deriving the loop from first principles.
+
+Tags: `out-of-phase`, `anti-ritual`, `problem-choice`
+
+---
+
+## §233 — Reinvent physiology (integrate molecules → organism)
+
+> Nobody knows how to connect up all these molecular events to the actual functioning of an organism, or an organ system, so I think physiology will have to be reinvented so that we can grasp how all this molecular stuff is embedded in the function of an organism.
+
+Why it matters: Lists of parts are not explanation; the integrative layer is its own science with its own machine language.
+
+Tags: `integrative`, `open-the-box`, `machine-language`
+
+---
+
+## §235 — Preserve worlds (autobiography as reconstruction)
+
+> These worlds are lost except through this and I suppose as one gets older one wants to try and preserve something.
+
+Why it matters: “Preservation” is part of the research ecosystem: keeping institutional memory and the lived context that makes methods transferable.
+
+Tags: `preservation`, `context`, `epistemic-hygiene`

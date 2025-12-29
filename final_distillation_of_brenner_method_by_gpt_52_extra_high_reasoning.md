@@ -138,6 +138,7 @@ Examples / anchors:
 
 - Message vs machine; program vs interpreter; mapping vs stored text (inference, recurring theme).
 - “Instructions separate from the machine” (messenger as an abstraction / program vs interpreter). (§105)
+- Gene → behaviour goes through construction/performance of nervous system (don’t jump levels). (§205)
 - Logic vs machinery: focus on order/information before mechanisms and energetics are filled in. (§59)
 - Von Neumann vs Schrödinger: separate *program/specification* from the *means to execute it* (“the program has to build the machinery to execute the program”). (§45–§46)
 - “Chastity vs impotence”: same outcome, different cause class. (§50)
@@ -155,6 +156,7 @@ Anchors:
 
 - Wordplay as “alternative interpretations of the same thing” → mental training for reframing. (§34)
 - Machine language constraint (“neurones… connections… cells… recognition proteins,” not sin/cos or gradients as final explanation). (§147, §208)
+- “Gradients vs lineage” as an analogue/digital coordinate choice in development. (§205)
 - “European plan vs American plan” as a coordinate choice: lineage (history) vs neighborhood (spatial computation). (§161)
 - Dimensional reduction: “reduction of biology to one dimension… is the absolute crucial step.” (§58)
 - Digital/analogue sanity: don’t confuse “digital program” metaphors with the fact that cells do strong analogue computation with thresholds at their natural scales. (§197)
@@ -247,6 +249,8 @@ Anchors:
 - “This is something you can always do… it’s open to you. There’s no magic in this.” (DIY intermediates / anti‑priesthood stance). (§51)
 - Negative staining “took electron microscopy out of the hands of the elite and gave it to the people.” (§86)
 - Tool monopolies / material access as gating constraints (radioactive triphosphates; “monopoly of DNA replication”). (§114)
+- “Inside‑out genetics” as tooling that removes life‑cycle bottlenecks (“liberated from the tyranny of the life‑cycles”). (§216)
+- “Bingo hall” as workflow reframing: decomposable work + instrumentation can scale. (§218)
 
 **Failure mode:** letting a scarce tool define your pace and your hypothesis space.
 
@@ -273,6 +277,7 @@ Anchors:
 
 - “Work out of phase.” (§143)
 - “Opening game… freedom of choice.” (§192)
+- Heroic → classical transition: routine work generates new important problems. (§210)
 
 **Failure mode:** confusing “crowded field activity” with “progress.”
 
@@ -286,6 +291,7 @@ Anchors:
 
 - “Spreading ignorance rather than knowledge.” (§63)
 - “Strong believer in the value of ignorance.” (§192)
+- “Ignorant about the new field, knowledgeable about the old” as a deliberate transition strategy. (§230)
 - “You can’t… equip yourself with a theoretical apparatus for the future… The best thing… is just start. Don’t… don’t equip yourself.” (§65)
 - Paper triage to protect bandwidth (“papers… that remove information from my head”). (§200)
 
@@ -440,6 +446,11 @@ In a multi‑agent setting, you can assign “operators” as roles:
 - **Genetic dissection:** use conditional lethals / switches to localize essential function. (§123)
 - **Hierarchical self-assembly:** treat complex structures as staged assembly; test by reconstitution and sub-assembly perturbations. (§124)
 - **Lineage vs neighborhood computation:** alternate coordinate systems for development (history vs spatial context). (§161)
+- **Lineage vs gradients:** analogue vs digital development coordinate choice. (§205)
+- **Genetic surgery:** mutation-first proof of function; you can’t assert “wild-type gene” without mutants. (§215)
+- **Inside-out genetics:** tooling-mediated reversal (gene → phenotype) that removes life-cycle bottlenecks. (§216)
+- **Heroic vs classical periods:** routine work generates new problems; distinguish what can/can’t be solved by “normal science.” (§210)
+- **Reconstruction as explanation:** compute/build the organism (from DNA + initial conditions) as the explanation form. (§206)
 
 ---
 
