@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { headers, cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
 import { AgentMailClient } from "@/lib/agentMail";
@@ -197,7 +197,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
     });
 
     // Ensure project exists (tools expect project_key to be the human_key / absolute path).
-    if (projectKey.startsWith("/")) {
+    if (isAbsolute(projectKey)) {
       const ensured = await client.toolsCall("ensure_project", { human_key: projectKey });
       const ensuredSlug = parseEnsureProjectSlug(ensured);
       if (!ensuredSlug) {
