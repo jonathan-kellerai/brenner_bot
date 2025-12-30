@@ -59,6 +59,49 @@ async function isAgentMailAvailable(baseUrl: string = "http://127.0.0.1:8765"): 
   }
 }
 
+function stubAgentMailJsonRpcFetch(): void {
+  vi.stubGlobal("fetch", async (_input: unknown, init?: RequestInit) => {
+    const body = typeof init?.body === "string" ? init.body : "";
+    let method = "";
+    let params: unknown = {};
+
+    try {
+      const parsed = JSON.parse(body) as { method?: unknown; params?: unknown };
+      if (typeof parsed.method === "string") method = parsed.method;
+      params = parsed.params ?? {};
+    } catch {
+      // ignore
+    }
+
+    let result: unknown = { ok: true };
+
+    if (method === "resources/read") {
+      const uri = (params as { uri?: unknown })?.uri;
+      const payload =
+        typeof uri === "string" && uri.includes("resource://inbox/")
+          ? { project: "/project", agent: "agent", count: 0, messages: [] }
+          : typeof uri === "string" && uri.includes("resource://thread/")
+            ? { project: "/project", thread_id: "thread-abc", messages: [] }
+            : {};
+
+      result = {
+        contents: [
+          {
+            uri: typeof uri === "string" ? uri : "resource://stub",
+            mimeType: "application/json",
+            text: JSON.stringify(payload),
+          },
+        ],
+      };
+    }
+
+    return new Response(JSON.stringify({ jsonrpc: "2.0", id: "1", result }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
+  });
+}
+
 // ============================================================================
 // Tests: Constructor & Configuration
 // ============================================================================
@@ -294,7 +337,12 @@ describe("client methods", () => {
   let client: AgentMailClient;
 
   beforeEach(() => {
-    client = new AgentMailClient();
+    stubAgentMailJsonRpcFetch();
+    client = new AgentMailClient({ baseUrl: "http://example.com" });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("call method exists and returns a Promise", () => {
@@ -377,7 +425,12 @@ describe("readInbox parameters", () => {
   let client: AgentMailClient;
 
   beforeEach(() => {
-    client = new AgentMailClient();
+    stubAgentMailJsonRpcFetch();
+    client = new AgentMailClient({ baseUrl: "http://example.com" });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("accepts required parameters only", () => {
@@ -411,7 +464,12 @@ describe("readThread parameters", () => {
   let client: AgentMailClient;
 
   beforeEach(() => {
-    client = new AgentMailClient();
+    stubAgentMailJsonRpcFetch();
+    client = new AgentMailClient({ baseUrl: "http://example.com" });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it("accepts required parameters only", () => {
