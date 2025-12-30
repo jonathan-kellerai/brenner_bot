@@ -23,32 +23,32 @@ export function TranscriptHero({
   wordCount,
 }: TranscriptHeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 mb-12">
+    <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 mb-8 sm:mb-12">
       {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-64 h-64 bg-amber-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-40 sm:w-64 h-40 sm:h-64 bg-amber-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
 
-      <div className="relative px-8 py-12 lg:px-12 lg:py-16">
+      <div className="relative px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
-          <span className="size-2 rounded-full bg-primary animate-pulse" />
+        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-medium mb-4 sm:mb-6">
+          <span className="size-1.5 sm:size-2 rounded-full bg-primary animate-pulse" />
           Primary Source
         </div>
 
         {/* Title */}
-        <h1 className="text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-foreground mb-4 max-w-4xl">
+        <h1 className="text-2xl sm:text-4xl lg:text-5xl xl:text-6xl font-bold tracking-tight text-foreground mb-3 sm:mb-4 max-w-4xl">
           {title}
         </h1>
 
         {/* Subtitle */}
         {subtitle && (
-          <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-2xl">
+          <p className="text-base sm:text-lg lg:text-xl text-muted-foreground mb-6 sm:mb-8 max-w-2xl">
             {subtitle}
           </p>
         )}
 
         {/* Stats */}
-        <div className="flex flex-wrap items-center gap-4 lg:gap-6">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 lg:gap-6">
           <Stat icon={<SectionIcon />} label="Sections" value={totalSections.toString()} />
           <Stat icon={<ClockIcon />} label="Read time" value={estimatedReadTime} />
           <Stat icon={<WordIcon />} label="Words" value={wordCount} />
@@ -60,11 +60,11 @@ export function TranscriptHero({
 
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
-    <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50">
-      <div className="text-primary">{icon}</div>
+    <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-background/50 backdrop-blur-sm border border-border/50">
+      <div className="text-primary [&>svg]:size-4 sm:[&>svg]:size-5">{icon}</div>
       <div>
-        <div className="text-xs text-muted-foreground uppercase tracking-wider">{label}</div>
-        <div className="text-lg font-semibold text-foreground">{value}</div>
+        <div className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider">{label}</div>
+        <div className="text-sm sm:text-lg font-semibold text-foreground">{value}</div>
       </div>
     </div>
   );

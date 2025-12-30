@@ -28,13 +28,13 @@ export function DistillationHero({
   const readTime = Math.ceil(wordCount / 200);
 
   return (
-    <div className="relative overflow-hidden rounded-3xl mb-12">
+    <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl mb-8 sm:mb-12">
       {/* Gradient background based on model */}
       <div className={`absolute inset-0 bg-gradient-to-br ${meta.color} opacity-10`} />
       <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent" />
 
       {/* Decorative pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 hidden sm:block">
         <div className="absolute top-0 left-0 w-full h-full" style={{
           backgroundImage: `radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)`,
           backgroundSize: "32px 32px",
@@ -42,55 +42,55 @@ export function DistillationHero({
       </div>
 
       {/* Floating accent orbs */}
-      <div className={`absolute -top-20 -right-20 size-64 rounded-full bg-gradient-to-br ${meta.color} opacity-20 blur-3xl`} />
-      <div className={`absolute -bottom-20 -left-20 size-48 rounded-full bg-gradient-to-br ${meta.color} opacity-15 blur-3xl`} />
+      <div className={`absolute -top-10 sm:-top-20 -right-10 sm:-right-20 size-32 sm:size-64 rounded-full bg-gradient-to-br ${meta.color} opacity-20 blur-3xl`} />
+      <div className={`absolute -bottom-10 sm:-bottom-20 -left-10 sm:-left-20 size-24 sm:size-48 rounded-full bg-gradient-to-br ${meta.color} opacity-15 blur-3xl`} />
 
-      <div className="relative px-8 py-12 lg:px-12 lg:py-16">
+      <div className="relative px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
         {/* Model badge with tagline */}
-        <div className="flex flex-wrap items-start justify-between gap-6 mb-8">
-          <div className="flex items-center gap-4">
-            <div className={`size-14 rounded-2xl bg-gradient-to-br ${meta.color} flex items-center justify-center text-white text-2xl font-bold shadow-xl shadow-black/20`}>
+        <div className="flex flex-wrap items-start justify-between gap-4 sm:gap-6 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className={`size-10 sm:size-14 rounded-xl sm:rounded-2xl bg-gradient-to-br ${meta.color} flex items-center justify-center text-white text-lg sm:text-2xl font-bold shadow-xl shadow-black/20`}>
               {meta.icon}
             </div>
             <div>
-              <div className="text-xs uppercase tracking-wider text-muted-foreground mb-1">
+              <div className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mb-0.5 sm:mb-1">
                 Model Distillation
               </div>
-              <div className="text-xl font-bold text-foreground">{meta.name}</div>
-              <div className={`text-sm font-medium bg-gradient-to-r ${meta.color} bg-clip-text text-transparent`}>
+              <div className="text-base sm:text-xl font-bold text-foreground">{meta.name}</div>
+              <div className={`text-xs sm:text-sm font-medium bg-gradient-to-r ${meta.color} bg-clip-text text-transparent`}>
                 {meta.tagline}
               </div>
             </div>
           </div>
-          <div className="text-sm text-muted-foreground font-medium">
+          <div className="text-xs sm:text-sm text-muted-foreground font-medium">
             {meta.date}
           </div>
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-foreground mb-6 max-w-4xl leading-tight">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-foreground mb-4 sm:mb-6 max-w-4xl leading-tight">
           {title}
         </h1>
 
         {/* Approach description */}
-        <div className="max-w-3xl mb-8">
-          <p className="text-lg lg:text-xl leading-relaxed text-foreground/80">
+        <div className="max-w-3xl mb-6 sm:mb-8">
+          <p className="text-base sm:text-lg lg:text-xl leading-relaxed text-foreground/80">
             {meta.approach}
           </p>
         </div>
 
-        {/* Strengths */}
-        <div className="mb-8">
-          <div className="text-xs uppercase tracking-wider text-muted-foreground mb-3">
+        {/* Strengths - horizontal scroll on mobile */}
+        <div className="mb-6 sm:mb-8">
+          <div className="text-[10px] sm:text-xs uppercase tracking-wider text-muted-foreground mb-2 sm:mb-3">
             Key Strengths
           </div>
-          <div className="flex flex-wrap gap-3">
+          <div className="flex gap-2 sm:gap-3 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide -mx-5 px-5 sm:mx-0 sm:px-0">
             {meta.strengths.map((strength, i) => (
               <div
                 key={i}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm text-sm text-foreground/90"
+                className="flex-shrink-0 inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg sm:rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm text-xs sm:text-sm text-foreground/90 whitespace-nowrap"
               >
-                <CheckIcon className="size-4 text-primary" />
+                <CheckIcon className="size-3.5 sm:size-4 text-primary" />
                 {strength}
               </div>
             ))}
@@ -98,7 +98,7 @@ export function DistillationHero({
         </div>
 
         {/* Stats */}
-        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-border/30">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4 pt-4 border-t border-border/30">
           <StatBadge icon={<ClockIcon />} value={`${readTime} min`} label="read" />
           <StatBadge icon={<WordIcon />} value={formatNumber(wordCount)} label="words" />
           <StatBadge icon={<SparklesIcon />} value="Frontier" label="model" />
@@ -118,7 +118,7 @@ function CheckIcon({ className }: { className?: string }) {
 
 function SparklesIcon() {
   return (
-    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <svg className="size-3.5 sm:size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
     </svg>
   );
@@ -126,7 +126,7 @@ function SparklesIcon() {
 
 function StatBadge({ icon, value, label }: { icon: React.ReactNode; value: string; label: string }) {
   return (
-    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 text-sm">
+    <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-card/80 backdrop-blur-sm border border-border/50 text-xs sm:text-sm">
       <span className="text-muted-foreground">{icon}</span>
       <span className="font-semibold text-foreground">{value}</span>
       <span className="text-muted-foreground">{label}</span>
