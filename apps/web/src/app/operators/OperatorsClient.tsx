@@ -114,6 +114,13 @@ function getTranscriptHref(sectionId: string): string | null {
   return `/corpus/transcript#section-${sectionNum}`;
 }
 
+function countAnchors(transcriptAnchors: string): number {
+  const trimmed = transcriptAnchors.trim();
+  if (!trimmed) return 0;
+  // Split by comma and filter out empty entries
+  return trimmed.split(",").filter((a) => a.trim()).length;
+}
+
 function operatorMatchesQuery(operator: BrennerOperatorPaletteEntry, query: string): boolean {
   const q = query.trim().toLowerCase();
   if (!q) return true;
@@ -243,7 +250,7 @@ function OperatorCard({
             </span>
             <span className="inline-flex items-center gap-1.5">
               <BookOpenIcon className="size-3.5" />
-              {operator.transcriptAnchors.split(",").length} anchor{operator.transcriptAnchors.split(",").length === 1 ? "" : "s"}
+              {countAnchors(operator.transcriptAnchors)} anchor{countAnchors(operator.transcriptAnchors) === 1 ? "" : "s"}
             </span>
           </div>
 
@@ -412,35 +419,47 @@ function OperatorDetailSheet({
         >
           {activeTab === "triggers" && (
             <div className="space-y-3">
-              {operator.whenToUseTriggers.map((trigger, index) => (
-                <div
-                  key={index}
-                  className="flex gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20"
-                >
-                  <div className="flex-shrink-0 mt-0.5">
-                    <div className="size-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                      <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{index + 1}</span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{trigger}</p>
+              {operator.whenToUseTriggers.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No usage triggers defined for this operator.
                 </div>
-              ))}
+              ) : (
+                operator.whenToUseTriggers.map((trigger, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-3 p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/20"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      <div className="size-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">{index + 1}</span>
+                      </div>
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{trigger}</p>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
           {activeTab === "failures" && (
             <div className="space-y-3">
-              {operator.failureModes.map((mode, index) => (
-                <div
-                  key={index}
-                  className="flex gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20"
-                >
-                  <div className="flex-shrink-0 mt-0.5">
-                    <AlertTriangleIcon className="size-5 text-red-500" />
-                  </div>
-                  <p className="text-sm text-foreground/90 leading-relaxed">{mode}</p>
+              {operator.failureModes.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  No failure modes documented for this operator.
                 </div>
-              ))}
+              ) : (
+                operator.failureModes.map((mode, index) => (
+                  <div
+                    key={index}
+                    className="flex gap-3 p-4 rounded-xl bg-red-500/5 border border-red-500/20"
+                  >
+                    <div className="flex-shrink-0 mt-0.5">
+                      <AlertTriangleIcon className="size-5 text-red-500" />
+                    </div>
+                    <p className="text-sm text-foreground/90 leading-relaxed">{mode}</p>
+                  </div>
+                ))
+              )}
             </div>
           )}
 
@@ -615,12 +634,16 @@ export function OperatorsClient({ operators }: { operators: BrennerOperatorPalet
 
   const handleOperatorClick = useCallback((op: BrennerOperatorPaletteEntry) => {
     setSelectedOperator(op);
-    window.history.replaceState(null, "", `#${op.canonicalTag}`);
+    const url = new URL(window.location.href);
+    url.hash = op.canonicalTag;
+    window.history.replaceState(null, "", url.toString());
   }, []);
 
   const handleCloseSheet = useCallback(() => {
     setSelectedOperator(null);
-    window.history.replaceState(null, "", window.location.pathname);
+    const url = new URL(window.location.href);
+    url.hash = "";
+    window.history.replaceState(null, "", url.toString());
   }, []);
 
   return (
@@ -648,7 +671,7 @@ export function OperatorsClient({ operators }: { operators: BrennerOperatorPalet
 
           {/* Subtitle */}
           <p className="mt-4 text-base sm:text-lg text-muted-foreground max-w-2xl leading-relaxed">
-            Fourteen reusable cognitive moves for turning vague questions into{" "}
+            Reusable cognitive moves for turning vague questions into{" "}
             <Jargon term="discriminative-test">discriminative tests</Jargon>—grounded in transcript{" "}
             <Jargon term="anchor">anchors</Jargon> and curated{" "}
             <Jargon term="quotebank">quote-bank</Jargon> primitives.

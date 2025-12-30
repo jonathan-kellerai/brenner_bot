@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 
 export const metadata: Metadata = {
   title: "Operators",
-  description: "Fourteen reusable Brenner moves with anchored quotes and transcript links.",
+  description: "Reusable Brenner cognitive moves with anchored quotes and transcript links.",
 };
 
 export default async function OperatorsPage() {
