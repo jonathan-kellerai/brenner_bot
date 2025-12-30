@@ -329,7 +329,7 @@ When the same setting is provided in multiple places, precedence is:
 
 1. **Flags** (per-command)
 2. **Environment**
-3. **Config file** (planned)
+3. **Config file**
 4. **Defaults**
 
 Environment variables (current):
@@ -338,12 +338,32 @@ Environment variables (current):
 - `AGENT_MAIL_BEARER_TOKEN` (optional; required if Agent Mail auth is enabled)
 - `AGENT_NAME` (optional default for `--sender`)
 
+Config file (optional, JSON):
+- Override path with `--config <path>` or `BRENNER_CONFIG_PATH=<path>`
+- Default path (POSIX): `~/.config/brenner/config.json` (or `$XDG_CONFIG_HOME/brenner/config.json`)
+- Default path (Windows): `%APPDATA%\\brenner\\config.json`
+
+Example:
+```json
+{
+  "agentMail": {
+    "baseUrl": "http://127.0.0.1:8765",
+    "path": "/mcp/",
+    "bearerToken": "optional"
+  },
+  "defaults": {
+    "projectKey": "/abs/path/to/your/repo",
+    "template": "metaprompt_by_gpt_52.md"
+  }
+}
+```
+
 Required flags (today’s implementation):
-- `mail agents`: `--project-key` optional (default: `"$PWD"`)
-- `mail send`: `--project-key` optional (default: `"$PWD"`), `--sender` (or `AGENT_NAME`), `--to`, `--subject`, `--body-file`
-- `prompt compose`: `--template` optional (default: `metaprompt_by_gpt_52.md`), `--excerpt-file`
-- `session start`: `--project-key` optional (default: `"$PWD"`), `--sender` (or `AGENT_NAME`), `--to`, `--thread-id`, `--excerpt-file`
-- `session status`: `--project-key` optional (default: `"$PWD"`), `--thread-id` (use `--watch` to poll; `--timeout` optional)
+- `mail agents`: `--project-key` optional (default: config `defaults.projectKey`, else `"$PWD"`)
+- `mail send`: `--project-key` optional (default: config `defaults.projectKey`, else `"$PWD"`), `--sender` (or `AGENT_NAME`), `--to`, `--subject`, `--body-file`
+- `prompt compose`: `--template` optional (default: config `defaults.template`, else `metaprompt_by_gpt_52.md`), `--excerpt-file`
+- `session start`: `--project-key` optional (default: config `defaults.projectKey`, else `"$PWD"`), `--sender` (or `AGENT_NAME`), `--to`, `--thread-id`, `--excerpt-file`
+- `session status`: `--project-key` optional (default: config `defaults.projectKey`, else `"$PWD"`), `--thread-id` (use `--watch` to poll; `--timeout` optional)
 
 ```bash
 ./brenner.ts mail tools

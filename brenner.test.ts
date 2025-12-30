@@ -9,13 +9,22 @@
 
 import { describe, expect, it } from "bun:test";
 import { spawn } from "node:child_process";
-import { resolve } from "node:path";
+import { randomUUID } from "node:crypto";
+import { writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 
 // ============================================================================
 // Test Helpers
 // ============================================================================
 
 const CLI_PATH = resolve(__dirname, "brenner.ts");
+
+function writeTempConfig(config: unknown): string {
+  const configPath = join(tmpdir(), `brenner-test-config-${randomUUID()}.json`);
+  writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
+  return configPath;
+}
 
 interface CliResult {
   stdout: string;
@@ -119,6 +128,7 @@ describe("help and usage", () => {
 
   it("usage includes environment variable documentation", async () => {
     const result = await runCli(["--help"]);
+    expect(result.stdout).toContain("BRENNER_CONFIG_PATH");
     expect(result.stdout).toContain("AGENT_MAIL_BASE_URL");
     expect(result.stdout).toContain("AGENT_MAIL_PATH");
     expect(result.stdout).toContain("AGENT_MAIL_BEARER_TOKEN");
@@ -924,6 +934,54 @@ describe("default values", () => {
     // Should succeed using default template
     expect(result.exitCode).toBe(0);
     expect(result.stdout.length).toBeGreaterThan(0);
+  });
+});
+
+// ============================================================================
+// Tests: Config File Defaults
+// ============================================================================
+
+describe("config file defaults", () => {
+  it("prompt compose uses config defaults.template", async () => {
+    const configPath = writeTempConfig({
+      defaults: { template: "initial_metaprompt.md" },
+    });
+
+    const result = await runCli(["--config", configPath, "prompt", "compose", "--excerpt-file", "README.md"]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Meta prompt:");
+    expect(result.stdout).not.toContain("## METAPROMPT (v0.2)");
+  });
+
+  it("--template flag overrides config defaults.template", async () => {
+    const configPath = writeTempConfig({
+      defaults: { template: "initial_metaprompt.md" },
+    });
+
+    const result = await runCli([
+      "--config",
+      configPath,
+      "prompt",
+      "compose",
+      "--template",
+      "metaprompt_by_gpt_52.md",
+      "--excerpt-file",
+      "README.md",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("## METAPROMPT (v0.2)");
+  });
+
+  it("fails when explicit --config path is missing", async () => {
+    const missingConfig =
+      process.platform === "win32" ? "C:\\\\__brenner_test_missing_config__.json" : "/__brenner_test_missing_config__.json";
+
+    const result = await runCli(["--config", missingConfig, "prompt", "compose", "--excerpt-file", "README.md"]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Config file not found");
   });
 });
 

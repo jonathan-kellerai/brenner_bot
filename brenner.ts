@@ -9,8 +9,9 @@
  * Runtime: Bun-only. Local imports are bundled when compiled.
  */
 
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { isAbsolute, join, resolve } from "node:path";
 
 // Shared modules from web lib (bundled by Bun)
 import { AgentMailClient } from "./apps/web/src/lib/agentMail";
@@ -152,6 +153,132 @@ function splitCsv(value: string | undefined): string[] {
 
 function readTextFile(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+function nonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function envNonEmpty(key: string): string | undefined {
+  return nonEmptyString(process.env[key]);
+}
+
+type BrennerConfigFile = {
+  agentMail?: {
+    baseUrl?: string;
+    path?: string;
+    bearerToken?: string;
+  };
+  defaults?: {
+    projectKey?: string;
+    template?: string;
+  };
+};
+
+type BrennerLoadedConfig = {
+  path: string | null;
+  config: BrennerConfigFile;
+};
+
+type BrennerRuntimeConfig = {
+  configFilePath: string | null;
+  agentMail: { baseUrl: string; path: string; bearerToken?: string };
+  defaults: { projectKey: string; template: string };
+};
+
+function defaultConfigPath(): string {
+  if (process.platform === "win32") {
+    const base = envNonEmpty("APPDATA") ?? join(homedir(), "AppData", "Roaming");
+    return join(base, "brenner", "config.json");
+  }
+
+  const base = envNonEmpty("XDG_CONFIG_HOME") ?? join(homedir(), ".config");
+  return join(base, "brenner", "config.json");
+}
+
+function resolveConfigPath(flags: ParsedArgs["flags"]): { path: string; explicit: boolean } {
+  const flagPath = nonEmptyString(asStringFlag(flags, "config"));
+  const envPath = envNonEmpty("BRENNER_CONFIG_PATH");
+  if (flagPath) return { path: resolve(flagPath), explicit: true };
+  if (envPath) return { path: resolve(envPath), explicit: true };
+  return { path: defaultConfigPath(), explicit: false };
+}
+
+function parseBrennerConfigJson(text: string, configPath: string): BrennerConfigFile {
+  let parsed: Json;
+  try {
+    parsed = JSON.parse(text) as Json;
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    throw new Error(`Failed to parse config JSON at ${configPath}: ${msg}`);
+  }
+
+  if (!isRecord(parsed)) {
+    throw new Error(`Config file must be a JSON object: ${configPath}`);
+  }
+
+  const out: BrennerConfigFile = {};
+
+  const agentMail = parsed.agentMail;
+  if (agentMail !== undefined) {
+    if (!isRecord(agentMail)) throw new Error(`Config field "agentMail" must be an object: ${configPath}`);
+    const baseUrl = nonEmptyString(agentMail.baseUrl);
+    const path = nonEmptyString(agentMail.path);
+    const bearerToken = nonEmptyString(agentMail.bearerToken);
+    if (baseUrl || path || bearerToken) {
+      out.agentMail = {
+        ...(baseUrl ? { baseUrl } : {}),
+        ...(path ? { path } : {}),
+        ...(bearerToken ? { bearerToken } : {}),
+      };
+    }
+  }
+
+  const defaults = parsed.defaults;
+  if (defaults !== undefined) {
+    if (!isRecord(defaults)) throw new Error(`Config field "defaults" must be an object: ${configPath}`);
+    const projectKey = nonEmptyString(defaults.projectKey);
+    const template = nonEmptyString(defaults.template);
+    if (projectKey || template) {
+      out.defaults = { ...(projectKey ? { projectKey } : {}), ...(template ? { template } : {}) };
+    }
+  }
+
+  return out;
+}
+
+function loadBrennerConfig(flags: ParsedArgs["flags"]): BrennerLoadedConfig {
+  const { path, explicit } = resolveConfigPath(flags);
+  if (!existsSync(path)) {
+    if (explicit) throw new Error(`Config file not found: ${path}`);
+    return { path: null, config: {} };
+  }
+
+  const raw = readTextFile(path);
+  return { path, config: parseBrennerConfigJson(raw, path) };
+}
+
+function resolveBrennerRuntimeConfig(loaded: BrennerLoadedConfig): BrennerRuntimeConfig {
+  const fileAgentMail = loaded.config.agentMail;
+  const baseUrl = (envNonEmpty("AGENT_MAIL_BASE_URL") ?? fileAgentMail?.baseUrl ?? "http://127.0.0.1:8765").replace(
+    /\/+$/,
+    "",
+  );
+  const rawPath = envNonEmpty("AGENT_MAIL_PATH") ?? fileAgentMail?.path ?? "/mcp/";
+  const path = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
+  const bearerToken = envNonEmpty("AGENT_MAIL_BEARER_TOKEN") ?? fileAgentMail?.bearerToken;
+
+  const fileDefaults = loaded.config.defaults;
+  const defaultProjectKey = fileDefaults?.projectKey ?? process.cwd();
+  const defaultTemplate = fileDefaults?.template ?? "metaprompt_by_gpt_52.md";
+
+  return {
+    configFilePath: loaded.path,
+    agentMail: { baseUrl, path, bearerToken },
+    defaults: { projectKey: defaultProjectKey, template: defaultTemplate },
+  };
 }
 
 type BrennerBuildInfo = {
@@ -698,23 +825,23 @@ Commands:
                [--max-total-words <n>] [--max-quote-words <n>] [--transcript-file <path>] [--quote-bank-file <path>] [--json]
   mail health
   mail tools
-  mail agents --project-key <abs-path>
-  mail send --project-key <abs-path> --sender <AgentName> --to <A,B> --subject <s> --body-file <path> [--thread-id <id>] [--ack-required]
-  mail inbox --project-key <abs-path> --agent <AgentName> [--limit <n>] [--since <iso>] [--urgent-only] [--include-bodies] [--threads]
-  mail read --project-key <abs-path> --agent <AgentName> --message-id <n>
-  mail ack --project-key <abs-path> --agent <AgentName> --message-id <n>
-  mail thread --project-key <abs-path> --thread-id <id> [--include-examples] [--llm]
+  mail agents [--project-key <abs-path>]
+  mail send [--project-key <abs-path>] --sender <AgentName> --to <A,B> --subject <s> --body-file <path> [--thread-id <id>] [--ack-required]
+  mail inbox [--project-key <abs-path>] --agent <AgentName> [--limit <n>] [--since <iso>] [--urgent-only] [--include-bodies] [--threads]
+  mail read [--project-key <abs-path>] --agent <AgentName> --message-id <n>
+  mail ack [--project-key <abs-path>] --agent <AgentName> --message-id <n>
+  mail thread [--project-key <abs-path>] --thread-id <id> [--include-examples] [--llm]
 
   toolchain plan [--manifest <path>] [--platform <p>] [--json]
 
-  prompt compose --template <path> --excerpt-file <path> [--theme <s>] [--domain <s>] [--question <s>]
+  prompt compose --excerpt-file <path> [--template <path>] [--theme <s>] [--domain <s>] [--question <s>]
 
-  session start --project-key <abs-path> --sender <AgentName> --to <A,B> --thread-id <id>
+  session start [--project-key <abs-path>] --sender <AgentName> --to <A,B> --thread-id <id>
                --excerpt-file <path> --question <s> [--context <s>]
                [--hypotheses <s>] [--constraints <s>] [--outputs <s>]
                [--with-memory] [--unified] [--template <path>] [--theme <s>] [--domain <s>]
 
-  session status --project-key <abs-path> --thread-id <id> [--watch] [--timeout <seconds>]
+  session status [--project-key <abs-path>] --thread-id <id> [--watch] [--timeout <seconds>]
 
     By default, sends role-specific prompts to each recipient:
       - Codex/GPT → Hypothesis Generator
@@ -725,6 +852,11 @@ Commands:
 
 Aliases:
   orchestrate start  (alias for: session start)
+
+Config file (JSON):
+  --config <path>             optional (or set BRENNER_CONFIG_PATH)
+  Default (POSIX)             ~/.config/brenner/config.json (or $XDG_CONFIG_HOME/brenner/config.json)
+  Default (Windows)           %APPDATA%\\brenner\\config.json
 
 Agent Mail connection (env):
   AGENT_MAIL_BASE_URL        default: http://127.0.0.1:8765
@@ -814,6 +946,8 @@ async function main(): Promise<void> {
     console.log(formatBrennerVersionText(getBrennerBuildInfo()));
     process.exit(0);
   }
+
+  const runtimeConfig = resolveBrennerRuntimeConfig(loadBrennerConfig(flags));
 
   if (top === "doctor") {
     const jsonMode = asBoolFlag(flags, "json");
@@ -908,12 +1042,12 @@ async function main(): Promise<void> {
     checkTool("cass", { skip: skipCass, required: true });
     checkTool("cm", { skip: skipCm, required: true });
 
-    if (checkAgentMail) {
-      const baseUrl = (process.env.AGENT_MAIL_BASE_URL ?? "http://127.0.0.1:8765").replace(/\/+$/, "");
-      const headers: Record<string, string> = {};
-      if (process.env.AGENT_MAIL_BEARER_TOKEN) headers.Authorization = `Bearer ${process.env.AGENT_MAIL_BEARER_TOKEN}`;
-      try {
-        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
+	    if (checkAgentMail) {
+	      const baseUrl = runtimeConfig.agentMail.baseUrl;
+	      const headers: Record<string, string> = {};
+	      if (runtimeConfig.agentMail.bearerToken) headers.Authorization = `Bearer ${runtimeConfig.agentMail.bearerToken}`;
+	      try {
+	        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
         if (res.ok) {
           checks.agentMail = { status: "ok", path: baseUrl, verifyCommand: "GET /health/readiness", exitCode: 0 };
         } else {
@@ -967,18 +1101,18 @@ async function main(): Promise<void> {
     process.exit(exitCode);
   }
 
-  if (top === "mail") {
-    const client = new AgentMailClient();
-    const projectKey = asStringFlag(flags, "project-key") ?? process.cwd();
+	  if (top === "mail") {
+	    const client = new AgentMailClient(runtimeConfig.agentMail);
+	    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
 
-    if (sub === "health") {
-      // Prefer the FastAPI health endpoint when reachable; fall back to MCP tool.
-      const baseUrl = (process.env.AGENT_MAIL_BASE_URL ?? "http://127.0.0.1:8765").replace(/\/+$/, "");
-      const headers: Record<string, string> = {};
-      if (process.env.AGENT_MAIL_BEARER_TOKEN) headers.Authorization = `Bearer ${process.env.AGENT_MAIL_BEARER_TOKEN}`;
-      try {
-        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
-        const json = await res.json().catch(() => ({}));
+	    if (sub === "health") {
+	      // Prefer the FastAPI health endpoint when reachable; fall back to MCP tool.
+	      const baseUrl = runtimeConfig.agentMail.baseUrl;
+	      const headers: Record<string, string> = {};
+	      if (runtimeConfig.agentMail.bearerToken) headers.Authorization = `Bearer ${runtimeConfig.agentMail.bearerToken}`;
+	      try {
+	        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
+	        const json = await res.json().catch(() => ({}));
         console.log(JSON.stringify({ ok: res.ok, status: res.status, readiness: json }, null, 2));
         process.exit(res.ok ? 0 : 1);
       } catch {
@@ -994,12 +1128,12 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
-    if (sub === "agents") {
-      const projectSlug = projectKey.startsWith("/")
-        ? parseEnsureProjectSlug(await client.toolsCall("ensure_project", { human_key: projectKey }))
-        : projectKey;
-      if (!projectSlug) throw new Error("Agent Mail ensure_project did not return a project slug.");
-      const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
+	    if (sub === "agents") {
+	      const projectSlug = isAbsolute(projectKey)
+	        ? parseEnsureProjectSlug(await client.toolsCall("ensure_project", { human_key: projectKey }))
+	        : projectKey;
+	      if (!projectSlug) throw new Error("Agent Mail ensure_project did not return a project slug.");
+	      const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);
     }
@@ -1017,9 +1151,9 @@ async function main(): Promise<void> {
       const threadId = asStringFlag(flags, "thread-id");
       const ackRequired = asBoolFlag(flags, "ack-required");
 
-      if (projectKey.startsWith("/")) {
-        await client.toolsCall("ensure_project", { human_key: projectKey });
-      }
+	      if (isAbsolute(projectKey)) {
+	        await client.toolsCall("ensure_project", { human_key: projectKey });
+	      }
 
       const whoisResult = await client.toolsCall("whois", {
         project_key: projectKey,
@@ -1326,11 +1460,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  if (top === "prompt" && sub === "compose") {
-    const templatePath = resolve(asStringFlag(flags, "template") ?? "metaprompt_by_gpt_52.md");
-    const excerptFile = asStringFlag(flags, "excerpt-file");
-    if (!excerptFile) throw new Error("Missing --excerpt-file.");
-    const excerpt = readTextFile(resolve(excerptFile));
+	  if (top === "prompt" && sub === "compose") {
+	    const templatePath = resolve(asStringFlag(flags, "template") ?? runtimeConfig.defaults.template);
+	    const excerptFile = asStringFlag(flags, "excerpt-file");
+	    if (!excerptFile) throw new Error("Missing --excerpt-file.");
+	    const excerpt = readTextFile(resolve(excerptFile));
 
     const out = composePrompt({
       templatePath,
@@ -1363,12 +1497,12 @@ async function main(): Promise<void> {
 
   const normalizedTop = top === "orchestrate" ? "session" : top;
 
-  if (normalizedTop === "session" && sub === "start") {
-    const client = new AgentMailClient();
-    const projectKey = resolve(asStringFlag(flags, "project-key") ?? process.cwd());
-    let sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
-    if (!sender) throw new Error("Missing --sender (or set AGENT_NAME).");
-    const to = splitCsv(asStringFlag(flags, "to"));
+	  if (normalizedTop === "session" && sub === "start") {
+	    const client = new AgentMailClient(runtimeConfig.agentMail);
+	    const projectKey = resolve(asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey);
+	    let sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
+	    if (!sender) throw new Error("Missing --sender (or set AGENT_NAME).");
+	    const to = splitCsv(asStringFlag(flags, "to"));
     if (to.length === 0) throw new Error("Missing --to <A,B>.");
     const threadId = asStringFlag(flags, "thread-id");
     if (!threadId) throw new Error("Missing --thread-id.");
@@ -1433,12 +1567,12 @@ async function main(): Promise<void> {
       }
     }
 
-    if (unified) {
-      // Legacy mode: send same message to all recipients
-      const templatePath = resolve(asStringFlag(flags, "template") ?? "metaprompt_by_gpt_52.md");
-      const body = composePrompt({
-        templatePath,
-        excerpt,
+	    if (unified) {
+	      // Legacy mode: send same message to all recipients
+	      const templatePath = resolve(asStringFlag(flags, "template") ?? runtimeConfig.defaults.template);
+	      const body = composePrompt({
+	        templatePath,
+	        excerpt,
         memoryContext: kickoffConfig.memoryContext,
         theme: asStringFlag(flags, "theme"),
         domain: asStringFlag(flags, "domain"),
@@ -1482,11 +1616,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-  if (normalizedTop === "session" && sub === "status") {
-    const client = new AgentMailClient();
-    const projectKey = asStringFlag(flags, "project-key") ?? process.cwd();
-    const threadId = asStringFlag(flags, "thread-id");
-    if (!threadId) throw new Error("Missing --thread-id.");
+	  if (normalizedTop === "session" && sub === "status") {
+	    const client = new AgentMailClient(runtimeConfig.agentMail);
+	    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+	    const threadId = asStringFlag(flags, "thread-id");
+	    if (!threadId) throw new Error("Missing --thread-id.");
 
     const watch = asBoolFlag(flags, "watch");
     const timeoutSeconds = asIntFlag(flags, "timeout") ?? 900;
