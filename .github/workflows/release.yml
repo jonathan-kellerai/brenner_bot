@@ -1,0 +1,85 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Build + Publish Release Assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.1.38
+
+      - name: Install dependencies (apps/web)
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      - name: Build binaries + checksums
+        env:
+          BRENNER_VERSION: ${{ github.ref_name }}
+          BRENNER_GIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+          build() {
+            local target="$1"
+            local outfile="$2"
+            local meta_target="$3"
+            echo "==> Building ${outfile} (${target})"
+            BRENNER_BUILD_DATE="${BUILD_DATE}" BRENNER_TARGET="${meta_target}" \
+              bun build --compile --minify --target="${target}" --outfile="dist/${outfile}" ./brenner.ts
+          }
+
+          build bun-linux-x64-baseline brenner-linux-x64 linux-x64
+          build bun-linux-arm64 brenner-linux-arm64 linux-arm64
+          build bun-darwin-arm64 brenner-darwin-arm64 darwin-arm64
+          build bun-darwin-x64 brenner-darwin-x64 darwin-x64
+
+          echo "==> Building brenner-win-x64.exe (bun-windows-x64-baseline)"
+          BRENNER_BUILD_DATE="${BUILD_DATE}" BRENNER_TARGET="win-x64" \
+            bun build --compile --minify --target=bun-windows-x64-baseline \
+              --outfile="dist/brenner-win-x64.exe" --windows-hide-console ./brenner.ts
+
+          cd dist
+          sha256sum brenner-linux-x64 > brenner-linux-x64.sha256
+          sha256sum brenner-linux-arm64 > brenner-linux-arm64.sha256
+          sha256sum brenner-darwin-arm64 > brenner-darwin-arm64.sha256
+          sha256sum brenner-darwin-x64 > brenner-darwin-x64.sha256
+          sha256sum brenner-win-x64.exe > brenner-win-x64.exe.sha256
+
+          cp ../install.sh ./install.sh
+          sha256sum install.sh > install.sh.sha256
+
+          if [[ -f ../install.ps1 ]]; then
+            cp ../install.ps1 ./install.ps1
+            sha256sum install.ps1 > install.ps1.sha256
+          else
+            echo "install.ps1 not present; skipping"
+          fi
+
+      - name: Publish GitHub Release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: dist/*
