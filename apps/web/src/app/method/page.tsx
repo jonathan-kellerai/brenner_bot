@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { BrennerLoopDiagram } from "@/components/method/BrennerLoopDiagram";
 
 export const metadata: Metadata = {
   title: "Method",
@@ -76,39 +77,6 @@ const operators = [
   },
 ];
 
-const loopStages = [
-  {
-    stage: 1,
-    title: "Problem Selection",
-    description: "Choose the right problem - one that is tractable yet significant. Brenner insisted this is the most important decision a scientist makes.",
-    quote: "I think many fields of science could do a great deal better if they went back to the classical approach of studying a problem.",
-  },
-  {
-    stage: 2,
-    title: "Parallel Hypotheses",
-    description: "Never pursue a single hypothesis. Generate multiple competing explanations and hold them simultaneously in mind.",
-    quote: "You need to have several hypotheses going at the same time, and you need experiments that distinguish between them.",
-  },
-  {
-    stage: 3,
-    title: "Discriminative Experiments",
-    description: "Design experiments that can falsify hypotheses, not just confirm them. The goal is elimination, not verification.",
-    quote: "The important thing is the experiment that tells you which hypothesis is wrong.",
-  },
-  {
-    stage: 4,
-    title: "Bayesian Update",
-    description: "Update beliefs based on evidence. Let the data speak. Be willing to abandon cherished ideas when evidence contradicts them.",
-    quote: "If your model doesn't work, you change your model, not your facts.",
-  },
-  {
-    stage: 5,
-    title: "Iterate",
-    description: "Return to step 2 with refined hypotheses. Each iteration narrows the possibility space until a clear answer emerges.",
-    quote: "Science is an iterative process. You go round and round, refining your understanding.",
-  },
-];
-
 const colorClasses: Record<string, { bg: string; border: string; text: string }> = {
   primary: { bg: "bg-primary/10", border: "border-primary/30", text: "text-primary" },
   accent: { bg: "bg-accent/10", border: "border-accent/30", text: "text-accent" },
@@ -140,68 +108,22 @@ export default function MethodPage() {
       </header>
 
       {/* Visual Loop Diagram */}
-      <section className="space-y-6 animate-fade-in-up stagger-1">
-        <div className="flex items-center gap-2">
-          <RefreshIcon />
-          <h2 className="text-xl font-semibold">The Brenner Loop</h2>
-        </div>
-
-        {/* Loop Visualization - Desktop */}
-        <div className="hidden lg:block">
-          <div className="relative rounded-2xl border border-border bg-gradient-to-br from-muted/30 to-muted/10 p-8">
-            {/* Circular representation */}
-            <div className="flex items-center justify-center gap-4">
-              {loopStages.map((stage, index) => (
-                <div key={stage.stage} className="flex items-center">
-                  <div className="flex flex-col items-center">
-                    <div className="flex items-center justify-center size-16 rounded-full bg-primary text-primary-foreground font-bold text-lg shadow-lg">
-                      {stage.stage}
-                    </div>
-                    <div className="mt-2 text-center max-w-[140px]">
-                      <div className="text-sm font-semibold text-foreground">{stage.title}</div>
-                    </div>
-                  </div>
-                  {index < loopStages.length - 1 && (
-                    <svg className="size-8 text-muted-foreground mx-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-                    </svg>
-                  )}
-                </div>
-              ))}
-              {/* Return arrow */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 text-sm text-muted-foreground">
-                <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" />
-                </svg>
-                <span>Return to Step 2 with refined hypotheses</span>
-              </div>
-            </div>
+      <section className="space-y-8 animate-fade-in-up stagger-1">
+        <div className="text-center space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium">
+            <RefreshIcon />
+            Interactive Diagram
           </div>
+          <h2 className="text-2xl font-bold tracking-tight">The Brenner Loop</h2>
+          <p className="text-muted-foreground max-w-xl mx-auto text-sm">
+            Hover over each stage to explore the iterative discovery process.
+            The cycle continues until a clear answer emerges.
+          </p>
         </div>
 
-        {/* Loop Stages - Cards */}
-        <div className="grid gap-4 lg:grid-cols-1">
-          {loopStages.map((stage, index) => (
-            <div
-              key={stage.stage}
-              className={`rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/30 hover:shadow-md animate-fade-in-up stagger-${index + 1}`}
-            >
-              <div className="flex items-start gap-4">
-                <div className="flex items-center justify-center size-10 rounded-full bg-primary text-primary-foreground font-bold shrink-0">
-                  {stage.stage}
-                </div>
-                <div className="flex-1 space-y-2">
-                  <h3 className="text-lg font-semibold text-foreground">{stage.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {stage.description}
-                  </p>
-                  <blockquote className="mt-3 pl-3 border-l-2 border-primary/30 text-sm italic text-muted-foreground">
-                    &ldquo;{stage.quote}&rdquo;
-                  </blockquote>
-                </div>
-              </div>
-            </div>
-          ))}
+        {/* Interactive Pentagon Diagram */}
+        <div className="rounded-2xl border border-border bg-gradient-to-br from-muted/20 via-background to-muted/10 p-6 lg:p-10">
+          <BrennerLoopDiagram />
         </div>
       </section>
 
