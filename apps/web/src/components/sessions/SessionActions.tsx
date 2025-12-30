@@ -237,7 +237,7 @@ export function SessionActions({
               <CollapsibleContent>
                 <div className="px-4 pb-4 space-y-3">
                   <div className="text-xs text-muted-foreground font-mono">
-                    {compilePreview.deltaStats.deltaMessageCount} delta messages • {compilePreview.deltaStats.validBlocks}/{compilePreview.deltaStats.totalBlocks} valid blocks • applied {compilePreview.merge.applied}, skipped {compilePreview.merge.skipped}
+                    {compilePreview.deltaStats.deltaMessageCount} delta messages ({compilePreview.deltaStats.currentRoundDeltaCount} in current round) • {compilePreview.deltaStats.validBlocks}/{compilePreview.deltaStats.totalBlocks} valid blocks • applied {compilePreview.merge.applied}, skipped {compilePreview.merge.skipped}
                   </div>
                   <pre className="text-xs font-mono whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 overflow-auto max-h-[420px]">
                     {compilePreview.artifactMarkdown}
