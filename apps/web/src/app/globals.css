@@ -4,6 +4,22 @@
 @custom-variant dark (&:is(.dark *));
 
 /* ============================================================================
+   MOBILE OVERFLOW PROTECTION
+   Prevents horizontal scrolling on mobile devices
+   ============================================================================ */
+html,
+body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Ensure long text wraps properly */
+p, li, span, div {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+}
+
+/* ============================================================================
    BRENNER BOT - WORLD-CLASS DESIGN SYSTEM v2.0
    Inspired by Stripe, Apple, Linear, Vercel - optimized for reading experience
    ============================================================================ */
