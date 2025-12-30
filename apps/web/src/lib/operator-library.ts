@@ -1,6 +1,5 @@
 import { access, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { headers } from "next/headers";
 
 import { parseQuoteBank, type Quote } from "./quotebank-parser";
 
@@ -52,19 +51,50 @@ async function tryReadFromFilesystem(relativePathFromRepoRoot: string): Promise<
 }
 
 async function fetchFromPublicUrl(relativePathFromCorpusRoot: string): Promise<string> {
-  const headersList = await headers();
-  const host = headersList.get("host") || "brennerbot.org";
-  const protocol = headersList.get("x-forwarded-proto") || "https";
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = getTrustedPublicBaseUrl();
+  const safePath = relativePathFromCorpusRoot.replace(/^\//, "");
 
-  const url = `${baseUrl}/_corpus/${relativePathFromCorpusRoot}`;
+  const url = new URL(`/_corpus/${safePath}`, baseUrl);
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch operator library from ${url} (${response.status})`);
+    throw new Error(`Failed to fetch operator library from ${url.toString()} (${response.status})`);
   }
 
   return response.text();
+}
+
+function getTrustedPublicBaseUrl(): string {
+  const explicitBaseUrl = process.env.BRENNER_PUBLIC_BASE_URL?.trim();
+  if (explicitBaseUrl) {
+    return normalizeBaseUrl(explicitBaseUrl, "BRENNER_PUBLIC_BASE_URL");
+  }
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl}`;
+
+  if (process.env.NODE_ENV === "development") return "http://localhost:3000";
+
+  return "https://brennerbot.org";
+}
+
+function normalizeBaseUrl(value: string, envName: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${envName} must be an absolute http(s) URL (got "${value}")`);
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${envName} must be an absolute http(s) URL (got "${value}")`);
+  }
+
+  url.pathname = "";
+  url.search = "";
+  url.hash = "";
+
+  return url.toString().replace(/\/$/, "");
 }
 
 export async function readOperatorLibraryMarkdown(): Promise<string> {
@@ -203,4 +233,3 @@ export async function getOperatorPalette(): Promise<OperatorWithQuotes[]> {
   operatorPaletteCache = palette;
   return palette;
 }
-

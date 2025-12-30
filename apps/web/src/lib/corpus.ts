@@ -1,6 +1,5 @@
 import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
-import { headers } from "next/headers";
 
 /**
  * Document category type.
@@ -197,20 +196,50 @@ async function tryReadFromFilesystem(filename: string): Promise<string | null> {
  * Used when filesystem access is not available (Vercel serverless).
  */
 async function fetchFromPublicUrl(filename: string): Promise<string> {
-  // Get the host from request headers to construct the URL
-  const headersList = await headers();
-  const host = headersList.get("host") || "brennerbot.org";
-  const protocol = headersList.get("x-forwarded-proto") || "https";
-  const baseUrl = `${protocol}://${host}`;
+  const baseUrl = getTrustedPublicBaseUrl();
+  const safeFilename = filename.replace(/^\//, "");
+  const url = new URL(`/_corpus/${safeFilename}`, baseUrl);
 
-  const url = `${baseUrl}/_corpus/${filename}`;
   const response = await fetch(url);
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch corpus file: ${filename} (${response.status})`);
+    throw new Error(`Failed to fetch corpus file: ${safeFilename} (${response.status})`);
   }
 
   return response.text();
+}
+
+function getTrustedPublicBaseUrl(): string {
+  const explicitBaseUrl = process.env.BRENNER_PUBLIC_BASE_URL?.trim();
+  if (explicitBaseUrl) {
+    return normalizeBaseUrl(explicitBaseUrl, "BRENNER_PUBLIC_BASE_URL");
+  }
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) return `https://${vercelUrl}`;
+
+  if (process.env.NODE_ENV === "development") return "http://localhost:3000";
+
+  return "https://brennerbot.org";
+}
+
+function normalizeBaseUrl(value: string, envName: string): string {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error(`${envName} must be an absolute http(s) URL (got "${value}")`);
+  }
+
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`${envName} must be an absolute http(s) URL (got "${value}")`);
+  }
+
+  url.pathname = "";
+  url.search = "";
+  url.hash = "";
+
+  return url.toString().replace(/\/$/, "");
 }
 
 export async function listCorpusDocs(): Promise<CorpusDoc[]> {
