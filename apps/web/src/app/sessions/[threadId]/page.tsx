@@ -160,8 +160,8 @@ function MarkdownBody({ body }: { body: string }) {
 
 function MessageCard({ message, deltaSummary }: { message: AgentMailMessage; deltaSummary?: { valid: number; invalid: number; total: number } }) {
   return (
-    <details className="group rounded-xl border border-border bg-card p-4">
-      <summary className="cursor-pointer list-none space-y-2">
+    <details className="group rounded-xl border border-border bg-card p-4 transition-all">
+      <summary className="cursor-pointer list-none space-y-2 touch-manipulation rounded-lg -m-1 p-1 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
         <div className="flex items-start justify-between gap-4">
           <MessageHeader message={message} />
           <span className="text-xs text-muted-foreground font-mono">{formatTs(message.created_ts)}</span>
@@ -536,8 +536,8 @@ export default async function SessionDetailPage({
                   </div>
                 )}
 
-                <details className="rounded-lg border border-border bg-muted/30 p-3">
-                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                <details className="rounded-lg border border-border bg-muted/30 p-3 transition-all">
+                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation rounded-md -mx-1 px-1 py-0.5 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     Show full lint report
                   </summary>
                   <pre className="mt-2 text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-background p-3 overflow-auto max-h-[360px]">
@@ -545,8 +545,8 @@ export default async function SessionDetailPage({
                   </pre>
                 </details>
 
-                <details className="rounded-lg border border-border bg-muted/30 p-3">
-                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                <details className="rounded-lg border border-border bg-muted/30 p-3 transition-all">
+                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground touch-manipulation rounded-md -mx-1 px-1 py-0.5 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                     Show lint report JSON
                   </summary>
                   <pre className="mt-2 text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-background p-3 overflow-auto max-h-[360px]">
@@ -569,8 +569,8 @@ export default async function SessionDetailPage({
         ) : (
           <div className="space-y-3">
             {deltaMessages.map(({ message, parse }) => (
-              <details key={message.id} className="group rounded-xl border border-border bg-card p-4">
-                <summary className="cursor-pointer list-none space-y-2">
+              <details key={message.id} className="group rounded-xl border border-border bg-card p-4 transition-all">
+                <summary className="cursor-pointer list-none space-y-2 touch-manipulation rounded-lg -m-1 p-1 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <MessageHeader message={message} />
                   <MessageMeta message={message} />
                   {parse ? (
@@ -609,8 +609,8 @@ export default async function SessionDetailPage({
                                   Rationale: <span className="text-foreground/90">{d.rationale}</span>
                                 </div>
                               )}
-                              <details className="mt-2">
-                                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                              <details className="mt-2 transition-all">
+                                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground touch-manipulation rounded-md px-1 py-0.5 -mx-1 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                   Show raw JSON
                                 </summary>
                                 <pre className="mt-2 text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-background p-3 overflow-auto">
@@ -626,8 +626,8 @@ export default async function SessionDetailPage({
                               <div className="text-xs text-muted-foreground">
                                 {d.error}
                               </div>
-                              <details>
-                                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground">
+                              <details className="transition-all">
+                                <summary className="cursor-pointer text-xs text-muted-foreground hover:text-foreground touch-manipulation rounded-md px-1 py-0.5 -mx-1 transition-colors active:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                                   Show raw JSON
                                 </summary>
                                 <pre className="mt-2 text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-background p-3 overflow-auto">
