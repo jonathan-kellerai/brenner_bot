@@ -49,6 +49,10 @@ function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function ensureTrailingNewline(text: string): string {
+  return text.endsWith("\n") ? text : `${text}\n`;
+}
+
 function parseEnsureProjectSlug(result: Json): string | undefined {
   if (!isRecord(result)) return undefined;
 
@@ -168,6 +172,14 @@ function splitCsv(value: string | undefined): string[] {
 
 function readTextFile(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+function stdoutLine(message: string): void {
+  process.stdout.write(ensureTrailingNewline(message));
+}
+
+function stderrLine(message: string): void {
+  process.stderr.write(ensureTrailingNewline(message));
 }
 
 async function withWorkingDirectory<T>(cwd: string, fn: () => Promise<T>): Promise<T> {
@@ -362,7 +374,7 @@ function loadBrennerConfig(flags: ParsedArgs["flags"]): BrennerLoadedConfig {
     if (explicit) throw e;
 
     const msg = e instanceof Error ? e.message : String(e);
-    console.error(`Warning: ignoring invalid config at ${path}: ${msg}`);
+    stderrLine(`Warning: ignoring invalid config at ${path}: ${msg}`);
     return { path: null, config: {} };
   }
 }
@@ -1201,17 +1213,17 @@ async function main(): Promise<void> {
   const [top, sub, action] = positional;
 
   if (asBoolFlag(flags, "version")) {
-    console.log(formatBrennerVersionText(getBrennerBuildInfo()));
+    stdoutLine(formatBrennerVersionText(getBrennerBuildInfo()));
     process.exit(0);
   }
 
   if (!top || asBoolFlag(flags, "help") || top === "help" || top === "-h") {
-    console.log(usage());
+    stdoutLine(usage());
     process.exit(0);
   }
 
   if (top === "version") {
-    console.log(formatBrennerVersionText(getBrennerBuildInfo()));
+    stdoutLine(formatBrennerVersionText(getBrennerBuildInfo()));
     process.exit(0);
   }
 
@@ -1244,7 +1256,7 @@ async function main(): Promise<void> {
       const rawManifest = readTextFile(resolvedManifestPath);
       const parsed = parseManifest(rawManifest);
       if (!parsed.ok) {
-        console.error(parsed.error);
+        stderrLine(parsed.error);
         process.exit(1);
       }
       const platform = detectPlatform() ?? undefined;
@@ -1266,7 +1278,7 @@ async function main(): Promise<void> {
     } catch (e) {
       if (manifestPath) {
         const msg = e instanceof Error ? e.message : String(e);
-        console.error(`Failed to read manifest: ${msg}`);
+        stderrLine(`Failed to read manifest: ${msg}`);
         process.exit(1);
       }
     }
@@ -1361,9 +1373,9 @@ async function main(): Promise<void> {
         checks,
         warnings,
       };
-      console.log(JSON.stringify(payload, null, 2));
+      stdoutLine(JSON.stringify(payload, null, 2));
     } else {
-      console.log(formatDoctorHuman({ brenner: buildInfo, checks, warnings }));
+      stdoutLine(formatDoctorHuman({ brenner: buildInfo, checks, warnings }));
     }
 
     process.exit(exitCode);
@@ -1420,7 +1432,7 @@ async function main(): Promise<void> {
     lines.push("- Remove `--easy-mode` if you do not want PATH changes.");
     lines.push("- Remove `--verify` if you only want installation (not recommended).");
 
-    console.log(lines.join("\n"));
+    stdoutLine(lines.join("\n"));
     process.exit(0);
   }
 
@@ -1436,18 +1448,18 @@ async function main(): Promise<void> {
       try {
         const res = await fetch(`${baseUrl}/health/readiness`, { headers });
         const json = await res.json().catch(() => ({}));
-        console.log(JSON.stringify({ ok: res.ok, status: res.status, readiness: json }, null, 2));
+        stdoutLine(JSON.stringify({ ok: res.ok, status: res.status, readiness: json }, null, 2));
         process.exit(res.ok ? 0 : 1);
       } catch {
         const result = await client.toolsCall("health_check", {});
-        console.log(JSON.stringify(result, null, 2));
+        stdoutLine(JSON.stringify(result, null, 2));
         process.exit(0);
       }
     }
 
     if (sub === "tools") {
       const result = await client.toolsList();
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(0);
     }
 
@@ -1457,7 +1469,7 @@ async function main(): Promise<void> {
         : projectKey;
       if (!projectSlug) throw new Error("Agent Mail ensure_project did not return a project slug.");
       const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(0);
     }
 
@@ -1494,7 +1506,7 @@ async function main(): Promise<void> {
         });
         const actualName = parseAgentNameFromToolResult(registerResult);
         if (actualName && actualName !== sender) {
-          console.error(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
+          stderrLine(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
           sender = actualName;
         }
       }
@@ -1509,10 +1521,10 @@ async function main(): Promise<void> {
         ack_required: ackRequired,
       });
       if (isToolError(result)) {
-        console.error(JSON.stringify(result, null, 2));
+        stderrLine(JSON.stringify(result, null, 2));
         process.exit(1);
       }
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(0);
     }
 
@@ -1602,7 +1614,7 @@ async function main(): Promise<void> {
 
         if (!includeSummaries) {
           const out = { agent: agentName, threads: baseThreads };
-          console.log(JSON.stringify(out, null, 2));
+          stdoutLine(JSON.stringify(out, null, 2));
           process.exit(0);
         }
 
@@ -1681,9 +1693,9 @@ async function main(): Promise<void> {
           }
         }
 
-        console.log(JSON.stringify({ agent: agentName, threads: enriched }, null, 2));
+        stdoutLine(JSON.stringify({ agent: agentName, threads: enriched }, null, 2));
       } else {
-        console.log(JSON.stringify(result, null, 2));
+        stdoutLine(JSON.stringify(result, null, 2));
       }
 
       process.exit(0);
@@ -1700,7 +1712,7 @@ async function main(): Promise<void> {
         agent_name: agentName,
         message_id: messageId,
       });
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(0);
     }
 
@@ -1715,7 +1727,7 @@ async function main(): Promise<void> {
         agent_name: agentName,
         message_id: messageId,
       });
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(0);
     }
 
@@ -1731,7 +1743,7 @@ async function main(): Promise<void> {
         include_examples: includeExamples,
         llm_mode: llmMode,
       });
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(0);
     }
 
@@ -1749,20 +1761,20 @@ async function main(): Promise<void> {
       manifestJson = readTextFile(manifestPath);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.error(`Failed to read manifest: ${msg}`);
+      stderrLine(`Failed to read manifest: ${msg}`);
       process.exit(1);
     }
 
     const parseResult = parseManifest(manifestJson);
     if (!parseResult.ok) {
-      console.error(parseResult.error);
+      stderrLine(parseResult.error);
       process.exit(1);
     }
 
     // Detect or use override platform
     const platform = platformOverride ?? detectPlatform();
     if (!platform) {
-      console.error(
+      stderrLine(
         `Unsupported platform: ${process.platform}/${process.arch}\n` +
           `Supported: linux-x64, linux-arm64, darwin-arm64, darwin-x64, win-x64`
       );
@@ -1772,16 +1784,16 @@ async function main(): Promise<void> {
     // Validate platform override if provided
     const validPlatforms = ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64", "win-x64"];
     if (platformOverride && !validPlatforms.includes(platformOverride)) {
-      console.error(`Invalid --platform: ${platformOverride}\nSupported: ${validPlatforms.join(", ")}`);
+      stderrLine(`Invalid --platform: ${platformOverride}\nSupported: ${validPlatforms.join(", ")}`);
       process.exit(1);
     }
 
     const plan = generateInstallPlan(parseResult.manifest, platform);
 
     if (jsonMode) {
-      console.log(formatPlanJson(plan));
+      stdoutLine(formatPlanJson(plan));
     } else {
-      console.log(formatPlanHuman(plan));
+      stdoutLine(formatPlanHuman(plan));
     }
 
     process.exit(0);
@@ -1868,9 +1880,9 @@ async function main(): Promise<void> {
     }
 
     if (jsonMode) {
-      console.log(JSON.stringify(composed, null, 2));
+      stdoutLine(JSON.stringify(composed, null, 2));
     } else {
-      console.log(composed.markdown);
+      stdoutLine(composed.markdown);
     }
 
     process.exit(0);
@@ -1946,7 +1958,7 @@ async function main(): Promise<void> {
     }
 
     if (jsonMode) {
-      console.log(
+      stdoutLine(
         JSON.stringify(
           {
             ...result,
@@ -1975,7 +1987,7 @@ async function main(): Promise<void> {
       lines.push(`   ${toAbsoluteUrl(hit.url, publicBaseUrl)}`);
     }
 
-    console.log(lines.join("\n").trim());
+    stdoutLine(lines.join("\n").trim());
     process.exit(0);
   }
 
@@ -2014,7 +2026,7 @@ async function main(): Promise<void> {
       sessionId: asStringFlag(flags, "session"),
     });
 
-    console.log(JSON.stringify(result, null, 2));
+    stdoutLine(JSON.stringify(result, null, 2));
     process.exit(result.ok ? 0 : 1);
   }
 
@@ -2053,7 +2065,7 @@ async function main(): Promise<void> {
     });
     const actualName = parseAgentNameFromToolResult(registerResult);
     if (actualName && actualName !== sender) {
-      console.error(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
+      stderrLine(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
       sender = actualName;
     }
 
@@ -2081,10 +2093,10 @@ async function main(): Promise<void> {
       };
       if (memoryContext) {
         kickoffConfig.memoryContext = memoryContext;
-        console.error(`Injected MEMORY CONTEXT (cass-memory) via ${memoryResult.provenance.mode}.`);
+        stderrLine(`Injected MEMORY CONTEXT (cass-memory) via ${memoryResult.provenance.mode}.`);
       } else {
         const details = memoryResult.provenance.errors.join("; ");
-        console.error(
+        stderrLine(
           `No MEMORY CONTEXT injected (cass-memory ${memoryResult.provenance.mode}${details ? `: ${details}` : ""}).`
         );
       }
@@ -2113,14 +2125,14 @@ async function main(): Promise<void> {
         ack_required: true,
       });
       const payload = isRecord(result) ? { ...result, memory: memoryAudit } : { memory: memoryAudit, send: result };
-      console.log(JSON.stringify(payload, null, 2));
+      stdoutLine(JSON.stringify(payload, null, 2));
     } else {
       // Role-specific mode: each agent gets their role prompt
       const messages = composeKickoffMessages(kickoffConfig);
       const results: Json[] = [];
 
       for (const msg of messages) {
-        console.error(`Sending kickoff to ${msg.to} as ${msg.role.displayName}...`);
+        stderrLine(`Sending kickoff to ${msg.to} as ${msg.role.displayName}...`);
         const result = await client.toolsCall("send_message", {
           project_key: projectKey,
           sender_name: sender,
@@ -2133,7 +2145,7 @@ async function main(): Promise<void> {
         results.push(result);
       }
 
-      console.log(JSON.stringify({ memory: memoryAudit, sent: results.length, messages: results }, null, 2));
+      stdoutLine(JSON.stringify({ memory: memoryAudit, sent: results.length, messages: results }, null, 2));
     }
 
     process.exit(0);
@@ -2152,15 +2164,15 @@ async function main(): Promise<void> {
     const result = await compileSessionArtifact({ client, projectKey, threadId });
     if (!result.ok) {
       if (jsonMode) {
-        console.log(JSON.stringify(result, null, 2));
+        stdoutLine(JSON.stringify(result, null, 2));
       } else {
-        console.error(`Failed to compile artifact for thread ${threadId}.`);
+        stderrLine(`Failed to compile artifact for thread ${threadId}.`);
         if (result.deltas.total_blocks > 0) {
-          console.error(
+          stderrLine(
             `Delta blocks: ${result.deltas.valid} valid, ${result.deltas.invalid} invalid (total ${result.deltas.total_blocks}).`
           );
         }
-        console.error(JSON.stringify({ errors: result.errors, warnings: result.warnings }, null, 2));
+        stderrLine(JSON.stringify({ errors: result.errors, warnings: result.warnings }, null, 2));
       }
       process.exit(1);
     }
@@ -2172,29 +2184,29 @@ async function main(): Promise<void> {
 
     if (jsonMode) {
       const payload = outFile ? { ...result, out_file: outFile } : result;
-      console.log(JSON.stringify(payload, null, 2));
+      stdoutLine(JSON.stringify(payload, null, 2));
       process.exit(0);
     }
 
     process.stdout.write(result.markdown);
 
     if (outFile) {
-      console.error(`Wrote artifact to ${outFile}.`);
+      stderrLine(`Wrote artifact to ${outFile}.`);
     }
 
     if (result.deltas.total_blocks > 0) {
-      console.error(
+      stderrLine(
         `Delta blocks: ${result.deltas.valid} valid, ${result.deltas.invalid} invalid (total ${result.deltas.total_blocks}).`
       );
     }
     if (result.invalid_deltas.length > 0) {
-      console.error(`Invalid delta blocks (sample):`);
+      stderrLine(`Invalid delta blocks (sample):`);
       for (const item of result.invalid_deltas.slice(0, 5)) {
-        console.error(`- message ${item.message_id}: ${item.subject} → ${item.error}`);
+        stderrLine(`- message ${item.message_id}: ${item.subject} → ${item.error}`);
       }
     }
 
-    console.error(formatLintReportHuman(result.lint, `artifact v${result.version}`));
+    stderrLine(formatLintReportHuman(result.lint, `artifact v${result.version}`));
     process.exit(0);
   }
 
@@ -2210,7 +2222,7 @@ async function main(): Promise<void> {
 
     const result = await compileSessionArtifact({ client, projectKey, threadId });
     if (!result.ok) {
-      console.log(JSON.stringify(result, null, 2));
+      stdoutLine(JSON.stringify(result, null, 2));
       process.exit(1);
     }
 
@@ -2218,10 +2230,10 @@ async function main(): Promise<void> {
     writeFileSync(outFile, result.markdown, "utf8");
 
     if (jsonMode) {
-      console.log(JSON.stringify({ ...result, out_file: outFile }, null, 2));
+      stdoutLine(JSON.stringify({ ...result, out_file: outFile }, null, 2));
     } else {
-      console.error(`Wrote artifact to ${outFile}.`);
-      console.error(formatLintReportHuman(result.lint, `artifact v${result.version}`));
+      stderrLine(`Wrote artifact to ${outFile}.`);
+      stderrLine(formatLintReportHuman(result.lint, `artifact v${result.version}`));
     }
 
     process.exit(0);
@@ -2250,13 +2262,13 @@ async function main(): Promise<void> {
     });
     const actualName = parseAgentNameFromToolResult(registerResult);
     if (actualName && actualName !== sender) {
-      console.error(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
+      stderrLine(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
       sender = actualName;
     }
 
     const compiled = await compileSessionArtifact({ client, projectKey, threadId });
     if (!compiled.ok) {
-      console.log(JSON.stringify(compiled, null, 2));
+      stdoutLine(JSON.stringify(compiled, null, 2));
       process.exit(1);
     }
 
@@ -2274,10 +2286,10 @@ async function main(): Promise<void> {
 
     const payload = { compiled, send: sendResult };
     if (jsonMode) {
-      console.log(JSON.stringify(payload, null, 2));
+      stdoutLine(JSON.stringify(payload, null, 2));
     } else {
-      console.log(JSON.stringify(sendResult, null, 2));
-      console.error(formatLintReportHuman(compiled.lint, `artifact v${compiled.version}`));
+      stdoutLine(JSON.stringify(sendResult, null, 2));
+      stderrLine(formatLintReportHuman(compiled.lint, `artifact v${compiled.version}`));
     }
 
     process.exit(isToolError(sendResult) ? 1 : 0);
@@ -2318,7 +2330,7 @@ async function main(): Promise<void> {
 
     while (!status.isComplete) {
       if (Date.now() - startMs > timeoutMs) {
-        console.error(`Timed out after ${timeoutSeconds}s waiting for roles to complete in thread ${threadId}.`);
+        stderrLine(`Timed out after ${timeoutSeconds}s waiting for roles to complete in thread ${threadId}.`);
         process.exit(2);
       }
 
@@ -2347,6 +2359,6 @@ async function main(): Promise<void> {
 
 main().catch((err) => {
   const message = err instanceof Error ? err.message : String(err);
-  console.error(message);
+  stderrLine(message);
   process.exit(1);
 });
