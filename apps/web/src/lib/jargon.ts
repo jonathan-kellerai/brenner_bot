@@ -3282,18 +3282,6 @@ export const jargonDictionary: Record<string, JargonTerm> = {
 
   // --- Development and Cell Biology ---
 
-  "cell-lineage": {
-    term: "Cell Lineage",
-    short: "The complete history of cell divisions from egg to adult.",
-    long:
-      "Cell lineage traces every cell division from the fertilized egg, showing exactly which cells give rise to which others. In C. elegans, the lineage is invariant: the same cell divisions always produce the same cells in every worm.",
-    why:
-      "Brenner felt that 'lineage would be very important. Perhaps there was some mechanism here in which when cells divided they actually computed their future fate.' Lineage became central to C. elegans biology. Transcript anchor: §201.",
-    analogy:
-      "A family tree showing who begat whom, except for every cell in the body.",
-    related: ["apoptosis", "digital-vs-analogue", "invariant-cell-number"],
-    category: "biology",
-  },
   "digital-vs-analogue": {
     term: "Digital vs Analogue Development",
     short: "Cell fate determined by lineage (digital) versus gradients (analogue).",
