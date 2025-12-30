@@ -12,8 +12,9 @@ import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    // Use Bun's native test runner environment
-    environment: "node",
+    // Use happy-dom for React component testing (faster than jsdom)
+    // Node environment is auto-selected for non-tsx files
+    environment: "happy-dom",
 
     // Include test files matching these patterns
     include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
@@ -56,6 +57,9 @@ export default defineConfig({
 
     // Globals (describe, it, expect) - auto-imported
     globals: true,
+
+    // Setup files for extending expect and test utilities
+    setupFiles: ["./src/test-setup.ts"],
   },
 
   resolve: {
