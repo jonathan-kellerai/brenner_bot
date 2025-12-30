@@ -163,7 +163,7 @@ export async function prefetchCorpusSearch(
   if (query.length < 2) return;
 
   await queryClient.prefetchQuery({
-    queryKey: corpusSearchKeys.query(query, options),
+    queryKey: corpusSearchKeys.query(query, options as Record<string, unknown> | undefined),
     queryFn: () => searchAction(query, options),
   });
 }
