@@ -7,8 +7,15 @@ import rehypeHighlight from "rehype-highlight";
 import { RefreshControls, SessionActions } from "@/components/sessions";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
+import {
+  createEmptyArtifact,
+  formatLintReportHuman,
+  formatLintReportJson,
+  lintArtifact,
+  mergeArtifactWithTimestamps,
+} from "@/lib/artifact-merge";
 import { computeThreadStatusFromThread, parseSubjectType } from "@/lib/threadStatus";
-import { parseDeltaMessage } from "@/lib/delta-parser";
+import { parseDeltaMessage, type ValidDelta } from "@/lib/delta-parser";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -196,6 +203,100 @@ function MessageCard({ message, deltaSummary }: { message: AgentMailMessage; del
   );
 }
 
+type CompiledLintState =
+  | {
+      ok: true;
+      report: ReturnType<typeof lintArtifact>;
+      reportHuman: string;
+      reportJson: string;
+      deltaMessagesAfterCompile: number;
+      deltaStats: { deltaMessageCount: number; totalBlocks: number; validBlocks: number; invalidBlocks: number };
+      merge: { applied: number; skipped: number; warningCount: number };
+    }
+  | {
+      ok: false;
+      error: string;
+      deltaMessagesAfterCompile: number;
+    };
+
+function computeLintForLatestCompiled(params: {
+  threadId: string;
+  compiledAt: string;
+  compiledVersion: number | null;
+  kickoffCreatedAt: string | null;
+  messages: AgentMailMessage[];
+}): CompiledLintState {
+  const compiledMs = Date.parse(params.compiledAt);
+  const compiledCutoff = Number.isNaN(compiledMs) ? null : compiledMs;
+
+  const deltaMessages = params.messages.filter((m) => parseSubjectType(m.subject).type === "delta");
+  const deltaMessagesAfterCompile =
+    compiledCutoff === null
+      ? 0
+      : deltaMessages.filter((m) => Date.parse(m.created_ts) > compiledCutoff).length;
+
+  const base = createEmptyArtifact(params.threadId);
+  const createdAt = params.kickoffCreatedAt ?? params.compiledAt;
+  base.metadata.created_at = createdAt;
+  base.metadata.updated_at = createdAt;
+
+  const collected: Array<ValidDelta & { timestamp: string; agent: string }> = [];
+  let totalBlocks = 0;
+  let validBlocks = 0;
+  let invalidBlocks = 0;
+
+  for (const message of deltaMessages) {
+    if (compiledCutoff !== null && Date.parse(message.created_ts) > compiledCutoff) continue;
+    const body = message.body_md ?? "";
+    const parsed = parseDeltaMessage(body);
+    totalBlocks += parsed.totalBlocks;
+    validBlocks += parsed.validCount;
+    invalidBlocks += parsed.invalidCount;
+
+    const agent = message.from?.trim() || "unknown";
+    const timestamp = message.created_ts;
+    for (const delta of parsed.deltas) {
+      if (!delta.valid) continue;
+      collected.push({ ...delta, timestamp, agent });
+    }
+  }
+
+  const merge = mergeArtifactWithTimestamps(base, collected);
+  if (!merge.ok) {
+    return {
+      ok: false,
+      error: "Merge failed; cannot compute lint report for latest compiled artifact.",
+      deltaMessagesAfterCompile,
+    };
+  }
+
+  const artifact = merge.artifact;
+  artifact.metadata.version = params.compiledVersion ?? Math.max(1, artifact.metadata.version);
+  artifact.metadata.updated_at = params.compiledAt;
+  artifact.metadata.status = "active";
+
+  const report = lintArtifact(artifact);
+
+  return {
+    ok: true,
+    report,
+    reportHuman: formatLintReportHuman(report, params.threadId),
+    reportJson: formatLintReportJson(report, params.threadId),
+    deltaMessagesAfterCompile,
+    deltaStats: {
+      deltaMessageCount: deltaMessages.length,
+      totalBlocks,
+      validBlocks,
+      invalidBlocks,
+    },
+    merge: {
+      applied: merge.applied_count,
+      skipped: merge.skipped_count,
+      warningCount: merge.warnings.length,
+    },
+  };
+}
+
 export default async function SessionDetailPage({
   params,
 }: {
@@ -268,6 +369,15 @@ export default async function SessionDetailPage({
     });
 
   const latestArtifactBody = status.latestArtifact?.message.body_md ?? null;
+  const latestCompiledMeta = status.latestArtifact
+    ? computeLintForLatestCompiled({
+        threadId,
+        compiledAt: status.latestArtifact.compiledAt,
+        compiledVersion: status.latestArtifact.version,
+        kickoffCreatedAt: status.kickoff?.created_ts ?? null,
+        messages: messagesSorted,
+      })
+    : null;
   const kickoffMessage = messagesSorted.find((m) => parseSubjectType(m.subject).type === "kickoff");
   const kickoffSender = kickoffMessage?.from ?? "";
   const kickoffRecipients = kickoffMessage?.to ?? [];
@@ -373,14 +483,78 @@ export default async function SessionDetailPage({
           <span className="text-xs text-muted-foreground">From latest <span className="font-mono">COMPILED:</span> message</span>
         </div>
 
-        <div className="rounded-xl border border-border bg-card p-5">
-          {latestArtifactBody ? (
-            <MarkdownBody body={latestArtifactBody} />
-          ) : (
-            <div className="text-sm text-muted-foreground">
-              No compiled artifact found yet. Once a <span className="font-mono">COMPILED:</span> message is posted to the thread, it will appear here.
+        <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
+          <div className="rounded-xl border border-border bg-card p-5">
+            {latestArtifactBody ? (
+              <MarkdownBody body={latestArtifactBody} />
+            ) : (
+              <div className="text-sm text-muted-foreground">
+                No compiled artifact found yet. Once a <span className="font-mono">COMPILED:</span> message is posted to the thread, it will appear here.
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold tracking-tight">Lint Report</h3>
+              {latestCompiledMeta?.ok && (
+                <span
+                  className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${latestCompiledMeta.report.valid ? "bg-success/15 text-success border border-success/20" : "bg-destructive/15 text-destructive border border-destructive/20"}`}
+                >
+                  {latestCompiledMeta.report.valid ? "VALID" : "INVALID"}
+                </span>
+              )}
             </div>
-          )}
+
+            {!status.latestArtifact ? (
+              <div className="text-sm text-muted-foreground">
+                No compiled artifact yet. Run <span className="font-mono">Compile</span> to see lint results.
+              </div>
+            ) : latestCompiledMeta && !latestCompiledMeta.ok ? (
+              <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-muted-foreground">
+                <div className="font-semibold text-warning">Lint unavailable</div>
+                <div className="mt-1">{latestCompiledMeta.error}</div>
+              </div>
+            ) : latestCompiledMeta && latestCompiledMeta.ok ? (
+              <>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-foreground border border-border">
+                    {latestCompiledMeta.report.summary.errors} errors
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-foreground border border-border">
+                    {latestCompiledMeta.report.summary.warnings} warnings
+                  </span>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-muted text-foreground border border-border">
+                    {latestCompiledMeta.report.summary.info} info
+                  </span>
+                </div>
+
+                {latestCompiledMeta.deltaMessagesAfterCompile > 0 && (
+                  <div className="text-xs text-warning">
+                    {latestCompiledMeta.deltaMessagesAfterCompile} DELTA message(s) arrived after this compile. Re-run Compile to refresh.
+                  </div>
+                )}
+
+                <details className="rounded-lg border border-border bg-muted/30 p-3">
+                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                    Show full lint report
+                  </summary>
+                  <pre className="mt-2 text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-background p-3 overflow-auto max-h-[360px]">
+                    {latestCompiledMeta.reportHuman}
+                  </pre>
+                </details>
+
+                <details className="rounded-lg border border-border bg-muted/30 p-3">
+                  <summary className="cursor-pointer list-none text-xs font-medium text-muted-foreground hover:text-foreground">
+                    Show lint report JSON
+                  </summary>
+                  <pre className="mt-2 text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-background p-3 overflow-auto max-h-[360px]">
+                    {latestCompiledMeta.reportJson}
+                  </pre>
+                </details>
+              </>
+            ) : null}
+          </div>
         </div>
       </section>
 

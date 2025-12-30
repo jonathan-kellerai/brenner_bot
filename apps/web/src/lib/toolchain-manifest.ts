@@ -103,11 +103,8 @@ export function detectPlatform(): PlatformString | null {
  * Convert platform string to OS/ARCH variables for URL template substitution.
  */
 export function platformToOsArch(platform: PlatformString): { os: string; arch: string } {
-  const parts = platform.split("-");
-  return {
-    os: parts[0]!,
-    arch: parts[1]!,
-  };
+  const [os = "", arch = ""] = platform.split("-");
+  return { os, arch };
 }
 
 // -----------------------------------------------------------------------------

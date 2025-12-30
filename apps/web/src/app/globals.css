@@ -2853,12 +2853,16 @@ p, li, span, div {
   }
 
   .toast-close {
-    @apply size-6 rounded-full flex items-center justify-center text-muted-foreground;
-    transition: background-color var(--duration-fast) var(--ease-out);
+    @apply size-8 rounded-full flex items-center justify-center text-muted-foreground touch-manipulation;
+    transition: all var(--duration-fast) var(--ease-out);
   }
 
   .toast-close:hover {
     @apply bg-muted;
+  }
+
+  .toast-close:active {
+    @apply scale-90 bg-muted;
   }
 
   /* Toast progress bar */

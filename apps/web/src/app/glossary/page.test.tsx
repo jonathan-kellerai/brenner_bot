@@ -79,7 +79,7 @@ describe("GlossaryPage", () => {
       render(<GlossaryPage />);
 
       const categoryCounts = getCategoryCounts();
-      for (const [category, _count] of categoryCounts) {
+      for (const [category] of categoryCounts) {
         // Look for button containing category name - use getAllByRole to handle duplicates
         const categoryButtons = screen.getAllByRole("button", {
           name: new RegExp(category, "i"),

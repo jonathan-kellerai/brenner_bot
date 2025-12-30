@@ -223,7 +223,11 @@ export async function getOperatorPalette(): Promise<OperatorWithQuotes[]> {
     const quotes = quoteBank.quotes.filter((q) => q.tags.includes(operator.canonicalTag));
     const supportingQuotes = quotes.filter((q) => operator.quoteBankAnchors.includes(q.sectionId));
 
-    return Object.assign({}, operator, { quotes, supportingQuotes });
+    return {
+      ...operator,
+      quotes,
+      supportingQuotes,
+    };
   });
 
   operatorPaletteCache = palette;

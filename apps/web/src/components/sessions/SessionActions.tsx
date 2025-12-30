@@ -166,11 +166,14 @@ export function SessionActions({
         </div>
       </div>
 
-      <details className="group rounded-lg border border-border bg-muted/30 p-4">
-        <summary className="cursor-pointer list-none text-sm text-muted-foreground group-open:text-foreground">
-          Configure sender/recipients
+      <details className="group rounded-xl border border-border bg-muted/30 overflow-hidden">
+        <summary className="cursor-pointer list-none p-4 text-sm text-muted-foreground group-open:text-foreground hover:bg-muted/50 active:bg-muted/70 transition-colors touch-manipulation flex items-center justify-between">
+          <span>Configure sender/recipients</span>
+          <svg className="size-4 text-muted-foreground transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+          </svg>
         </summary>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+        <div className="px-4 pb-4 grid gap-4 sm:grid-cols-2">
           <Input
             label="Sender"
             value={sender}
@@ -187,7 +190,7 @@ export function SessionActions({
           />
         </div>
         {!hasCompiledArtifact && (
-          <p className="mt-3 text-xs text-muted-foreground">
+          <p className="px-4 pb-4 text-xs text-muted-foreground">
             Request Critique is disabled until a <span className="font-mono">COMPILED:</span> message exists in the thread.
           </p>
         )}
@@ -206,15 +209,18 @@ export function SessionActions({
       )}
 
       {compilePreview && (
-        <details className="rounded-lg border border-border bg-background p-4">
-          <summary className="cursor-pointer list-none text-sm font-medium">
-            Preview: compiled v{compilePreview.version} (lint: {compilePreview.lint.summary.errors}e/{compilePreview.lint.summary.warnings}w)
+        <details className="group rounded-xl border border-border bg-background overflow-hidden">
+          <summary className="cursor-pointer list-none p-4 text-sm font-medium hover:bg-muted/50 active:bg-muted/70 transition-colors touch-manipulation flex items-center justify-between gap-2">
+            <span>Preview: compiled v{compilePreview.version} (lint: {compilePreview.lint.summary.errors}e/{compilePreview.lint.summary.warnings}w)</span>
+            <svg className="size-4 text-muted-foreground flex-shrink-0 transition-transform group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
           </summary>
-          <div className="mt-3 space-y-3">
+          <div className="px-4 pb-4 space-y-3">
             <div className="text-xs text-muted-foreground font-mono">
               {compilePreview.deltaStats.deltaMessageCount} delta messages • {compilePreview.deltaStats.validBlocks}/{compilePreview.deltaStats.totalBlocks} valid blocks • applied {compilePreview.merge.applied}, skipped {compilePreview.merge.skipped}
             </div>
-            <pre className="text-xs font-mono whitespace-pre-wrap rounded-md border border-border bg-muted/30 p-3 overflow-auto max-h-[420px]">
+            <pre className="text-xs font-mono whitespace-pre-wrap rounded-lg border border-border bg-muted/30 p-3 overflow-auto max-h-[420px]">
               {compilePreview.artifactMarkdown}
             </pre>
           </div>

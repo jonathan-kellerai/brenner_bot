@@ -89,7 +89,7 @@ export function parseQuoteBank(markdown: string): ParsedQuoteBank {
     const sectionTitle = match[2].trim();
 
     // Get content between this header and the next
-    const startIndex = match.index! + match[0].length;
+    const startIndex = (match.index ?? 0) + match[0].length;
     const endIndex = sectionMatches[i + 1]?.index ?? markdown.length;
     const sectionContent = markdown.slice(startIndex, endIndex);
 
