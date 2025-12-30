@@ -10,10 +10,11 @@
 import { describe, expect, test } from "vitest";
 import {
   createEmptyArtifact,
+  lintArtifact,
   mergeArtifact,
   mergeArtifactWithTimestamps,
+  renderArtifactMarkdown,
   validateArtifact,
-  type Artifact,
 } from "./artifact-merge";
 import { type ValidDelta, type DeltaSection } from "./delta-parser";
 
@@ -611,5 +612,238 @@ describe("validateArtifact", () => {
     expect(warnings.some((w) => w.code === "BELOW_MINIMUM")).toBe(true);
     expect(warnings.some((w) => w.code === "NO_THIRD_ALTERNATIVE")).toBe(true);
     expect(warnings.some((w) => w.code === "NO_SCALE_CHECK")).toBe(true);
+  });
+});
+
+// ============================================================================
+// Tests: Rendering + Linting
+// ============================================================================
+
+describe("renderArtifactMarkdown", () => {
+  test("renders canonical markdown with required section headers", () => {
+    const artifact = createEmptyArtifact("TEST-RENDER");
+
+    const deltas: ValidDelta[] = [
+      makeValidDelta("EDIT", "research_thread", null, {
+        statement: "What is X?",
+        context: "Background context.",
+        why_it_matters: "It matters because Y.",
+        anchors: ["§1"],
+      }),
+      makeValidDelta("ADD", "hypothesis_slate", null, {
+        name: "H1",
+        claim: "A",
+        mechanism: "M",
+        anchors: ["§2"],
+      }),
+      makeValidDelta("ADD", "hypothesis_slate", null, {
+        name: "H2",
+        claim: "B",
+        mechanism: "M",
+        anchors: ["§3"],
+      }),
+      makeValidDelta("ADD", "hypothesis_slate", null, {
+        name: "Third Alternative",
+        claim: "Both could be wrong",
+        mechanism: "Misspecification",
+        anchors: ["inference"],
+        third_alternative: true,
+      }),
+      makeValidDelta("ADD", "predictions_table", null, {
+        condition: "Condition 1",
+        predictions: { H1: "X", H2: "Y", H3: "indeterminate" },
+      }),
+      makeValidDelta("ADD", "predictions_table", null, {
+        condition: "Condition 2",
+        predictions: { H1: "X", H2: "X", H3: "indeterminate" },
+      }),
+      makeValidDelta("ADD", "predictions_table", null, {
+        condition: "Condition 3",
+        predictions: { H1: "Y", H2: "X", H3: "indeterminate" },
+      }),
+      makeValidDelta("ADD", "discriminative_tests", null, {
+        name: "Test 1",
+        procedure: "Do thing",
+        discriminates: "H1 vs H2",
+        expected_outcomes: { H1: "A", H2: "B" },
+        potency_check: "Control",
+        score: { likelihood_ratio: 3, cost: 2, speed: 2, ambiguity: 3 },
+      }),
+      makeValidDelta("ADD", "discriminative_tests", null, {
+        name: "Test 2",
+        procedure: "Do other thing",
+        discriminates: "H1 vs H2",
+        expected_outcomes: { H1: "A2", H2: "B2" },
+        potency_check: "Control 2",
+        score: { likelihood_ratio: 2, cost: 2, speed: 2, ambiguity: 2 },
+      }),
+      makeValidDelta("ADD", "assumption_ledger", null, {
+        name: "Assumption 1",
+        statement: "S1",
+        load: "L1",
+        test: "T1",
+        scale_check: true,
+        calculation: "1e3 > 1e2",
+      }),
+      makeValidDelta("ADD", "assumption_ledger", null, {
+        name: "Assumption 2",
+        statement: "S2",
+        load: "L2",
+        test: "T2",
+      }),
+      makeValidDelta("ADD", "assumption_ledger", null, {
+        name: "Assumption 3",
+        statement: "S3",
+        load: "L3",
+        test: "T3",
+      }),
+      makeValidDelta("ADD", "adversarial_critique", null, {
+        name: "Critique 1",
+        attack: "Attack",
+        evidence: "Evidence",
+        current_status: "Status",
+        real_third_alternative: true,
+      }),
+      makeValidDelta("ADD", "adversarial_critique", null, {
+        name: "Critique 2",
+        attack: "Attack 2",
+        evidence: "Evidence 2",
+        current_status: "Status 2",
+      }),
+    ];
+
+    const merged = mergeArtifact(artifact, deltas, "Agent1", "2025-01-01T00:00:00Z");
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+
+    const md = renderArtifactMarkdown(merged.artifact);
+    expect(md).toContain('session_id: "TEST-RENDER"');
+    expect(md).toContain("# Brenner Protocol Artifact: TEST-RENDER");
+
+    expect(md).toContain("## 1. Research Thread");
+    expect(md).toContain("## 2. Hypothesis Slate");
+    expect(md).toContain("## 3. Predictions Table");
+    expect(md).toContain("## 4. Discriminative Tests");
+    expect(md).toContain("## 5. Assumption Ledger");
+    expect(md).toContain("## 6. Anomaly Register");
+    expect(md).toContain("## 7. Adversarial Critique");
+
+    // Predictions table should include hypothesis ID columns
+    expect(md).toContain("| ID | Observation/Condition | H1 | H2 | H3 |");
+
+    // Empty anomaly register should be explicit
+    expect(md).toContain("None registered.");
+  });
+});
+
+describe("lintArtifact", () => {
+  test("flags missing required content as errors", () => {
+    const artifact = createEmptyArtifact("TEST-LINT");
+    const report = lintArtifact(artifact);
+
+    expect(report.valid).toBe(false);
+    expect(report.summary.errors).toBeGreaterThan(0);
+    expect(report.violations.some((v) => v.id === "ER-001")).toBe(true);
+    expect(report.violations.some((v) => v.id === "EH-003")).toBe(true);
+  });
+
+  test("returns valid when minimum guardrails are satisfied", () => {
+    const base = createEmptyArtifact("TEST-LINT-OK");
+    const deltas: ValidDelta[] = [
+      makeValidDelta("EDIT", "research_thread", null, {
+        statement: "What is X?",
+        context: "Background context.",
+        why_it_matters: "It matters because Y.",
+        anchors: ["§1"],
+      }),
+      makeValidDelta("ADD", "hypothesis_slate", null, {
+        name: "H1",
+        claim: "A",
+        mechanism: "M",
+        anchors: ["§2"],
+      }),
+      makeValidDelta("ADD", "hypothesis_slate", null, {
+        name: "H2",
+        claim: "B",
+        mechanism: "M",
+        anchors: ["§3"],
+      }),
+      makeValidDelta("ADD", "hypothesis_slate", null, {
+        name: "Third Alternative",
+        claim: "Both could be wrong",
+        mechanism: "Misspecification",
+        anchors: ["inference"],
+        third_alternative: true,
+      }),
+      makeValidDelta("ADD", "predictions_table", null, {
+        condition: "Condition 1",
+        predictions: { H1: "X", H2: "Y", H3: "indeterminate" },
+      }),
+      makeValidDelta("ADD", "predictions_table", null, {
+        condition: "Condition 2",
+        predictions: { H1: "X", H2: "X", H3: "indeterminate" },
+      }),
+      makeValidDelta("ADD", "predictions_table", null, {
+        condition: "Condition 3",
+        predictions: { H1: "Y", H2: "X", H3: "indeterminate" },
+      }),
+      makeValidDelta("ADD", "discriminative_tests", null, {
+        name: "Test 1",
+        procedure: "Do thing",
+        discriminates: "H1 vs H2",
+        expected_outcomes: { H1: "A", H2: "B" },
+        potency_check: "Control",
+        score: { likelihood_ratio: 3, cost: 2, speed: 2, ambiguity: 3 },
+      }),
+      makeValidDelta("ADD", "discriminative_tests", null, {
+        name: "Test 2",
+        procedure: "Do other thing",
+        discriminates: "H1 vs H2",
+        expected_outcomes: { H1: "A2", H2: "B2" },
+        potency_check: "Control 2",
+        score: { likelihood_ratio: 2, cost: 2, speed: 2, ambiguity: 2 },
+      }),
+      makeValidDelta("ADD", "assumption_ledger", null, {
+        name: "Assumption 1",
+        statement: "S1",
+        load: "L1",
+        test: "T1",
+        scale_check: true,
+        calculation: "1e3 > 1e2",
+      }),
+      makeValidDelta("ADD", "assumption_ledger", null, {
+        name: "Assumption 2",
+        statement: "S2",
+        load: "L2",
+        test: "T2",
+      }),
+      makeValidDelta("ADD", "assumption_ledger", null, {
+        name: "Assumption 3",
+        statement: "S3",
+        load: "L3",
+        test: "T3",
+      }),
+      makeValidDelta("ADD", "adversarial_critique", null, {
+        name: "Critique 1",
+        attack: "Attack",
+        evidence: "Evidence",
+        current_status: "Status",
+        real_third_alternative: true,
+      }),
+      makeValidDelta("ADD", "adversarial_critique", null, {
+        name: "Critique 2",
+        attack: "Attack 2",
+        evidence: "Evidence 2",
+        current_status: "Status 2",
+      }),
+    ];
+
+    const merged = mergeArtifact(base, deltas, "Agent1", "2025-01-01T00:00:00Z");
+    expect(merged.ok).toBe(true);
+    if (!merged.ok) return;
+
+    const report = lintArtifact(merged.artifact);
+    expect(report.valid).toBe(true);
+    expect(report.summary.errors).toBe(0);
   });
 });

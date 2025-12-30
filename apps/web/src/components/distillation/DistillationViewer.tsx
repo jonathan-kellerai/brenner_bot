@@ -278,6 +278,24 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
 }
 
 // ============================================================================
+// RAW CONTENT FALLBACK (for unstructured files)
+// ============================================================================
+
+function RawContentFallback({ content }: { content: string }) {
+  const paragraphs = content.split(/\n\n+/).filter(Boolean);
+
+  return (
+    <div className="prose prose-lg dark:prose-invert max-w-none">
+      {paragraphs.map((para, i) => (
+        <p key={i} className="text-base lg:text-lg leading-relaxed text-foreground/85 mb-4">
+          {para}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN VIEWER
 // ============================================================================
 
@@ -323,15 +341,19 @@ export function DistillationViewer({ data, docId }: DistillationViewerProps) {
       />
 
       <div className="max-w-3xl mx-auto">
-        {data.parts.map((part) => (
-          <div key={part.number}>
-            {data.parts.length > 1 && <PartHeader part={part} docId={docId} />}
+        {data.parts.length > 0 ? (
+          data.parts.map((part) => (
+            <div key={part.number}>
+              {data.parts.length > 1 && <PartHeader part={part} docId={docId} />}
 
-            {part.sections.map((section, i) => (
-              <Section key={i} section={section} docId={docId} />
-            ))}
-          </div>
-        ))}
+              {part.sections.map((section, i) => (
+                <Section key={i} section={section} docId={docId} />
+              ))}
+            </div>
+          ))
+        ) : data.rawContent ? (
+          <RawContentFallback content={data.rawContent} />
+        ) : null}
       </div>
 
       {/* Back to top */}

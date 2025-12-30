@@ -34,6 +34,7 @@ export interface ParsedDistillation {
   subtitle?: string;
   preamble?: string;
   parts: DistillationPart[];
+  rawContent?: string;
   wordCount: number;
 }
 
@@ -278,13 +279,33 @@ export function parseDistillation(markdown: string, docId: string): ParsedDistil
   }
 
   // Extract preamble (content between title and first PART/section)
+  // Only use narrative preambles - skip technical metadata with lists/code
   let preamble: string | undefined;
   const preambleMatch = markdown.match(
     /^#\s+.+\n+(?:\*[^*]+\*\n+)?(?:---\n+)?([\s\S]+?)(?=^#\s+PART|^##\s+)/m
   );
   if (preambleMatch) {
-    preamble = preambleMatch[1].trim().replace(/^>\s*/gm, "").replace(/\n+/g, " ");
+    const rawPreamble = preambleMatch[1].trim();
+    // Skip if it contains bullet points, backticks, or looks like technical metadata
+    const hasBullets = /^[-*]\s+/m.test(rawPreamble);
+    const hasCode = /`[^`]+`/.test(rawPreamble);
+    const hasFileRefs = /\.(md|ts|json|js)\b/.test(rawPreamble);
+    if (!hasBullets && !hasCode && !hasFileRefs) {
+      preamble = rawPreamble
+        .replace(/^>\s*/gm, "")           // Strip blockquote markers
+        .replace(/^##\s+.+$/gm, "")       // Strip section headers
+        .replace(/^---+$/gm, "")          // Strip horizontal rules
+        .replace(/\*\*([^*]+)\*\*/g, "$1") // Strip bold markers
+        .replace(/\*([^*]+)\*/g, "$1")    // Strip italic markers
+        .replace(/\n+/g, " ")             // Join lines
+        .replace(/\s+/g, " ")             // Normalize whitespace
+        .trim();
+      // Clear preamble if it ended up empty after stripping
+      if (!preamble) preamble = undefined;
+    }
   }
+
+  const rawContent = parts.length === 0 ? markdown.trim() : undefined;
 
   return {
     title,
@@ -292,6 +313,7 @@ export function parseDistillation(markdown: string, docId: string): ParsedDistil
     subtitle,
     preamble,
     parts,
+    rawContent,
     wordCount,
   };
 }

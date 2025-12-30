@@ -305,7 +305,7 @@ function applyAdd(
   artifact: Artifact,
   delta: TimestampedDelta,
   errors: MergeError[],
-  warnings: MergeWarning[],
+  _warnings: MergeWarning[],
 ): boolean {
   const { section, payload, raw } = delta;
 
@@ -914,7 +914,7 @@ function renderHypothesisSlate(items: HypothesisItem[]): string[] {
   for (const h of sortById(items)) {
     const thirdAlt = h.third_alternative === true;
     const name = escapeInline(h.name);
-    const title = thirdAlt && !/third\\s+alternative/i.test(name) ? `${name} (Third Alternative)` : name;
+    const title = thirdAlt && !/third\s+alternative/i.test(name) ? `${name} (Third Alternative)` : name;
     const heading = isKilled(h) ? `### ~~${h.id}: ${title}~~` : `### ${h.id}: ${title}`;
     lines.push(heading);
     lines.push(`**Claim**: ${escapeInline(h.claim)}`);
@@ -1075,4 +1075,414 @@ export function renderArtifactMarkdown(artifact: Artifact): string {
   lines.push(...renderCritiques(artifact.sections.adversarial_critique));
 
   return lines.join("\n").trimEnd() + "\n";
+}
+
+// ============================================================================
+// Artifact Linter (Guardrails)
+// ============================================================================
+
+export type LintSeverity = "error" | "warning" | "info";
+
+export interface LintViolation {
+  id: string;
+  severity: LintSeverity;
+  message: string;
+  fix?: string;
+}
+
+export interface LintReport {
+  valid: boolean;
+  summary: { errors: number; warnings: number; info: number };
+  violations: LintViolation[];
+}
+
+function severityRank(severity: LintSeverity): number {
+  switch (severity) {
+    case "error":
+      return 0;
+    case "warning":
+      return 1;
+    case "info":
+      return 2;
+  }
+}
+
+function isIsoTimestamp(value: string): boolean {
+  return typeof value === "string" && value.trim().length > 0 && !Number.isNaN(Date.parse(value));
+}
+
+function isAllowedStatus(status: string): boolean {
+  return status === "draft" || status === "active" || status === "closed";
+}
+
+function hasThirdAlternative(hypotheses: HypothesisItem[]): boolean {
+  return hypotheses.some((h) => {
+    if (isKilled(h)) return false;
+    if (h.third_alternative === true) return true;
+    return typeof h.name === "string" && /third\s+alternative/i.test(h.name);
+  });
+}
+
+function hasScaleCheck(assumptions: AssumptionItem[]): boolean {
+  return assumptions.some((a) => !isKilled(a) && a.scale_check === true);
+}
+
+function pushViolation(violations: LintViolation[], violation: LintViolation): void {
+  violations.push(violation);
+}
+
+/**
+ * Lint an artifact object against machine-checkable guardrails.
+ *
+ * This lints the structured artifact (not raw markdown), so line numbers are not provided.
+ */
+export function lintArtifact(artifact: Artifact): LintReport {
+  const violations: LintViolation[] = [];
+
+  // --------------------------------------------------------------------------
+  // Metadata (M)
+  // --------------------------------------------------------------------------
+
+  if (!artifact.metadata.session_id || artifact.metadata.session_id.trim().length === 0) {
+    pushViolation(violations, {
+      id: "EM-002",
+      severity: "error",
+      message: "Metadata.session_id is required",
+      fix: "Set artifact.metadata.session_id to a non-empty thread/session identifier",
+    });
+  }
+
+  if (!isIsoTimestamp(artifact.metadata.created_at)) {
+    pushViolation(violations, {
+      id: "EM-003",
+      severity: "error",
+      message: "Metadata.created_at must be an ISO-8601 timestamp",
+      fix: "Set artifact.metadata.created_at to new Date().toISOString()",
+    });
+  }
+
+  if (!isIsoTimestamp(artifact.metadata.updated_at)) {
+    pushViolation(violations, {
+      id: "EM-003b",
+      severity: "error",
+      message: "Metadata.updated_at must be an ISO-8601 timestamp",
+      fix: "Set artifact.metadata.updated_at to new Date().toISOString()",
+    });
+  }
+
+  if (!isAllowedStatus(artifact.metadata.status)) {
+    pushViolation(violations, {
+      id: "EM-004",
+      severity: "error",
+      message: "Metadata.status must be one of: draft | active | closed",
+      fix: "Set artifact.metadata.status to 'draft', 'active', or 'closed'",
+    });
+  }
+
+  if (artifact.metadata.contributors.length === 0) {
+    pushViolation(violations, {
+      id: "WM-001",
+      severity: "warning",
+      message: "No contributors recorded",
+      fix: "Ensure merge pipeline stamps artifact.metadata.contributors",
+    });
+  }
+
+  if (
+    isIsoTimestamp(artifact.metadata.created_at) &&
+    isIsoTimestamp(artifact.metadata.updated_at) &&
+    Date.parse(artifact.metadata.updated_at) < Date.parse(artifact.metadata.created_at)
+  ) {
+    pushViolation(violations, {
+      id: "WM-002",
+      severity: "warning",
+      message: "updated_at is earlier than created_at",
+      fix: "Ensure updated_at is >= created_at",
+    });
+  }
+
+  if (!Number.isInteger(artifact.metadata.version)) {
+    pushViolation(violations, {
+      id: "IM-002",
+      severity: "info",
+      message: "Metadata.version should be an integer",
+      fix: "Set artifact.metadata.version to an integer",
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Research Thread (R)
+  // --------------------------------------------------------------------------
+
+  const rt = artifact.sections.research_thread;
+  if (!rt || rt.statement.trim().length === 0) {
+    pushViolation(violations, {
+      id: "ER-001",
+      severity: "error",
+      message: "Research thread statement is missing",
+      fix: "Add an EDIT delta to section 'research_thread' with a non-empty statement",
+    });
+  }
+  if (!rt || rt.context.trim().length === 0) {
+    pushViolation(violations, {
+      id: "ER-002",
+      severity: "error",
+      message: "Research thread context is missing",
+      fix: "Add an EDIT delta to section 'research_thread' with a non-empty context",
+    });
+  }
+  if (!rt || !Array.isArray(rt.anchors) || rt.anchors.length === 0) {
+    pushViolation(violations, {
+      id: "WR-001",
+      severity: "warning",
+      message: "Research thread anchors are missing",
+      fix: "Add at least one transcript anchor (e.g., §42) or 'inference'",
+    });
+  }
+
+  // --------------------------------------------------------------------------
+  // Hypothesis Slate (H)
+  // --------------------------------------------------------------------------
+
+  const hypotheses = artifact.sections.hypothesis_slate.filter((h) => !isKilled(h));
+  if (hypotheses.length < 3) {
+    pushViolation(violations, {
+      id: "EH-001",
+      severity: "error",
+      message: `Hypothesis slate has ${hypotheses.length} active items (minimum 3)`,
+      fix: "Add hypotheses (including a third alternative) via ADD deltas",
+    });
+  }
+  if (hypotheses.length > 6) {
+    pushViolation(violations, {
+      id: "EH-002",
+      severity: "error",
+      message: `Hypothesis slate has ${hypotheses.length} active items (maximum 6)`,
+      fix: "KILL or consolidate hypotheses to <= 6 items",
+    });
+  }
+  if (!hasThirdAlternative(artifact.sections.hypothesis_slate)) {
+    pushViolation(violations, {
+      id: "EH-003",
+      severity: "error",
+      message: "No third alternative hypothesis is present",
+      fix: "Ensure at least one hypothesis is explicitly labeled as the third alternative",
+    });
+  }
+
+  for (const h of hypotheses) {
+    if (!h.claim || h.claim.trim().length === 0) {
+      pushViolation(violations, {
+        id: "EH-004",
+        severity: "error",
+        message: `${h.id} is missing claim`,
+        fix: "Add a non-empty claim field",
+      });
+    }
+    if (!Array.isArray(h.anchors) || h.anchors.length === 0) {
+      pushViolation(violations, {
+        id: "WH-001",
+        severity: "warning",
+        message: `${h.id} is missing anchors`,
+        fix: "Add transcript anchors (e.g., §42) or 'inference'",
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Predictions Table (P)
+  // --------------------------------------------------------------------------
+
+  const predictions = artifact.sections.predictions_table.filter((p) => !isKilled(p));
+  if (predictions.length < 3) {
+    pushViolation(violations, {
+      id: "EP-001",
+      severity: "error",
+      message: `Predictions table has ${predictions.length} active items (minimum 3)`,
+      fix: "Add predictions via ADD deltas",
+    });
+  }
+
+  const hypothesisIds = sortById(artifact.sections.hypothesis_slate).map((h) => h.id);
+  for (const p of predictions) {
+    const values = hypothesisIds.map((hid) => (p.predictions ?? {})[hid] ?? "");
+    const normalized = values.map((v) => v.trim()).filter(Boolean);
+    const unique = new Set(normalized);
+    if (normalized.length > 0 && unique.size <= 1 && hypothesisIds.length >= 2) {
+      pushViolation(violations, {
+        id: "WP-001",
+        severity: "warning",
+        message: `${p.id} does not discriminate (all hypothesis outcomes identical or missing)`,
+        fix: "Adjust prediction so at least two hypotheses differ in expected outcome",
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Discriminative Tests (T)
+  // --------------------------------------------------------------------------
+
+  const tests = artifact.sections.discriminative_tests.filter((t) => !isKilled(t));
+  if (tests.length < 2) {
+    pushViolation(violations, {
+      id: "ET-001",
+      severity: "error",
+      message: `Discriminative tests has ${tests.length} active items (minimum 2)`,
+      fix: "Add discriminative tests via ADD deltas",
+    });
+  }
+  for (const t of tests) {
+    if (!t.procedure || t.procedure.trim().length === 0) {
+      pushViolation(violations, {
+        id: "ET-002",
+        severity: "error",
+        message: `${t.id} is missing procedure`,
+        fix: "Add a non-empty procedure field",
+      });
+    }
+    if (!t.expected_outcomes || Object.keys(t.expected_outcomes).length === 0) {
+      pushViolation(violations, {
+        id: "ET-003",
+        severity: "error",
+        message: `${t.id} is missing expected outcomes`,
+        fix: "Add expected_outcomes mapping (e.g., {'H1': '...', 'H2': '...'})",
+      });
+    }
+    if (!t.potency_check || t.potency_check.trim().length === 0) {
+      pushViolation(violations, {
+        id: "WT-001",
+        severity: "warning",
+        message: `${t.id} is missing potency check`,
+        fix: "Add a potency_check that distinguishes chastity vs impotence",
+      });
+    }
+    if (!t.score) {
+      pushViolation(violations, {
+        id: "WT-003",
+        severity: "warning",
+        message: `${t.id} is missing score breakdown`,
+        fix: "Add score: {likelihood_ratio, cost, speed, ambiguity} with 0-3 values",
+      });
+    }
+  }
+
+  for (let i = 1; i < tests.length; i++) {
+    const prev = calculateTotalScore(tests[i - 1]?.score);
+    const cur = calculateTotalScore(tests[i]?.score);
+    if (cur > prev) {
+      pushViolation(violations, {
+        id: "WT-002",
+        severity: "warning",
+        message: "Tests are not ranked by score (non-increasing order violated)",
+        fix: "Sort tests by descending total score (LR+cost+speed+ambiguity)",
+      });
+      break;
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Assumption Ledger (A)
+  // --------------------------------------------------------------------------
+
+  const assumptions = artifact.sections.assumption_ledger.filter((a) => !isKilled(a));
+  if (assumptions.length < 3) {
+    pushViolation(violations, {
+      id: "EA-001",
+      severity: "error",
+      message: `Assumption ledger has ${assumptions.length} active items (minimum 3)`,
+      fix: "Add assumptions via ADD deltas",
+    });
+  }
+  if (!hasScaleCheck(artifact.sections.assumption_ledger)) {
+    pushViolation(violations, {
+      id: "EA-002",
+      severity: "error",
+      message: "No scale/physics check assumption found",
+      fix: "Add an assumption with scale_check: true and a calculation",
+    });
+  }
+  for (const a of assumptions) {
+    if (!a.statement || a.statement.trim().length === 0) {
+      pushViolation(violations, {
+        id: "EA-003",
+        severity: "error",
+        message: `${a.id} is missing statement`,
+        fix: "Add a non-empty statement field",
+      });
+    }
+    if (a.scale_check === true && (!a.calculation || a.calculation.trim().length === 0)) {
+      pushViolation(violations, {
+        id: "WA-003",
+        severity: "warning",
+        message: `${a.id} is a scale check but missing calculation`,
+        fix: "Add a calculation field with explicit numbers and units",
+      });
+    }
+  }
+
+  // --------------------------------------------------------------------------
+  // Adversarial Critique (C)
+  // --------------------------------------------------------------------------
+
+  const critiques = artifact.sections.adversarial_critique.filter((c) => !isKilled(c));
+  if (critiques.length < 2) {
+    pushViolation(violations, {
+      id: "EC-001",
+      severity: "error",
+      message: `Adversarial critique has ${critiques.length} active items (minimum 2)`,
+      fix: "Add critiques via ADD deltas",
+    });
+  }
+  for (const c of critiques) {
+    if (!c.attack || c.attack.trim().length === 0) {
+      pushViolation(violations, {
+        id: "EC-002",
+        severity: "error",
+        message: `${c.id} is missing attack`,
+        fix: "Add an attack field describing how the framing could be wrong",
+      });
+    }
+    if (!c.evidence || c.evidence.trim().length === 0) {
+      pushViolation(violations, {
+        id: "WC-002",
+        severity: "warning",
+        message: `${c.id} is missing evidence`,
+        fix: "Add evidence describing what would confirm the critique",
+      });
+    }
+    if (!c.current_status || c.current_status.trim().length === 0) {
+      pushViolation(violations, {
+        id: "IC-001",
+        severity: "info",
+        message: `${c.id} is missing current status`,
+        fix: "Add current_status describing how seriously to take this critique",
+      });
+    }
+  }
+  if (!critiques.some((c) => c.real_third_alternative === true)) {
+    pushViolation(violations, {
+      id: "WC-001",
+      severity: "warning",
+      message: "No critique marked as a real third alternative",
+      fix: "Mark at least one critique with real_third_alternative: true",
+    });
+  }
+
+  const sorted = [...violations].sort((a, b) => {
+    const sr = severityRank(a.severity) - severityRank(b.severity);
+    if (sr !== 0) return sr;
+    return a.id.localeCompare(b.id);
+  });
+
+  const summary = {
+    errors: sorted.filter((v) => v.severity === "error").length,
+    warnings: sorted.filter((v) => v.severity === "warning").length,
+    info: sorted.filter((v) => v.severity === "info").length,
+  };
+
+  return {
+    valid: summary.errors === 0,
+    summary,
+    violations: sorted,
+  };
 }

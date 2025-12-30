@@ -424,7 +424,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         wordCount={wordCount}
       />
 
-      {data.sections.length > 0 && (
+      {data.sections.length > 0 ? (
         <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-8 xl:gap-12">
           {/* Sidebar TOC (desktop) */}
           <aside className="hidden lg:block">
@@ -459,7 +459,11 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
             ))}
           </main>
         </div>
-      )}
+      ) : data.rawContent ? (
+        <div className="max-w-3xl mx-auto">
+          <RawContentFallback content={data.rawContent} />
+        </div>
+      ) : null}
 
       <BackToTop />
     </>
@@ -510,3 +514,20 @@ function ArrowUpIcon() {
   );
 }
 
+// ============================================================================
+// RAW CONTENT FALLBACK (for unstructured files)
+// ============================================================================
+
+function RawContentFallback({ content }: { content: string }) {
+  const paragraphs = content.split(/\n\n+/).filter(Boolean);
+
+  return (
+    <div className="prose prose-lg dark:prose-invert max-w-none">
+      {paragraphs.map((para, i) => (
+        <p key={i} className="text-base lg:text-lg leading-relaxed text-foreground/85 mb-4">
+          {para}
+        </p>
+      ))}
+    </div>
+  );
+}

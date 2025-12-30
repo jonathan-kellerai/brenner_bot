@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useMemo } from "react";
 import { parseDistillation } from "@/lib/distillation-parser";
 import type { ParsedDistillation } from "@/lib/distillation-parser";
 
@@ -228,13 +228,15 @@ interface CompareViewProps {
 }
 
 export function CompareView({ distillations }: CompareViewProps) {
-  // Parse all distillations
-  const parsedData = Object.fromEntries(
-    Object.entries(distillations).map(([id, { content }]) => {
-      const model = MODELS.find((m) => m.id === id)!;
-      return [id, parseDistillation(content, model.docId)];
-    })
-  ) as Record<ModelId, ParsedDistillation>;
+  // Parse all distillations - memoized to avoid re-parsing on state changes
+  const parsedData = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(distillations).map(([id, { content }]) => {
+        const model = MODELS.find((m) => m.id === id)!;
+        return [id, parseDistillation(content, model.docId)];
+      })
+    ) as Record<ModelId, ParsedDistillation>;
+  }, [distillations]);
 
   // State
   const [leftModel, setLeftModel] = useState<ModelId>("opus");
@@ -272,10 +274,11 @@ export function CompareView({ distillations }: CompareViewProps) {
 
     targetPane.scrollTop = targetScrollTop;
 
-    // Reset scrolling flag after a short delay
-    requestAnimationFrame(() => {
+    // Reset scrolling flag after a delay longer than the scroll event propagation
+    // Using setTimeout instead of requestAnimationFrame for more reliable timing
+    setTimeout(() => {
       isScrolling.current = false;
-    });
+    }, 50);
   }, [syncScroll]);
 
   const handleLeftScroll = useCallback(() => handleScroll("left"), [handleScroll]);
