@@ -315,9 +315,10 @@ export function ReadingProgress({ progress: externalProgress }: ReadingProgressP
 interface TranscriptSectionProps {
   section: TSection;
   isActive: boolean;
+  searchHighlights?: string[];
 }
 
-export function TranscriptSection({ section, isActive }: TranscriptSectionProps) {
+export function TranscriptSection({ section, isActive, searchHighlights }: TranscriptSectionProps) {
   return (
     <section
       id={`section-${section.number}`}
@@ -344,7 +345,7 @@ export function TranscriptSection({ section, isActive }: TranscriptSectionProps)
       {/* Section Content */}
       <div className="space-y-6 pl-0 lg:pl-[4.5rem]">
         {section.content.map((content, i) => (
-          <ContentBlock key={i} content={content} />
+          <ContentBlock key={i} content={content} searchHighlights={searchHighlights} />
         ))}
       </div>
 
@@ -362,14 +363,21 @@ export function TranscriptSection({ section, isActive }: TranscriptSectionProps)
 // CONTENT BLOCKS
 // ============================================================================
 
-function ContentBlock({ content }: { content: TranscriptContent }) {
+function ContentBlock({ content, searchHighlights }: { content: TranscriptContent; searchHighlights?: string[] }) {
+  // Merge content highlights with search highlights
+  const mergedHighlights = useMemo(() => {
+    const baseHighlights = content.highlights ?? [];
+    if (!searchHighlights?.length) return baseHighlights.length > 0 ? baseHighlights : undefined;
+    return [...baseHighlights, ...searchHighlights];
+  }, [content.highlights, searchHighlights]);
+
   switch (content.type) {
     case "brenner-quote":
-      return <BrennerQuote text={content.text} highlights={content.highlights} />;
+      return <BrennerQuote text={content.text} highlights={mergedHighlights} />;
     case "interviewer-question":
-      return <InterviewerQuestion text={content.text} />;
+      return <InterviewerQuestion text={content.text} highlights={searchHighlights} />;
     case "paragraph":
-      return <Paragraph text={content.text} highlights={content.highlights} />;
+      return <Paragraph text={content.text} highlights={mergedHighlights} />;
     default:
       return null;
   }
@@ -468,14 +476,14 @@ function escapeRegex(str: string): string {
 // INTERVIEWER QUESTION
 // ============================================================================
 
-function InterviewerQuestion({ text }: { text: string }) {
+function InterviewerQuestion({ text, highlights }: { text: string; highlights?: string[] }) {
   return (
     <div className="flex items-start gap-3 py-4 px-5 rounded-xl bg-muted/30 border border-border/50">
       <div className="flex-shrink-0 size-7 rounded-full bg-muted flex items-center justify-center">
         <span className="text-xs font-bold text-muted-foreground">Q</span>
       </div>
       <p className="text-base text-muted-foreground italic leading-relaxed">
-        {text}
+        {highlights ? renderTextWithHighlights(text, highlights) : text}
       </p>
     </div>
   );

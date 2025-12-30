@@ -26,7 +26,7 @@
  * Per brenner_bot-5so.3.3.2: "Compute thread/session status (responses, acks, latest artifact)"
  */
 
-import type { AgentMailMessage } from "./agentMail";
+import type { AgentMailMessage, AgentMailThread } from "./agentMail";
 
 // ============================================================================
 // Types
@@ -489,4 +489,93 @@ export function getPendingRoles(status: ThreadStatus): BrennerRole[] {
   return (Object.entries(status.roles) as [BrennerRole, RoleStatus][])
     .filter(([, roleStatus]) => !roleStatus.completed)
     .map(([role]) => role);
+}
+
+// ============================================================================
+// Thread-Level Convenience Functions
+// ============================================================================
+
+/**
+ * Compute thread status from an AgentMailThread object.
+ * Convenience wrapper for use with readThread() responses.
+ */
+export function computeThreadStatusFromThread(
+  thread: AgentMailThread,
+  options?: { expectedRoles?: BrennerRole[] }
+): ThreadStatus {
+  return computeThreadStatus(thread.messages, options);
+}
+
+/**
+ * Compute a minimal status summary for display in list views.
+ * Useful when full ThreadStatus is too heavy.
+ */
+export function computeThreadStatusSummary(
+  messages: AgentMailMessage[],
+  options?: { expectedRoles?: BrennerRole[] }
+): {
+  threadId: string | null;
+  phase: SessionPhase;
+  respondedRoleCount: number;
+  totalRoleCount: number;
+  pendingAcks: number;
+  hasArtifact: boolean;
+  isComplete: boolean;
+  summary: string;
+} {
+  const status = computeThreadStatus(messages, options);
+  const expectedRoles = options?.expectedRoles ?? [
+    "hypothesis_generator",
+    "test_designer",
+    "adversarial_critic",
+  ];
+  const respondedRoleCount = expectedRoles.filter((r) => status.roles[r].completed).length;
+
+  return {
+    threadId: status.threadId,
+    phase: status.phase,
+    respondedRoleCount,
+    totalRoleCount: expectedRoles.length,
+    pendingAcks: status.acks.pendingCount,
+    hasArtifact: status.latestArtifact !== null,
+    isComplete: status.isComplete,
+    summary: `${respondedRoleCount}/${expectedRoles.length} roles | Phase: ${status.phase.replace(/_/g, " ")}${status.acks.pendingCount > 0 ? ` | ${status.acks.pendingCount} pending acks` : ""}`,
+  };
+}
+
+/**
+ * Check if a thread is waiting for a specific role to respond.
+ */
+export function isWaitingForRole(
+  messages: AgentMailMessage[],
+  role: BrennerRole,
+  options?: { expectedRoles?: BrennerRole[] }
+): boolean {
+  const status = computeThreadStatus(messages, options);
+  return !status.roles[role].completed;
+}
+
+/**
+ * Get agents who have pending acknowledgements (were requested but haven't ACKed).
+ */
+export function getAgentsWithPendingAcks(messages: AgentMailMessage[]): string[] {
+  const status = computeThreadStatus(messages);
+  return status.acks.awaitingFrom;
+}
+
+/**
+ * Get agents who haven't responded with a DELTA yet.
+ * Note: Only tracks agents who have sent messages - doesn't know about invited agents
+ * who haven't participated at all.
+ */
+export function getPendingAgents(messages: AgentMailMessage[]): string[] {
+  const status = computeThreadStatus(messages);
+  // Find participants who haven't contributed any DELTA
+  const deltaContributors = new Set<string>();
+  for (const roleStatus of Object.values(status.roles)) {
+    for (const contributor of roleStatus.contributors) {
+      deltaContributors.add(contributor);
+    }
+  }
+  return status.stats.participants.filter((p) => !deltaContributors.has(p));
 }
