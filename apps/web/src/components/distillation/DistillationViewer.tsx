@@ -588,6 +588,74 @@ function Section({ section, docId, sectionId }: SectionProps) {
 }
 
 // ============================================================================
+// INLINE FORMATTING - Renders bold, italic, code as styled JSX
+// ============================================================================
+
+function renderFormattedText(text: string): ReactNode {
+  if (!text) return null;
+
+  // Tokenize: find all formatting markers
+  const tokens: Array<{ type: "text" | "bold" | "italic" | "code"; content: string }> = [];
+  // Order matters: check bold (**) before italic (*) since bold uses double asterisks
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Add any text before this match
+    if (match.index > lastIndex) {
+      tokens.push({ type: "text", content: text.slice(lastIndex, match.index) });
+    }
+
+    const matched = match[0];
+    if (matched.startsWith("**") && matched.endsWith("**")) {
+      tokens.push({ type: "bold", content: matched.slice(2, -2) });
+    } else if (matched.startsWith("`") && matched.endsWith("`")) {
+      tokens.push({ type: "code", content: matched.slice(1, -1) });
+    } else if (matched.startsWith("*") && matched.endsWith("*")) {
+      tokens.push({ type: "italic", content: matched.slice(1, -1) });
+    }
+
+    lastIndex = match.index + matched.length;
+  }
+
+  // Add remaining text
+  if (lastIndex < text.length) {
+    tokens.push({ type: "text", content: text.slice(lastIndex) });
+  }
+
+  // Return plain text if no formatting found
+  if (tokens.length === 0) return text;
+
+  // Build React elements
+  return tokens.map((token, i) => {
+    switch (token.type) {
+      case "bold":
+        return (
+          <strong key={i} className="font-semibold text-foreground">
+            {token.content}
+          </strong>
+        );
+      case "italic":
+        return (
+          <em key={i} className="italic text-foreground/95">
+            {token.content}
+          </em>
+        );
+      case "code":
+        return (
+          <code key={i} className="px-1.5 py-0.5 mx-0.5 rounded-md bg-muted/70 font-mono text-[0.9em] text-foreground/90">
+            {token.content}
+          </code>
+        );
+      default:
+        return <span key={i}>{token.content}</span>;
+    }
+  });
+}
+
+// ============================================================================
 // CONTENT RENDERER
 // ============================================================================
 
@@ -602,8 +670,8 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
   switch (content.type) {
     case "paragraph":
       return (
-        <p className="text-base lg:text-lg leading-relaxed text-foreground/85">
-          {content.text}
+        <p className="text-base lg:text-lg leading-[1.75] text-foreground/85">
+          {renderFormattedText(content.text)}
         </p>
       );
 
@@ -625,8 +693,8 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
                 showPreview={true}
               />
             </div>
-            <p className="text-base lg:text-lg leading-relaxed text-foreground/90 italic font-serif pr-8">
-              {content.text}
+            <p className="text-base lg:text-lg leading-[1.75] text-foreground/90 italic font-serif pr-8">
+              {renderFormattedText(content.text)}
             </p>
           </blockquote>
           {content.reference && (
