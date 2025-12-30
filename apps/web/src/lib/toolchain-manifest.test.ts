@@ -5,7 +5,7 @@
  * @see specs/release_artifact_matrix_v0.1.md
  */
 
-import { describe, test, expect } from "bun:test";
+import { describe, test, expect } from "vitest";
 import {
   parseManifest,
   detectPlatform,
