@@ -97,6 +97,23 @@ export interface ThreadStatus {
   kickoff: AgentMailMessage | null;
   /** Total message count in thread */
   messageCount: number;
+  /**
+   * Current round number.
+   * - Round 0: Initial collection phase (KICKOFF → first COMPILED)
+   * - Round 1+: Post-compile iteration (COMPILED v1 exists, working toward v2, etc.)
+   * Round number equals the count of COMPILED messages (or version number - 1).
+   */
+  round: number;
+  /**
+   * Number of DELTAs contributed in the current round (since last COMPILED or KICKOFF).
+   * Useful for tracking progress within a round.
+   */
+  deltasInCurrentRound: number;
+  /**
+   * Number of CRITIQUEs received in the current round (since last COMPILED).
+   * Only relevant for rounds > 0.
+   */
+  critiquesInCurrentRound: number;
   /** Summary statistics */
   stats: {
     totalDeltas: number;
@@ -259,6 +276,7 @@ export function computeThreadStatus(
   let kickoff: AgentMailMessage | null = null;
   let latestCompiled: AgentMailMessage | null = null;
   const participants = new Set<string>();
+  const compiledMessages: AgentMailMessage[] = [];
 
   let totalDeltas = 0;
   let totalCritiques = 0;
@@ -309,6 +327,8 @@ export function computeThreadStatus(
         break;
 
       case "compiled":
+        // Track all compiled messages for round counting
+        compiledMessages.push(msg);
         // Track latest compiled (in case of multiple compilations)
         if (
           !latestCompiled ||
@@ -394,6 +414,36 @@ export function computeThreadStatus(
     };
   }
 
+  // Compute round information
+  // Round = number of COMPILED messages (0 = before first compile, 1 = after v1 exists, etc.)
+  const round = compiledMessages.length;
+
+  // Find the boundary timestamp for "current round" messages
+  // If no COMPILED yet, use KICKOFF time (or epoch if no kickoff)
+  // If COMPILED exists, use the latest COMPILED time
+  const roundBoundaryTime = latestCompiled
+    ? new Date(latestCompiled.created_ts).getTime()
+    : kickoff
+      ? new Date(kickoff.created_ts).getTime()
+      : 0;
+
+  // Count DELTAs and CRITIQUEs in current round (after the boundary)
+  let deltasInCurrentRound = 0;
+  let critiquesInCurrentRound = 0;
+
+  for (const msg of sortedMessages) {
+    const msgTime = new Date(msg.created_ts).getTime();
+    // Messages after the boundary (or all messages if no boundary)
+    if (msgTime > roundBoundaryTime) {
+      const msgType = parseSubjectType(msg.subject).type;
+      if (msgType === "delta") {
+        deltasInCurrentRound++;
+      } else if (msgType === "critique") {
+        critiquesInCurrentRound++;
+      }
+    }
+  }
+
   return {
     threadId,
     phase,
@@ -407,6 +457,9 @@ export function computeThreadStatus(
     latestArtifact,
     kickoff,
     messageCount: messages.length,
+    round,
+    deltasInCurrentRound,
+    critiquesInCurrentRound,
     stats: {
       totalDeltas,
       totalCritiques,
@@ -438,8 +491,14 @@ export function formatThreadStatusSummary(status: ThreadStatus): string {
   };
 
   lines.push(`${phaseEmoji[status.phase]} Thread: ${status.threadId ?? "(no thread)"}`);
-  lines.push(`Phase: ${status.phase.replace(/_/g, " ")}`);
+  lines.push(`Phase: ${status.phase.replace(/_/g, " ")} | Round ${status.round}`);
   lines.push("");
+
+  // Round info
+  if (status.round > 0) {
+    lines.push(`🔄 Round ${status.round} (${status.deltasInCurrentRound} new deltas, ${status.critiquesInCurrentRound} critiques)`);
+    lines.push("");
+  }
 
   // Role completion
   lines.push("Roles:");
@@ -525,6 +584,9 @@ export function computeThreadStatusSummary(
   pendingAcks: number;
   hasArtifact: boolean;
   isComplete: boolean;
+  round: number;
+  deltasInCurrentRound: number;
+  critiquesInCurrentRound: number;
   summary: string;
 } {
   const status = computeThreadStatus(messages, options);
@@ -535,6 +597,7 @@ export function computeThreadStatusSummary(
   ];
   const respondedRoleCount = expectedRoles.filter((r) => status.roles[r].completed).length;
 
+  const roundInfo = status.round > 0 ? ` | Round ${status.round}` : "";
   return {
     threadId: status.threadId,
     phase: status.phase,
@@ -543,7 +606,10 @@ export function computeThreadStatusSummary(
     pendingAcks: status.acks.pendingCount,
     hasArtifact: status.latestArtifact !== null,
     isComplete: status.isComplete,
-    summary: `${respondedRoleCount}/${expectedRoles.length} roles | Phase: ${status.phase.replace(/_/g, " ")}${status.acks.pendingCount > 0 ? ` | ${status.acks.pendingCount} pending acks` : ""}`,
+    round: status.round,
+    deltasInCurrentRound: status.deltasInCurrentRound,
+    critiquesInCurrentRound: status.critiquesInCurrentRound,
+    summary: `${respondedRoleCount}/${expectedRoles.length} roles | Phase: ${status.phase.replace(/_/g, " ")}${roundInfo}${status.acks.pendingCount > 0 ? ` | ${status.acks.pendingCount} pending acks` : ""}`,
   };
 }
 
@@ -582,4 +648,59 @@ export function getPendingAgents(messages: AgentMailMessage[]): string[] {
     }
   }
   return status.stats.participants.filter((p) => !deltaContributors.has(p));
+}
+
+/**
+ * Get messages that belong to the current round.
+ *
+ * For round 0: Returns all DELTA messages after KICKOFF (or all if no KICKOFF).
+ * For round 1+: Returns all DELTA and CRITIQUE messages after the latest COMPILED.
+ *
+ * This is the core function for round-aware compilation - use it to get only
+ * the deltas that should be merged for the next version.
+ */
+export function getMessagesInCurrentRound(messages: AgentMailMessage[]): AgentMailMessage[] {
+  // Sort by timestamp
+  const sortedMessages = [...messages].sort(
+    (a, b) => new Date(a.created_ts).getTime() - new Date(b.created_ts).getTime()
+  );
+
+  // Find the boundary: latest COMPILED or KICKOFF (or epoch)
+  let boundaryTime = 0;
+
+  // First, find the latest COMPILED
+  for (const msg of sortedMessages) {
+    if (parseSubjectType(msg.subject).type === "compiled") {
+      boundaryTime = new Date(msg.created_ts).getTime();
+    }
+  }
+
+  // If no COMPILED, use KICKOFF as boundary
+  if (boundaryTime === 0) {
+    for (const msg of sortedMessages) {
+      if (parseSubjectType(msg.subject).type === "kickoff") {
+        boundaryTime = new Date(msg.created_ts).getTime();
+        break;
+      }
+    }
+  }
+
+  // Return messages after boundary with relevant types (DELTA or CRITIQUE)
+  return sortedMessages.filter((msg) => {
+    const msgTime = new Date(msg.created_ts).getTime();
+    if (msgTime <= boundaryTime) return false;
+
+    const msgType = parseSubjectType(msg.subject).type;
+    return msgType === "delta" || msgType === "critique";
+  });
+}
+
+/**
+ * Get only DELTA messages for the current round (for compilation).
+ * Filters out CRITIQUE messages that don't contain structured delta blocks.
+ */
+export function getDeltaMessagesForCurrentRound(messages: AgentMailMessage[]): AgentMailMessage[] {
+  return getMessagesInCurrentRound(messages).filter(
+    (msg) => parseSubjectType(msg.subject).type === "delta"
+  );
 }

@@ -451,6 +451,9 @@ describe("threadNeedsAttention", () => {
       latestArtifact: null,
       kickoff: null,
       messageCount: 1,
+      round: 0,
+      deltasInCurrentRound: 0,
+      critiquesInCurrentRound: 0,
       stats: { totalDeltas: 0, totalCritiques: 0, totalAcks: 0, participants: [] },
     };
 
@@ -471,6 +474,9 @@ describe("threadNeedsAttention", () => {
       latestArtifact: null,
       kickoff: null,
       messageCount: 5,
+      round: 1,
+      deltasInCurrentRound: 0,
+      critiquesInCurrentRound: 0,
       stats: { totalDeltas: 3, totalCritiques: 0, totalAcks: 0, participants: [] },
     };
 
@@ -493,6 +499,9 @@ describe("getPendingRoles", () => {
       latestArtifact: null,
       kickoff: null,
       messageCount: 2,
+      round: 0,
+      deltasInCurrentRound: 1,
+      critiquesInCurrentRound: 0,
       stats: { totalDeltas: 1, totalCritiques: 0, totalAcks: 0, participants: [] },
     };
 

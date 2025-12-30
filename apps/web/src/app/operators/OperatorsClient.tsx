@@ -895,6 +895,232 @@ export function OperatorsClient({ operators }: { operators: BrennerOperatorPalet
           onClose={handleCloseSheet}
         />
       )}
+
+      {/* Floating Prompt Builder Bar */}
+      {selectedForPrompt.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="flex items-center gap-3 px-4 py-3 rounded-2xl bg-card/95 backdrop-blur-xl border border-border/50 shadow-2xl shadow-black/20">
+            <div className="flex items-center gap-2">
+              <div className="flex -space-x-1">
+                {selectedOperatorsForPrompt.slice(0, 3).map((op) => (
+                  <div
+                    key={op.canonicalTag}
+                    className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center text-sm font-bold"
+                    title={op.title}
+                  >
+                    {op.symbol}
+                  </div>
+                ))}
+                {selectedForPrompt.size > 3 && (
+                  <div className="size-8 rounded-lg bg-muted border border-border flex items-center justify-center text-xs font-medium text-muted-foreground">
+                    +{selectedForPrompt.size - 3}
+                  </div>
+                )}
+              </div>
+              <span className="text-sm font-medium text-foreground ml-1">
+                {selectedForPrompt.size} operator{selectedForPrompt.size === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            <div className="h-6 w-px bg-border/50" />
+
+            <button
+              onClick={() => setShowPromptBuilder(true)}
+              className="flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            >
+              <SparklesIcon className="size-4" />
+              Generate Prompts
+            </button>
+
+            <button
+              onClick={() => setSelectedForPrompt(new Set())}
+              className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              title="Clear selection"
+            >
+              <XIcon className="size-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Prompt Builder Panel */}
+      {showPromptBuilder && (
+        <PromptBuilderPanel
+          bundle={promptBundle}
+          operators={selectedOperatorsForPrompt}
+          onClose={() => setShowPromptBuilder(false)}
+        />
+      )}
     </div>
+  );
+}
+
+// ============================================================================
+// PROMPT BUILDER PANEL
+// ============================================================================
+
+function PromptBuilderPanel({
+  bundle,
+  operators,
+  onClose,
+}: {
+  bundle: PromptBundle;
+  operators: BrennerOperatorPaletteEntry[];
+  onClose: () => void;
+}) {
+  const [activeTab, setActiveTab] = useState<"kickoff" | "codex" | "opus" | "gemini">("kickoff");
+  const [copiedTab, setCopiedTab] = useState<string | null>(null);
+
+  const copyToClipboard = async (text: string, tab: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedTab(tab);
+      setTimeout(() => setCopiedTab(null), 2000);
+    } catch (err) {
+      console.error("Failed to copy:", err);
+    }
+  };
+
+  const tabs = [
+    { key: "kickoff" as const, label: "Kickoff", content: bundle.kickoff },
+    { key: "codex" as const, label: "Codex", content: bundle.roles.codex },
+    { key: "opus" as const, label: "Opus", content: bundle.roles.opus },
+    { key: "gemini" as const, label: "Gemini", content: bundle.roles.gemini },
+  ];
+
+  const activeContent = tabs.find((t) => t.key === activeTab)?.content ?? "";
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleEscape);
+    return () => window.removeEventListener("keydown", handleEscape);
+  }, [onClose]);
+
+  useEffect(() => {
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.width = "";
+      window.scrollTo(0, scrollY);
+    };
+  }, []);
+
+  return createPortal(
+    <>
+      {/* Backdrop */}
+      <div
+        className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm animate-in fade-in-0 duration-200"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      {/* Panel */}
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="prompt-builder-title"
+        className="fixed z-[9999] bg-card shadow-2xl animate-in duration-300
+          inset-x-0 bottom-0 max-h-[85vh] rounded-t-3xl border-t border-border/50
+          lg:inset-4 lg:max-h-none lg:rounded-2xl lg:border
+          flex flex-col"
+      >
+        {/* Header */}
+        <div className="flex-shrink-0 px-6 pt-6 pb-4 border-b border-border/50">
+          <div className="flex items-center justify-between gap-4">
+            <div>
+              <h2 id="prompt-builder-title" className="text-xl font-bold text-foreground flex items-center gap-2">
+                <SparklesIcon className="size-5 text-primary" />
+                Prompt Builder
+              </h2>
+              <p className="text-sm text-muted-foreground mt-1">
+                {operators.length} operator{operators.length === 1 ? "" : "s"} selected
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-full bg-muted hover:bg-muted/80 text-muted-foreground hover:text-foreground transition-all"
+              aria-label="Close"
+            >
+              <XIcon className="size-5" />
+            </button>
+          </div>
+
+          {/* Selected operators pills */}
+          <div className="flex flex-wrap gap-2 mt-4">
+            {operators.map((op) => (
+              <span
+                key={op.canonicalTag}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-primary/10 text-primary text-sm font-medium"
+              >
+                <span className="text-base">{op.symbol}</span>
+                {op.title}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex-shrink-0 px-6 py-3 border-b border-border/50 flex gap-1 overflow-x-auto scrollbar-hide">
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-all ${
+                activeTab === tab.key
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:text-foreground hover:bg-muted"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-6 py-4">
+          <div className="relative">
+            <button
+              onClick={() => copyToClipboard(activeContent, activeTab)}
+              className="absolute top-3 right-3 flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium text-muted-foreground hover:text-foreground transition-all"
+            >
+              {copiedTab === activeTab ? (
+                <>
+                  <CheckIcon className="size-4 text-green-500" />
+                  Copied!
+                </>
+              ) : (
+                <>
+                  <ClipboardIcon className="size-4" />
+                  Copy
+                </>
+              )}
+            </button>
+            <pre className="p-4 pr-24 rounded-xl bg-muted/50 border border-border/50 text-sm text-foreground whitespace-pre-wrap font-mono leading-relaxed overflow-x-auto">
+              {activeContent}
+            </pre>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex-shrink-0 px-6 py-4 border-t border-border/50 flex items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground">
+            Copy these prompts and paste them into your AI coding agent session.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-sm font-medium text-foreground transition-colors"
+          >
+            Done
+          </button>
+        </div>
+      </div>
+    </>,
+    document.body
   );
 }
