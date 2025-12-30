@@ -2508,6 +2508,9 @@ p, li, span, div {
     -webkit-backdrop-filter: blur(var(--glass-blur));
     border-top: 1px solid var(--glass-border);
     padding-bottom: env(safe-area-inset-bottom, 0);
+    /* iOS Safari fix: force GPU compositing to prevent gap during address bar animation */
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
   }
 
   .bottom-nav-item {
@@ -2567,6 +2570,8 @@ p, li, span, div {
       opacity 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
       transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
       box-shadow 0.2s var(--ease-out);
+    /* iOS Safari fix: force GPU compositing */
+    -webkit-transform: translate3d(0, 0, 0);
   }
 
   .back-to-top.visible {

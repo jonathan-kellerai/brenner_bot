@@ -1445,6 +1445,410 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["transcript", "anchor", "quote-bank"],
     category: "project",
   },
+
+  // -------------------------------------------------------------------------
+  // Molecular Biology: Core Organisms and Systems
+  // -------------------------------------------------------------------------
+  bacteriophage: {
+    term: "Bacteriophage",
+    short: "Viruses that infect bacteria; the workhorse of early molecular biology.",
+    long:
+      "Bacteriophages (or simply 'phage') are viruses that infect and replicate within bacteria. Their simplicity (just DNA or RNA in a protein coat) and rapid reproduction made them ideal for genetic experiments. The 'Phage Group' centered around Delbrück used them to establish the foundations of molecular biology.",
+    analogy:
+      "A stripped-down car with only engine and wheels: complex enough to study inheritance, simple enough to understand completely.",
+    why:
+      "Brenner's early work on the genetic code, mRNA discovery, and nonsense mutations all used bacteriophage T4. Phage genetics provided the first rigorous framework for molecular analysis. Transcript anchors: §50, §73, §81, §85-86.",
+    related: ["phage-group", "genetic-code", "mrna", "nonsense-codon"],
+    category: "biology",
+  },
+  phage: {
+    term: "Phage",
+    short: "Short for bacteriophage; the model system for early molecular genetics.",
+    long:
+      "Phage is the common abbreviation for bacteriophage. T4 phage (which infects E. coli) was central to cracking the genetic code. The phage life cycle takes only 20-30 minutes, enabling rapid genetic experiments impossible with slower-growing organisms.",
+    related: ["bacteriophage", "phage-group", "t4-phage"],
+    category: "biology",
+  },
+  "t4-phage": {
+    term: "T4 Phage",
+    short: "The specific bacteriophage used for genetic code and fine-structure mapping work.",
+    long:
+      "Bacteriophage T4 infects E. coli and was the primary experimental system for Benzer's fine-structure mapping and Brenner's genetic code work. Its rII region became the proving ground for understanding gene structure at the molecular level.",
+    why:
+      "T4's rII region was where Benzer mapped mutations to single nucleotides and Brenner proved the triplet nature of the code through frameshift analysis.",
+    related: ["bacteriophage", "rii-region", "fine-structure-mapping"],
+    category: "biology",
+  },
+  "phage-group": {
+    term: "Phage Group",
+    short: "The intellectual community around Delbrück that founded molecular biology.",
+    long:
+      "The Phage Group was an informal network of scientists centered around Max Delbrück at Cold Spring Harbor and Caltech. They established the conventions, methods, and social norms of molecular biology. Annual phage meetings at Cold Spring Harbor were intellectual crucibles where ideas were rigorously tested.",
+    why:
+      "Brenner was 'injected into the whole of modern science' when he joined this community (§67). The Phage Group's culture of open criticism and collaborative competition shaped his scientific style.",
+    related: ["bacteriophage", "cold-spring-harbor", "max-delbruck"],
+    category: "biology",
+  },
+  "rna-tie-club": {
+    term: "RNA Tie Club",
+    short: "Gamow's exclusive club of 20 scientists working on the genetic code.",
+    long:
+      "Founded by physicist George Gamow, the RNA Tie Club had exactly 20 members, one for each amino acid. Members received ties and tie pins with their amino acid name. The club circulated informal papers on coding theory. Brenner was 'valine,' Crick was 'tryptophan.'",
+    analogy:
+      "A secret society for code-breakers, complete with membership tokens and private communications.",
+    why:
+      "The club exemplified how the genetic code problem attracted outsiders (physicists like Gamow) and operated at the fringe of established biology. Transcript anchor: §79.",
+    related: ["genetic-code", "george-gamow", "cross-domain-import"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Molecular Biology: Genetic Code Concepts
+  // -------------------------------------------------------------------------
+  "nonsense-codon": {
+    term: "Nonsense Codon",
+    short: "A triplet that signals 'stop translation' rather than coding for an amino acid.",
+    long:
+      "Nonsense codons (UAG/amber, UAA/ochre, UGA/opal) terminate protein synthesis. Mutations that create nonsense codons truncate proteins. The discovery of nonsense suppressors (tRNAs that read through stop codons) was crucial for understanding the code.",
+    why:
+      "Brenner's work on amber and ochre mutations (§106-107) was central to understanding how the genetic code works and how it could be manipulated experimentally.",
+    related: ["amber-mutation", "suppressor-mutation", "genetic-code", "codon"],
+    category: "biology",
+  },
+  "amber-mutation": {
+    term: "Amber Mutation",
+    short: "A mutation creating the UAG stop codon, named for its discoverer's translation.",
+    long:
+      "Amber mutations create the UAG stop codon, causing premature termination of protein synthesis. The name comes from a pun: discoverer Harris Bernstein's surname means 'amber' in German. Amber suppressors are tRNA mutations that insert an amino acid at UAG instead of stopping.",
+    why:
+      "Amber mutations became a fundamental tool for genetic analysis. Brenner and colleagues used them extensively to study gene function. Transcript anchor: §106.",
+    related: ["nonsense-codon", "suppressor-mutation", "ochre-mutation"],
+    category: "biology",
+  },
+  "ochre-mutation": {
+    term: "Ochre Mutation",
+    short: "A mutation creating the UAA stop codon.",
+    long:
+      "Ochre mutations create the UAA stop codon. Like amber, ochre mutations truncate proteins and can be suppressed by specific tRNA mutations. The color name continued the amber naming convention.",
+    related: ["nonsense-codon", "amber-mutation", "suppressor-mutation"],
+    category: "biology",
+  },
+  "suppressor-mutation": {
+    term: "Suppressor Mutation",
+    short: "A second mutation that rescues the phenotype caused by a first mutation.",
+    long:
+      "Suppressor mutations compensate for other mutations. Nonsense suppressors are mutant tRNAs that read stop codons as amino acids, restoring (partial) protein function. Intragenic suppressors are second mutations in the same gene that restore function.",
+    analogy:
+      "Two wrongs making a right: the second error compensates for the first, restoring function.",
+    why:
+      "Suppressor analysis was a powerful genetic tool. Brenner used frameshift suppressors (+ and - mutations canceling out) to prove the triplet code. Transcript anchor: §106-109.",
+    related: ["nonsense-codon", "amber-mutation", "frameshift"],
+    category: "biology",
+  },
+  "conditional-lethal": {
+    term: "Conditional Lethal",
+    short: "A mutation that kills only under specific conditions, enabling study of essential genes.",
+    long:
+      "Conditional lethal mutations are lethal under restrictive conditions but viable under permissive conditions. Temperature-sensitive mutants work at low temperature but fail at high temperature. This allows isolation and study of mutations in essential genes that would otherwise be impossible to recover.",
+    analogy:
+      "A car that runs fine in summer but won't start in winter: the defect exists but only manifests under specific conditions.",
+    why:
+      "Conditional lethals revolutionized genetics by making essential genes accessible to mutational analysis. Brenner used them extensively in C. elegans. Transcript anchor: §123.",
+    related: ["temperature-sensitive", "mutagenesis", "genetic-screen"],
+    category: "biology",
+  },
+  "temperature-sensitive": {
+    term: "Temperature-Sensitive",
+    short: "A mutation causing a protein to function at low but not high temperature.",
+    long:
+      "Temperature-sensitive (ts) mutations produce proteins that fold and function correctly at permissive temperature (e.g., 15°C) but misfold or denature at restrictive temperature (e.g., 25°C). This conditionality allows genetic analysis of essential genes.",
+    why:
+      "Temperature-sensitive mutations were a key tool in Brenner's C. elegans genetics, allowing study of genes required for viability.",
+    related: ["conditional-lethal", "mutation", "genetic-screen"],
+    category: "biology",
+  },
+  "rii-region": {
+    term: "rII Region",
+    short: "The phage T4 genetic region where Benzer mapped mutations to single nucleotides.",
+    long:
+      "The rII region of bacteriophage T4 was Seymour Benzer's experimental system for fine-structure genetic mapping. By analyzing recombination between closely spaced mutations, Benzer achieved resolution down to single nucleotides, demonstrating that genes have internal structure.",
+    why:
+      "Benzer's rII work ended the classical concept of the indivisible gene and opened molecular genetics. Brenner built on this foundation for his code work. Transcript anchor: §70, §94.",
+    related: ["t4-phage", "fine-structure-mapping", "seymour-benzer"],
+    category: "biology",
+  },
+  operon: {
+    term: "Operon",
+    short: "A cluster of genes transcribed together and regulated as a unit.",
+    long:
+      "The operon model (Jacob and Monod) explains how bacteria coordinate expression of related genes. An operon includes structural genes, an operator site, and is controlled by a repressor protein. The lac operon (lactose metabolism) was the paradigm case.",
+    why:
+      "The operon concept was developed during the same period as mRNA discovery. Brenner collaborated with Jacob on understanding gene regulation. Transcript anchor: §96-97, §123.",
+    related: ["gene", "transcription", "francois-jacob"],
+    category: "biology",
+  },
+  replicon: {
+    term: "Replicon",
+    short: "A unit of DNA that replicates from a single origin; Brenner's term with Jacob.",
+    long:
+      "A replicon is a DNA molecule or segment that replicates as a unit from one origin of replication. Brenner and François Jacob coined this term to describe the fundamental unit of chromosome replication. Bacterial chromosomes are single replicons; eukaryotic chromosomes have multiple replicons.",
+    why:
+      "The replicon concept unified thinking about DNA replication across different organisms. Transcript anchor: §121.",
+    related: ["dna", "gene", "francois-jacob"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Experimental Methods: Genetic Techniques
+  // -------------------------------------------------------------------------
+  "fine-structure-mapping": {
+    term: "Fine-Structure Mapping",
+    short: "Benzer's technique for mapping mutations within a gene to single-nucleotide resolution.",
+    long:
+      "Fine-structure mapping uses recombination frequencies between closely spaced mutations to order them within a gene. Benzer's work on phage T4 rII achieved resolution limited only by the distance between adjacent nucleotides, proving genes have internal structure.",
+    why:
+      "Fine-structure mapping demonstrated that the gene was not indivisible, paving the way for molecular analysis. Brenner used similar logic in his code work. Transcript anchor: §70.",
+    related: ["rii-region", "seymour-benzer", "mutation", "recombination"],
+    category: "method",
+  },
+  "saturation-mutagenesis": {
+    term: "Saturation Mutagenesis",
+    short: "Mutagenize until you've found all genes controlling a phenotype.",
+    long:
+      "Saturation mutagenesis involves generating enough mutants to recover mutations in every gene affecting a trait. When new screens yield only alleles of already-known genes, saturation is approached. This systematic approach ensures comprehensive genetic coverage.",
+    analogy:
+      "Fishing a pond until you stop catching new species. When you only recatch known fish, you've likely found them all.",
+    why:
+      "Brenner applied this approach to C. elegans, systematically identifying genes controlling movement, development, and behavior. Transcript anchor: §166.",
+    related: ["mutagenesis", "genetic-screen", "allele", "c-elegans"],
+    category: "method",
+  },
+  complementation: {
+    term: "Complementation",
+    short: "Test whether two mutations affect the same or different genes.",
+    long:
+      "Complementation analysis places two recessive mutations in the same cell (in trans). If the phenotype is wild-type, the mutations are in different genes (they complement). If the phenotype is mutant, they are in the same gene (they fail to complement).",
+    analogy:
+      "If two broken cars can be combined to make one working car, they have different broken parts. If combining them still produces a broken car, they share the same defect.",
+    why:
+      "Complementation is the operational definition of a gene. Brenner used it extensively in C. elegans to organize mutations into genes.",
+    related: ["allele", "gene", "mutation", "genetic-screen"],
+    category: "method",
+  },
+  epistasis: {
+    term: "Epistasis",
+    short: "When one gene's phenotype masks another's, revealing pathway order.",
+    long:
+      "Epistasis occurs when the phenotype of one mutation overrides another. If gene A is upstream of gene B in a pathway, mutations in A may mask mutations in B. Epistasis analysis reveals the order of gene action in biological pathways.",
+    analogy:
+      "If breaking the power supply masks whether the light bulb works: power is epistatic to bulb function because it acts upstream.",
+    why:
+      "Brenner used epistasis to order genes in developmental and behavioral pathways in C. elegans. Transcript anchor: §172.",
+    related: ["genetic-pathway", "gene", "phenotype"],
+    category: "method",
+  },
+  "genetic-pathway": {
+    term: "Genetic Pathway",
+    short: "The ordered sequence of gene products that execute a biological process.",
+    long:
+      "A genetic pathway is determined by epistasis analysis: testing double mutants to see which phenotype dominates. The gene whose phenotype 'wins' acts downstream. This builds an ordered map of gene action from genetics alone, without knowing the biochemistry.",
+    why:
+      "Pathway analysis was central to C. elegans genetics. Brenner and colleagues used it to order genes controlling cell fate, apoptosis, and behavior. Transcript anchor: §172.",
+    related: ["epistasis", "gene", "phenotype", "c-elegans"],
+    category: "method",
+  },
+  "genetic-screen": {
+    term: "Genetic Screen",
+    short: "Systematic mutagenesis followed by selection for a phenotype of interest.",
+    long:
+      "A genetic screen involves mutagenizing organisms, then selecting or screening for individuals with altered phenotypes. Forward screens find genes by phenotype; saturation screens aim to find all genes affecting a trait. The power comes from systematic, unbiased coverage.",
+    why:
+      "Brenner's C. elegans screens for behavioral and developmental mutants exemplify this approach. The mutant collection became a community resource. Transcript anchors: §154, §158, §166.",
+    related: ["mutagenesis", "saturation-mutagenesis", "forward-genetics", "c-elegans"],
+    category: "method",
+  },
+  proflavine: {
+    term: "Proflavine",
+    short: "An acridine dye that causes frameshift mutations by inserting between DNA bases.",
+    long:
+      "Proflavine and related acridines intercalate between DNA base pairs, causing insertion or deletion mutations during replication. These frameshift mutations were crucial for proving the triplet nature of the genetic code: +1 and -1 shifts cancel out to restore reading frame.",
+    why:
+      "Brenner and colleagues used proflavine-induced frameshifts to prove the code was triplet and non-overlapping. The logic: if adding one base (shifting +1) is rescued by removing one base (shifting -1), the code reads in fixed triplets. Transcript anchor: §90, §106-109.",
+    related: ["frameshift", "mutation", "genetic-code", "reading-frame"],
+    category: "biology",
+  },
+  "base-analogue": {
+    term: "Base Analogue",
+    short: "A chemical mimicking a DNA base that causes point mutations when incorporated.",
+    long:
+      "Base analogues like 5-bromouracil resemble normal DNA bases closely enough to be incorporated during replication, but pair differently, causing point mutations. Unlike proflavine (which causes frameshifts), base analogues cause single-nucleotide substitutions.",
+    why:
+      "The contrast between base-analogue mutants (point mutations) and proflavine mutants (frameshifts) helped distinguish mutation types and prove the triplet code structure. Transcript anchor: §90.",
+    related: ["mutation", "proflavine", "genetic-code"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Experimental Methods: Structural Biology
+  // -------------------------------------------------------------------------
+  "phase-problem": {
+    term: "Phase Problem",
+    short: "The fundamental obstacle in X-ray crystallography: diffraction loses phase information.",
+    long:
+      "X-ray crystallography measures diffraction intensities but not phases. Without phases, you cannot compute electron density maps. The phase problem is computationally intractable by brute force (too many combinations). Solutions include isomorphous replacement and molecular replacement.",
+    analogy:
+      "Knowing the brightness of each speaker in a room but not when they spoke: you have amplitudes but lost the timing that would let you reconstruct the conversation.",
+    why:
+      "Brenner understood the phase problem from Cambridge crystallographers. It exemplifies how some problems require clever tricks rather than brute computation. Transcript anchor: §88-89.",
+    related: ["isomorphous-replacement", "invariant-extract"],
+    category: "method",
+  },
+  "isomorphous-replacement": {
+    term: "Isomorphous Replacement",
+    short: "Solving the phase problem by comparing crystals with and without heavy atoms.",
+    long:
+      "Isomorphous replacement introduces heavy atoms (like mercury or gold) into protein crystals without changing their structure. Comparing diffraction with and without heavy atoms constrains the phases. Multiple heavy-atom derivatives give unambiguous phases.",
+    why:
+      "Max Perutz used this method to solve hemoglobin structure. Brenner understood that some problems require such indirect approaches: you cannot measure phases directly, so you triangulate from perturbations. Transcript anchor: §89.",
+    related: ["phase-problem", "cross-domain-import"],
+    category: "method",
+  },
+  "seven-cycle-test": {
+    term: "Seven-Cycle Test",
+    short: "If an effect isn't visible across seven log cycles, it's probably not real.",
+    long:
+      "A pragmatic statistical heuristic: plot your data on log paper spanning seven orders of magnitude. If the effect is not visible from across the room, it is probably not biologically significant. This guards against over-interpreting small effects that require elaborate statistics to detect.",
+    analogy:
+      "If you need a magnifying glass to see the difference, the difference may not matter in the real world.",
+    why:
+      "This reflects Brenner's emphasis on robust, obvious effects over statistically-significant-but-tiny ones. Biology should produce effects you can see, not effects you need p-values to believe.",
+    related: ["amplify", "potency", "materialize"],
+    category: "brenner",
+  },
+  "tape-rna": {
+    term: "Tape RNA",
+    short: "Brenner's original name for mRNA, invoking the Turing machine metaphor.",
+    long:
+      "Before 'messenger RNA' became standard, Brenner called the intermediate 'tape RNA,' explicitly invoking the tape of a Turing machine. This framing emphasized that genetic information is read sequentially, like a program tape, rather than serving as a structural template.",
+    why:
+      "The naming reflects Brenner's computational view of biology: DNA is source code, mRNA is the tape fed to the ribosome machine. Transcript anchor: §99.",
+    related: ["mrna", "genetic-code", "machine-language", "recode"],
+    category: "brenner",
+  },
+
+  // -------------------------------------------------------------------------
+  // Key Institutions
+  // -------------------------------------------------------------------------
+  "cold-spring-harbor": {
+    term: "Cold Spring Harbor",
+    short: "The Long Island laboratory that hosted the phage meetings and shaped molecular biology.",
+    long:
+      "Cold Spring Harbor Laboratory on Long Island, New York, was the intellectual home of the Phage Group. Annual phage meetings brought together the pioneers of molecular biology. The summer courses and symposia established standards for the field.",
+    why:
+      "Brenner was 'injected into the whole of modern science' at Cold Spring Harbor in 1954. The culture of rigorous discussion he encountered there shaped his scientific style. Transcript anchor: §67, §73.",
+    related: ["phage-group", "max-delbruck", "bacteriophage"],
+    category: "project",
+  },
+  "mrc-lab": {
+    term: "MRC Laboratory",
+    short: "The Medical Research Council lab in Cambridge where Brenner spent his career.",
+    long:
+      "The MRC Laboratory of Molecular Biology in Cambridge, England, was Brenner's scientific home from 1957. Founded by Max Perutz, it became a powerhouse of structural and molecular biology, producing multiple Nobel laureates including Brenner himself.",
+    why:
+      "The MRC lab's culture of long-term, curiosity-driven research enabled Brenner's C. elegans work. 'We were talking the same language' drew him there. Transcript anchor: §82, §87.",
+    related: ["francis-crick", "c-elegans"],
+    category: "project",
+  },
+
+  // -------------------------------------------------------------------------
+  // Key Scientists
+  // -------------------------------------------------------------------------
+  "francis-crick": {
+    term: "Francis Crick",
+    short: "Co-discoverer of DNA structure; Brenner's intellectual partner for 20 years.",
+    long:
+      "Francis Crick, with James Watson, determined the double-helix structure of DNA in 1953. Brenner shared an office with Crick for 20 years at the MRC Laboratory. Their daily conversations shaped both scientists' thinking about the genetic code, protein synthesis, and development.",
+    why:
+      "Brenner credits Crick with teaching him to 'stay imprisoned within the physical context of everything' and to articulate half-formed ideas aloud. Transcript anchors: §55-56, §60, §66.",
+    related: ["james-watson", "genetic-code", "mrc-lab"],
+    category: "biology",
+  },
+  "james-watson": {
+    term: "James Watson",
+    short: "Co-discoverer of DNA structure; drove Brenner across America in a Chevy convertible.",
+    long:
+      "James Watson, with Francis Crick, solved the DNA structure. Watson and Brenner traveled across America together in 1954, discussing the gene-protein problem. Watson's aggressive, competitive style contrasted with but complemented Brenner's approach.",
+    why:
+      "The cross-country trip with Watson exemplifies science as adventure and friendship. Their discussions during the trip helped crystallize the experimental program for cracking the code. Transcript anchors: §75-78.",
+    related: ["francis-crick", "genetic-code", "cold-spring-harbor"],
+    category: "biology",
+  },
+  "seymour-benzer": {
+    term: "Seymour Benzer",
+    short: "Pioneer of fine-structure genetics who later founded behavioral genetics.",
+    long:
+      "Seymour Benzer's fine-structure mapping of phage T4 rII demonstrated that genes have internal structure resolvable to single nucleotides. He later switched to Drosophila behavioral genetics, pioneering the genetic analysis of behavior.",
+    why:
+      "Benzer's work 'ended the classical gene' and opened molecular genetics. Brenner admired his ability to create new fields by switching organisms and questions. Transcript anchors: §64, §70.",
+    related: ["rii-region", "fine-structure-mapping", "bacteriophage"],
+    category: "biology",
+  },
+  "max-delbruck": {
+    term: "Max Delbrück",
+    short: "Physicist who founded the Phage Group and established molecular biology's culture.",
+    long:
+      "Max Delbrück, originally a physicist, founded the Phage Group and established the intellectual culture of molecular biology. His emphasis on simple systems, rigorous quantitation, and collaborative competition shaped a generation of scientists.",
+    why:
+      "Delbrück's influence pervades Brenner's approach: choose simple systems, be quantitative, attack problems at the right level. Transcript anchors: §65, §73-74.",
+    related: ["phage-group", "cold-spring-harbor", "bacteriophage"],
+    category: "biology",
+  },
+  "francois-jacob": {
+    term: "François Jacob",
+    short: "Co-developer of the operon model; collaborated with Brenner on mRNA discovery.",
+    long:
+      "François Jacob, with Jacques Monod, developed the operon model of gene regulation. Jacob collaborated with Brenner and Meselson on the famous 1961 experiment proving the existence of messenger RNA.",
+    why:
+      "The Jacob-Brenner-Meselson experiment was a paradigm of decisive experimental design. Brenner and Jacob also coined 'replicon.' Transcript anchors: §96-97, §121.",
+    related: ["operon", "mrna", "replicon"],
+    category: "biology",
+  },
+  "george-gamow": {
+    term: "George Gamow",
+    short: "Cosmologist who founded the RNA Tie Club and catalyzed coding theory.",
+    long:
+      "George Gamow was a theoretical physicist and cosmologist who became fascinated by the genetic code. He proposed the first coding theories (the Diamond Code) and founded the RNA Tie Club to coordinate thinking about the problem.",
+    analogy:
+      "An outsider with fresh eyes: his physics background let him see the coding problem as information theory when biologists still thought in chemical terms.",
+    why:
+      "Gamow exemplifies cross-domain import. Though his specific theories were wrong, his framing of the problem as 'cracking a code' shaped how everyone approached it. Transcript anchors: §68, §72, §79.",
+    related: ["rna-tie-club", "genetic-code", "cross-domain-import"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Additional Brenner Concepts
+  // -------------------------------------------------------------------------
+  recombination: {
+    term: "Recombination",
+    short: "The exchange of genetic material between chromosomes during meiosis.",
+    long:
+      "Recombination shuffles genetic material between homologous chromosomes. The frequency of recombination between two markers indicates their physical distance: rarely recombining markers are close together. This enables genetic mapping without sequencing.",
+    why:
+      "Recombination was the workhorse of classical genetics. Brenner used recombination frequencies to map genes in phage and C. elegans before sequencing was available.",
+    related: ["gene", "allele", "fine-structure-mapping"],
+    category: "biology",
+  },
+  "overlapping-code": {
+    term: "Overlapping Code",
+    short: "A hypothetical genetic code where adjacent codons share nucleotides.",
+    long:
+      "In an overlapping code, consecutive amino acids would share nucleotides: ABC codes the first amino acid, BCD the second. This would restrict which amino acids could be adjacent. Brenner proved all overlapping triplet codes impossible by showing that observed protein sequences violate the restrictions.",
+    why:
+      "Brenner's 1955 paper 'On the Impossibility of All Overlapping Triplet Codes' was a key theoretical contribution, ruling out an entire class of solutions. Transcript anchor: §69, §83.",
+    related: ["genetic-code", "codon", "forbidden-pattern", "exclusion-test"],
+    category: "biology",
+  },
 };
 
 // ============================================================================

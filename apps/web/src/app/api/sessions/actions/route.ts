@@ -5,7 +5,7 @@ import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { checkOrchestrationAuth } from "@/lib/auth";
 import { createEmptyArtifact, lintArtifact, mergeArtifactWithTimestamps, renderArtifactMarkdown } from "@/lib/artifact-merge";
 import { parseDeltaMessage, type ValidDelta } from "@/lib/delta-parser";
-import { extractVersion, parseSubjectType } from "@/lib/threadStatus";
+import { extractVersion, parseSubjectType, getDeltaMessagesForCurrentRound } from "@/lib/threadStatus";
 
 export const runtime = "nodejs";
 
@@ -39,10 +39,16 @@ interface CompileResult {
     warnings: unknown[];
   };
   deltaStats: {
+    /** Total DELTA messages across all rounds */
     deltaMessageCount: number;
+    /** Total delta blocks parsed across all messages */
     totalBlocks: number;
+    /** Valid delta blocks that were applied */
     validBlocks: number;
+    /** Invalid delta blocks that were skipped */
     invalidBlocks: number;
+    /** Number of DELTA messages in current round (since last COMPILED) */
+    currentRoundDeltaCount: number;
   };
 }
 
@@ -201,7 +207,17 @@ async function compileThread(params: {
   const createdAt = findKickoffCreatedAt(threadMessages) ?? compiledAt;
   const version = computeNextCompiledVersion(threadMessages);
 
-  const deltaMessages = threadMessages.filter((m) => parseSubjectType(m.subject).type === "delta" && typeof m.body_md === "string");
+  // For a complete artifact, we process ALL deltas from all rounds.
+  // This ensures the compiled artifact contains the full state, not just incremental changes.
+  // (Incremental compilation on top of previous artifact would require complex artifact parsing.)
+  const allDeltaMessages = threadMessages.filter((m) => parseSubjectType(m.subject).type === "delta" && typeof m.body_md === "string");
+
+  // For stats, we also track current round deltas separately.
+  const currentRoundDeltas = getDeltaMessagesForCurrentRound(threadMessages);
+  const currentRoundDeltaMessages = currentRoundDeltas.filter((m) => typeof m.body_md === "string");
+
+  // Use all deltas for compilation
+  const deltaMessages = allDeltaMessages;
 
   const collected: Array<ValidDelta & { timestamp: string; agent: string }> = [];
   let totalBlocks = 0;
@@ -266,6 +282,7 @@ async function compileThread(params: {
         totalBlocks,
         validBlocks,
         invalidBlocks,
+        currentRoundDeltaCount: currentRoundDeltaMessages.length,
       },
     },
     messages: threadMessages,
