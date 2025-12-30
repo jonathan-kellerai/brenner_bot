@@ -169,49 +169,49 @@ export const jargonDictionary: Record<string, JargonTerm> = {
   },
   dephase: {
     term: "Dephase",
-    short: "Delay commitment to maximize information gathering (∿).",
+    short: "Move out of phase with fashion to find open territory (∿).",
     long:
-      "The operator ∿ keeps options open during the 'opening game' of research. Premature commitment to a hypothesis closes off exploration.",
+      "The operator ∿ means working half a wavelength ahead or behind the crowd. Avoid crowded priors and industrialized midgames. The 'opening game' has tremendous freedom of choice.",
     analogy:
       "Think of it like the opening in chess—you develop pieces and control space before launching a specific attack.",
     why:
-      "Brenner warns against jumping to conclusions. Early research should gather data, not defend positions.",
-    related: ["productive-ignorance", "paradox-hunt"],
+      "Brenner warns against fighting crowded competitions. Transcript anchors: §143 ('the best thing in science is to work out of phase'), §192 ('opening game... tremendous freedom of choice'), §210 (heroic → classical transition).",
+    related: ["productive-ignorance", "paradox-hunt", "cross-domain-import"],
     category: "operators",
   },
   unentrain: {
     term: "Unentrain",
     short: "Deliberately ignore conventional wisdom to see fresh (⊙).",
     long:
-      "The operator ⊙ involves productive ignorance—not knowing the 'standard' approach lets you see possibilities experts miss.",
+      "The operator ⊙ involves productive ignorance—not knowing the 'standard' approach lets you see possibilities experts miss. The best people to push a science forward often come from outside it.",
     analogy:
       "Think of it like a child asking 'why?' about things adults take for granted.",
     why:
-      "Brenner's outsider status in several fields gave him advantages—he wasn't blinded by what everyone 'knew' was true.",
-    related: ["dephase", "productive-ignorance"],
+      "Brenner's outsider status gave him advantages. Transcript anchors: §63 ('spreading ignorance rather than knowledge'), §65 ('Don't equip yourself'), §157 ('the émigrés are always the best people'), §192 ('strong believer in the value of ignorance').",
+    related: ["dephase", "productive-ignorance", "cross-domain-import"],
     category: "operators",
   },
   "cross-domain-import": {
     term: "Cross-Domain Import",
     short: "Borrow techniques or concepts from other fields (⊕).",
     long:
-      "The operator ⊕ transfers ideas across disciplinary boundaries. Solutions in one field may already exist in another.",
+      "The operator ⊕ transfers ideas across disciplinary boundaries. Solutions in one field may already exist in another. Import patterns from unrelated fields; maintain 'fresh eyes' by resisting expert entrainment.",
     analogy:
       "Think of it like how assembly line manufacturing was inspired by meatpacking plants.",
     why:
-      "Brenner imported information theory from engineering to crack the genetic code—a biology problem solved with math.",
-    related: ["recode", "level-split"],
+      "Brenner imported information theory from engineering to crack the genetic code. Transcript anchors: §86 (cross-domain pattern: syphilis staining → negative staining), §200 (paper triage to protect bandwidth), §230 (move fields while carrying invariants).",
+    related: ["recode", "level-split", "unentrain", "productive-ignorance"],
     category: "operators",
   },
   "paradox-hunt": {
     term: "Paradox Hunt",
     short: "Actively seek contradictions—they mark discovery zones (◊).",
     long:
-      "The operator ◊ treats paradoxes as valuable. Where your theory predicts one thing and reality shows another, there's something important to learn.",
+      "The operator ◊ treats paradoxes as valuable. Where your theory predicts one thing and reality shows another, there's something important to learn. Paradox is not a nuisance—it's a beacon pointing to missing production rules.",
     analogy:
       "Think of it like a detective who gets excited when the alibi doesn't match—contradictions are clues.",
     why:
-      "Brenner actively sought paradoxes because resolving them forces deeper understanding.",
+      "Brenner actively sought paradoxes. Transcript anchors: §95 (paradox of prodigious synthesis rate → led to messenger RNA discovery), §106 ('how can these two things exist and not be explained').",
     related: ["forbidden-pattern", "exception-quarantine"],
     category: "operators",
   },
@@ -219,11 +219,11 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Theory Kill",
     short: "Deliberately attempt to destroy your own hypothesis (†).",
     long:
-      "The operator † requires trying to falsify your own ideas before publishing. If you can't kill your theory, maybe it's true. If you can, better to find out now.",
+      "The operator † requires trying to falsify your own ideas before publishing. If you can't kill your theory, maybe it's true. If you can, better to find out now. Don't fall in love with theories.",
     analogy:
       "Think of it like stress-testing a bridge before letting traffic on it.",
     why:
-      "Brenner's harsh self-criticism prevented him from publishing weak ideas—he'd already killed them internally.",
+      "Brenner's harsh self-criticism prevented him from publishing weak ideas. Transcript anchor: §229 ('When they go ugly, kill them. Get rid of them').",
     related: ["exclusion-test", "potency", "forbidden-pattern"],
     category: "operators",
   },
@@ -231,23 +231,23 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Materialize",
     short: "Turn abstract theory into concrete, testable predictions (⌂).",
     long:
-      "The operator ⌂ grounds speculation in reality. A theory that can't be materialized into experiments isn't science—it's philosophy.",
+      "The operator ⌂ grounds speculation in reality. A theory that can't be materialized into experiments isn't science—it's philosophy. Ask: 'If this were true, what would I see?'",
     analogy:
       "Think of it like an architect who can't just draw pretty pictures but must specify actual materials and measurements.",
     why:
-      "Brenner despised armchair theorizing. Every idea had to cash out in an experiment someone could actually do.",
-    related: ["scale-prison", "potency"],
+      "Brenner despised armchair theorizing. Transcript anchors: §42 ('Let the imagination go... but... direct it by experiment'), §66 ('Materialise the question').",
+    related: ["scale-prison", "potency", "quickie"],
     category: "operators",
   },
   diy: {
     term: "DIY",
     short: "Build your own tools when commercial ones don't exist (🔧).",
     long:
-      "The operator 🔧 means building custom equipment or methods. Sometimes the right tool doesn't exist, so you make it.",
+      "The operator 🔧 means building custom equipment or methods. Sometimes the right tool doesn't exist, so you make it. Don't let missing tools define your pace.",
     analogy:
       "Think of it like a chef who forges their own knives because nothing on the market suits their technique.",
     why:
-      "Brenner and colleagues built custom equipment when commercial options were inadequate for their precise needs.",
+      "Brenner and colleagues built custom equipment. Transcript anchors: §23 (build Warburg manometer), §37, §41 (heliostat), §51 ('This is something you can always do... open to you'), §86 (negative staining democratizes EM).",
     related: ["democratize", "abundance-trick"],
     category: "operators",
   },
@@ -255,12 +255,52 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Scale Prison",
     short: "Physics constrains what's possible at each size (⊞).",
     long:
-      "The operator ⊞ reminds us that scale matters. Diffusion, surface area, heat—everything changes with size. What works at one scale may be impossible at another.",
+      "The operator ⊞ reminds us that scale matters. Diffusion, surface area, heat—everything changes with size. What works at one scale may be impossible at another. Calculate actual numbers.",
     analogy:
       "Think of it like how ants can carry 50x their weight, but if you scaled an ant to human size it would collapse.",
     why:
-      "Brenner emphasized that biological imagination must be 'imprisoned by physics'—not everything conceivable is physically possible.",
-    related: ["level-split", "materialize"],
+      "Brenner emphasized that biological imagination must be 'imprisoned by physics'. Transcript anchor: §66 ('get the scale of everything right... the DNA in a bacterium is 1mm long... folded up a thousand times').",
+    related: ["level-split", "materialize", "invariant-extract"],
+    category: "operators",
+  },
+
+  // -------------------------------------------------------------------------
+  // Derived Operators (compositions of core operators)
+  // -------------------------------------------------------------------------
+  quickie: {
+    term: "Quickie",
+    short: "Run a cheap pilot test to de-risk before committing to the full experiment (⚡).",
+    long:
+      "The operator ⚡ asks: before investing months in the flagship experiment, can you run a cheap pilot that would kill the key alternative? De-risk before committing major resources.",
+    analogy:
+      "Think of it like checking if a restaurant is open before driving across town for dinner.",
+    why:
+      "Brenner's approach valued efficiency—why commit months of work when a quick test could rule out the hypothesis? Transcript anchor: §99 ('I'll do a quickie').",
+    related: ["materialize", "exclusion-test", "potency"],
+    category: "operators",
+  },
+  hal: {
+    term: "HAL",
+    short: "Have A Look—directly observe before elaborate inference (👁).",
+    long:
+      "The operator 👁 (HAL = Have A Look) says: before doing complex analysis, consider if you could just look. Each link in an inference chain has error probability; direct observation is often faster.",
+    analogy:
+      "Think of it like peeking inside a box instead of weighing it, shaking it, and running statistical tests on the sounds.",
+    why:
+      "Brenner preferred direct observation over elaborate inference when possible. Transcript anchor: §198 ('I had invented something called HAL biology. HAL... stood for Have A Look biology').",
+    related: ["materialize", "amplify", "quickie"],
+    category: "operators",
+  },
+  "potency-check": {
+    term: "Potency Check",
+    short: "Verify your intervention actually worked before trusting results (🎭).",
+    long:
+      "The operator 🎭 distinguishes 'won't' from 'can't'. Before concluding a hypothesis is wrong based on a negative result, verify that your intervention actually worked. Chaste vs impotent.",
+    analogy:
+      "Think of it like checking if the light switch is connected before concluding the bulb is burned out.",
+    why:
+      "Brenner emphasized that negative results only mean something if you've verified the positive control. Transcript anchor: §50 (chastity vs impotence: same outcome, different reasons).",
+    related: ["exclusion-test", "potency", "decision-experiment"],
     category: "operators",
   },
 
