@@ -199,6 +199,7 @@ function OperatorCard({
   const category = getOperatorCategory(operator.canonicalTag);
   const categoryData = category ? OPERATOR_CATEGORIES[category] : null;
   const quotes = operator.supportingQuotes;
+  const anchorCount = countAnchors(operator.transcriptAnchors);
 
   return (
     <button
@@ -250,7 +251,7 @@ function OperatorCard({
             </span>
             <span className="inline-flex items-center gap-1.5">
               <BookOpenIcon className="size-3.5" />
-              {countAnchors(operator.transcriptAnchors)} anchor{countAnchors(operator.transcriptAnchors) === 1 ? "" : "s"}
+              {anchorCount} anchor{anchorCount === 1 ? "" : "s"}
             </span>
           </div>
 
