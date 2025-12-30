@@ -772,6 +772,12 @@ configure_path() {
 
   log_info "Adding ${DEST_DIR} to PATH..."
 
+  local config_dir
+  config_dir=$(dirname "$config_file")
+  if [[ ! -d "$config_dir" ]]; then
+    mkdir -p "$config_dir" || die "Failed to create directory: ${config_dir}"
+  fi
+
   if grep -qF "$DEST_DIR" "$config_file" 2>/dev/null; then
     log_debug "PATH entry already in ${config_file}"
   else

@@ -403,18 +403,37 @@ export default function GlossaryPage() {
       {/* Term cards */}
       <div className="space-y-3">
         {filteredTerms.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <p>No terms found matching your search.</p>
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center py-16 space-y-4"
+          >
+            <div className="flex justify-center">
+              <div className="size-20 rounded-full bg-muted/50 flex items-center justify-center">
+                <MagnifyingGlassIcon className="size-10 text-muted-foreground/50" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-lg font-medium text-foreground">No terms found</p>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                {searchQuery
+                  ? `No results for "${searchQuery}". Try a different search term or browse by category.`
+                  : "No terms match the selected category."}
+              </p>
+            </div>
             <button
               onClick={() => {
                 setSearchQuery("");
                 setActiveCategory("all");
               }}
-              className="mt-2 text-primary hover:underline"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
             >
-              Clear filters
+              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+              </svg>
+              Clear all filters
             </button>
-          </div>
+          </motion.div>
         ) : (
           filteredTerms.map(([key, term]) => (
             <TermCard
@@ -423,6 +442,7 @@ export default function GlossaryPage() {
               term={term}
               isExpanded={expandedTerms.has(key)}
               onToggle={() => toggleTerm(key)}
+              searchQuery={searchQuery}
             />
           ))
         )}

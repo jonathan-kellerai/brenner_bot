@@ -144,7 +144,7 @@ export default function Home() {
                       {feature.description}
                     </p>
                   </div>
-                  <div className="flex items-center gap-1 text-xs sm:text-sm font-medium text-primary sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="flex items-center gap-1.5 text-xs sm:text-sm font-medium text-primary opacity-70 sm:opacity-0 group-hover:opacity-100 group-active:opacity-100 transition-opacity duration-200">
                     <span>Learn more</span>
                     <ArrowRightIcon />
                   </div>
@@ -200,12 +200,12 @@ export default function Home() {
           ].map((stat, index) => (
             <div
               key={stat.label}
-              className={`text-center p-3 sm:p-4 rounded-xl bg-muted/30 sm:bg-transparent animate-fade-in stagger-${index + 1}`}
+              className={`text-center p-4 sm:p-5 rounded-xl bg-muted/30 hover:bg-muted/50 sm:bg-muted/20 sm:hover:bg-muted/40 border border-transparent hover:border-border/50 transition-all duration-300 animate-fade-in stagger-${index + 1} group cursor-default`}
             >
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient-primary">
+              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient-primary group-hover:scale-105 transition-transform duration-300">
                 {stat.value}
               </div>
-              <div className="text-xs sm:text-sm text-muted-foreground mt-0.5 sm:mt-1">
+              <div className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-1.5 group-hover:text-foreground/70 transition-colors duration-300">
                 {stat.label}
               </div>
             </div>
