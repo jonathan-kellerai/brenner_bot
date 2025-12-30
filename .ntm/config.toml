@@ -1,0 +1,43 @@
+# BrennerBot ntm Project Configuration
+# Run `ntm palette` in a session to access these commands
+
+[project]
+name = "brenner_bot"
+description = "Brenner Loop multi-agent research sessions"
+
+# Palette commands for the Brenner Loop workflow
+# Usage: ntm palette → select command → choose target panes → send
+
+[[palette]]
+name = "Brenner: Check Mail"
+description = "Tell agents to check their Agent Mail inbox for the current thread"
+template = "brenner_check_mail.md"
+category = "brenner-loop"
+
+[[palette]]
+name = "Brenner: Reply with DELTA"
+description = "Request structured delta response following the artifact schema"
+template = "brenner_reply_delta.md"
+category = "brenner-loop"
+
+[[palette]]
+name = "Brenner: Discriminative Tests"
+description = "Request ranked discriminative tests with potency controls"
+template = "brenner_discriminative_tests.md"
+category = "brenner-loop"
+
+[[palette]]
+name = "Brenner: Adversarial Critique"
+description = "Request third alternatives and assumption analysis"
+template = "brenner_adversarial_critique.md"
+category = "brenner-loop"
+
+# Quick reference for operators
+[notes]
+session_naming = "Engineering: use beads ID (e.g., brenner_bot-5so.3.4). Research: use RS-YYYYMMDD-slug"
+artifact_path = "artifacts/{thread_id}.md"
+specs = [
+  "specs/delta_output_format_v0.1.md",
+  "specs/artifact_schema_v0.1.md",
+  "specs/role_prompts_v0.1.md"
+]
