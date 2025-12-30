@@ -16,7 +16,7 @@ interface CorpusDoc {
   filename: string;
 }
 
-type CategoryKey = "primary" | "distillations" | "prompts";
+type CategoryKey = "primary" | "distillations" | "raw-responses" | "prompts";
 
 // ============================================================================
 // CONSTANTS
@@ -65,6 +65,69 @@ const CORPUS_DOCS: CorpusDoc[] = [
     description: "The original seed prompt that started the project",
     filename: "initial_metaprompt.md",
   },
+  // Raw Model Responses - GPT
+  {
+    id: "raw-gpt-batch-1",
+    title: "GPT-5.2 Response (Batch 1)",
+    description: "First batch of extended reasoning responses from GPT-5.2 Pro",
+    filename: "gpt_pro_extended_reasoning_responses/brenner_bot__gpt_pro_52__response_batch_1.md",
+  },
+  {
+    id: "raw-gpt-batch-2",
+    title: "GPT-5.2 Response (Batch 2)",
+    description: "Second batch of extended reasoning responses from GPT-5.2 Pro",
+    filename: "gpt_pro_extended_reasoning_responses/brenner_bot__gpt_pro_52__response_batch_2.md",
+  },
+  {
+    id: "raw-gpt-batch-3",
+    title: "GPT-5.2 Response (Batch 3)",
+    description: "Third batch of extended reasoning responses from GPT-5.2 Pro",
+    filename: "gpt_pro_extended_reasoning_responses/brenner_bot__gpt_pro_52__response_batch_3.md",
+  },
+  {
+    id: "raw-gpt-truncated",
+    title: "GPT-5.2 Response (Previously Truncated)",
+    description: "Previously truncated GPT-5.2 responses, now complete",
+    filename: "gpt_pro_extended_reasoning_responses/brenner_bot__gpt_pro_52__response_previously_truncated_batch.md",
+  },
+  // Raw Model Responses - Opus
+  {
+    id: "raw-opus-batch-1",
+    title: "Opus 4.5 Response (Batch 1)",
+    description: "First batch of responses from Claude Opus 4.5",
+    filename: "opus_45_responses/brenner_bot__opus_45__response_batch_1.md",
+  },
+  {
+    id: "raw-opus-batch-2",
+    title: "Opus 4.5 Response (Batch 2)",
+    description: "Second batch of responses from Claude Opus 4.5",
+    filename: "opus_45_responses/brenner_bot__opus_45__response_batch_2.md",
+  },
+  {
+    id: "raw-opus-batch-3",
+    title: "Opus 4.5 Response (Batch 3)",
+    description: "Third batch of responses from Claude Opus 4.5",
+    filename: "opus_45_responses/brenner_bot__opus_45__response_batch_3.md",
+  },
+  // Raw Model Responses - Gemini
+  {
+    id: "raw-gemini-batch-1",
+    title: "Gemini 3 Response (Batch 1)",
+    description: "First batch of deep think responses from Gemini 3",
+    filename: "gemini_3_deep_think_responses/brenner_bot__gemini3__response_batch_1.md",
+  },
+  {
+    id: "raw-gemini-batch-2",
+    title: "Gemini 3 Response (Batch 2)",
+    description: "Second batch of deep think responses from Gemini 3",
+    filename: "gemini_3_deep_think_responses/brenner_bot__gemini3__response_batch_2.md",
+  },
+  {
+    id: "raw-gemini-batch-3",
+    title: "Gemini 3 Response (Batch 3)",
+    description: "Third batch of deep think responses from Gemini 3",
+    filename: "gemini_3_deep_think_responses/brenner_bot__gemini3__response_batch_3.md",
+  },
 ];
 
 // ============================================================================
@@ -92,6 +155,12 @@ const SparklesIcon = ({ className = "size-5" }: { className?: string }) => (
 const SearchIcon = ({ className = "size-5" }: { className?: string }) => (
   <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+  </svg>
+);
+
+const ChatBubbleIcon = ({ className = "size-5" }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" />
   </svg>
 );
 
@@ -136,6 +205,12 @@ const categories: Record<CategoryKey, { title: string; description: string; icon
     icon: <SparklesIcon className="size-4 sm:size-5" />,
     color: "from-purple-500/20 to-pink-500/20 dark:from-purple-500/10 dark:to-pink-500/10",
   },
+  "raw-responses": {
+    title: "Raw Model Responses",
+    description: "Complete reasoning traces from each model's analysis sessions",
+    icon: <ChatBubbleIcon className="size-4 sm:size-5" />,
+    color: "from-emerald-500/20 to-teal-500/20 dark:from-emerald-500/10 dark:to-teal-500/10",
+  },
   prompts: {
     title: "Metaprompts",
     description: "Structured prompts for applying the Brenner method",
@@ -151,6 +226,7 @@ const categories: Record<CategoryKey, { title: string; description: string; icon
 function getCategory(id: string): CategoryKey {
   if (id.startsWith("distillation")) return "distillations";
   if (id === "transcript" || id === "quote-bank") return "primary";
+  if (id.startsWith("raw-")) return "raw-responses";
   return "prompts";
 }
 
@@ -164,13 +240,23 @@ function getReadTime(id: string): string {
     "distillation-opus-45": "45 min",
     "distillation-gemini-3": "20 min",
   };
-  return times[id] || "15 min";
+  if (times[id]) return times[id];
+  // Raw response batches
+  if (id.startsWith("raw-gpt")) return "40-50 min";
+  if (id.startsWith("raw-opus")) return "12-15 min";
+  if (id.startsWith("raw-gemini")) return "6-8 min";
+  return "15 min";
 }
 
 function getModelBadge(id: string): { label: string; colorClass: string } | null {
-  if (id === "distillation-opus-45") return { label: "Claude Opus", colorClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
-  if (id === "distillation-gpt-52") return { label: "GPT-5.2", colorClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" };
+  // Distillations
+  if (id === "distillation-opus-45") return { label: "Claude Opus 4.5", colorClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
+  if (id === "distillation-gpt-52") return { label: "GPT-5.2 Pro", colorClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" };
   if (id === "distillation-gemini-3") return { label: "Gemini 3", colorClass: "bg-blue-500/15 text-blue-600 dark:text-blue-400" };
+  // Raw responses
+  if (id.startsWith("raw-gpt")) return { label: "GPT-5.2 Pro", colorClass: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" };
+  if (id.startsWith("raw-opus")) return { label: "Claude Opus 4.5", colorClass: "bg-amber-500/15 text-amber-600 dark:text-amber-400" };
+  if (id.startsWith("raw-gemini")) return { label: "Gemini 3", colorClass: "bg-blue-500/15 text-blue-600 dark:text-blue-400" };
   return null;
 }
 
@@ -193,16 +279,17 @@ function DocCard({ doc, index }: DocCardProps) {
       delay={index * 60}
       threshold={0.05}
       rootMargin="0px 0px -20px 0px"
+      className="h-full"
     >
       <Link
         href={`/corpus/${doc.id}`}
-        className="group block touch-manipulation"
+        className="group block touch-manipulation h-full"
       >
-        <Card hover className="h-full relative overflow-hidden active:scale-[0.98] transition-transform">
+        <Card hover className="h-full relative overflow-hidden active:scale-[0.98] transition-transform flex flex-col">
           {/* Hover gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:via-transparent group-hover:to-primary/3 transition-all duration-500 pointer-events-none" />
 
-          <CardHeader className="p-4 sm:p-5 lg:p-6 relative">
+          <CardHeader className="p-4 sm:p-5 lg:p-6 relative flex-1">
             <div className="flex items-start justify-between gap-3 sm:gap-4">
               <div className="space-y-1.5 sm:space-y-2 flex-1 min-w-0">
                 {/* Title with hover animation */}
@@ -299,7 +386,7 @@ function CategorySection({ categoryKey, docs, isExpanded, onToggle, sectionIndex
 
       {/* Cards Grid - Collapsible on mobile */}
       <div className={`transition-all duration-300 ease-out lg:block ${isExpanded ? "block" : "hidden lg:block"}`}>
-        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 items-stretch">
           {docs.map((doc, index) => (
             <DocCard key={doc.id} doc={doc} index={index} />
           ))}
@@ -370,7 +457,7 @@ interface CategoryPillsProps {
 }
 
 function CategoryPills({ activeCategory, onChange, counts }: CategoryPillsProps) {
-  const allCategories: (CategoryKey | "all")[] = ["all", "primary", "distillations", "prompts"];
+  const allCategories: (CategoryKey | "all")[] = ["all", "primary", "distillations", "raw-responses", "prompts"];
 
   return (
     <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
@@ -413,6 +500,7 @@ export default function CorpusIndexPage() {
   const [expandedSections, setExpandedSections] = useState<Record<CategoryKey, boolean>>({
     primary: true,
     distillations: true,
+    "raw-responses": true,
     prompts: true,
   });
 
@@ -457,6 +545,7 @@ export default function CorpusIndexPage() {
       all: CORPUS_DOCS.length,
       primary: 0,
       distillations: 0,
+      "raw-responses": 0,
       prompts: 0,
     };
 
