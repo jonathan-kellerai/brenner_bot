@@ -66,10 +66,10 @@ const MIN_SECTIONS = 2;
 // ============================================================================
 
 /**
- * Validate anchor format (§ followed by number)
+ * Validate anchor format (§ followed by number, no ranges)
  */
 function isValidAnchor(anchor: string): boolean {
-  return /^§\d+(-\d+)?$/.test(anchor);
+  return /^§\d+$/.test(anchor);
 }
 
 /**
