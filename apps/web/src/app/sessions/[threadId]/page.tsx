@@ -4,7 +4,7 @@ import { cookies, headers } from "next/headers";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
-import { RefreshControls } from "@/components/sessions";
+import { RefreshControls, SessionActions } from "@/components/sessions";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
 import { computeThreadStatusFromThread, parseSubjectType } from "@/lib/threadStatus";
@@ -268,6 +268,9 @@ export default async function SessionDetailPage({
     });
 
   const latestArtifactBody = status.latestArtifact?.message.body_md ?? null;
+  const kickoffMessage = messagesSorted.find((m) => parseSubjectType(m.subject).type === "kickoff");
+  const kickoffSender = kickoffMessage?.from ?? "";
+  const kickoffRecipients = kickoffMessage?.to ?? [];
 
   return (
     <div className="max-w-5xl mx-auto space-y-10">
@@ -354,6 +357,14 @@ export default async function SessionDetailPage({
           </div>
         )}
       </section>
+
+      <SessionActions
+        threadId={threadId}
+        projectKey={projectKey}
+        defaultSender={kickoffSender}
+        defaultRecipients={kickoffRecipients}
+        hasCompiledArtifact={Boolean(status.latestArtifact)}
+      />
 
       {/* Compiled Artifact */}
       <section className="space-y-3 animate-fade-in-up stagger-2">

@@ -39,7 +39,7 @@ For UI/search alignment, each core operator also lists:
 2) Rewrite the claim as 2–3 explicitly level-typed hypotheses (include a Third Alternative).
 3) Add at least 1 discriminative test that would separate those hypotheses, including a potency check.
 
-Output (required): 2–6 ` ```delta ` JSON blocks per specs/delta_output_format_v0.1.md targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - hypothesis_slate (ADD/EDIT; include `third_alternative: true` on one hypothesis when appropriate)
 - discriminative_tests (ADD)
 Optional: predictions_table (ADD), assumption_ledger (ADD with `scale_check: true`)
@@ -78,7 +78,7 @@ Anchors: prefer transcript `§n`; otherwise use `anchors: ["inference"]`.
 2) State what the new observables are and what would count as a discriminative readout.
 3) Add 1–2 tests and (optionally) prediction rows that become easy in the new coordinates.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: predictions_table (ADD), hypothesis_slate (EDIT to sharpen mechanisms/anchors)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -115,7 +115,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Specify the shortest discriminative observation path (measurement + readout).
 3) Add 1–2 high-leverage tests (with potency checks) and any required prediction rows.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: predictions_table (ADD), research_thread (EDIT to clarify statement/context)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -152,7 +152,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Use those invariants to rule out model families (forbidden patterns) or compress the hypothesis space.
 3) Add a test that probes an invariant (high likelihood ratio), and record any load-bearing assumptions.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 - assumption_ledger (ADD; include at least one `scale_check: true` when relevant)
 Optional: hypothesis_slate (EDIT to add constraints/anchors)
@@ -190,7 +190,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Design 1–2 "killer" tests that directly probe forbidden patterns (maximize likelihood ratio).
 3) Include a Third Alternative if the current framing is a false dichotomy.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD; include potency checks)
 Optional: hypothesis_slate (ADD/EDIT), predictions_table (ADD)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -227,7 +227,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) State what changes: readout, timescale, perturbation availability, ambiguity.
 3) Add 1–2 tests designed for the transposed system and note any new assumptions/risks.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: assumption_ledger (ADD), research_thread (EDIT context to justify system choice)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -264,7 +264,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Redesign the experiment so the signal becomes large/robust (avoid subtle effects).
 3) Add 1–2 tests that use the amplifier + include potency checks.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: predictions_table (ADD), assumption_ledger (ADD)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -301,7 +301,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Propose the smallest workable DIY substitute (enough to decide; no gold-plating).
 3) Add 1–2 tests that use the DIY tool and include potency checks.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: assumption_ledger (ADD), anomaly_register (ADD if tool limitations introduce ambiguity)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -338,7 +338,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Use the analogy to generate at least 1 Third Alternative hypothesis or a new discriminative readout.
 3) Add 1–2 tests that would separate the imported framing from the baseline framing.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - hypothesis_slate (ADD; include a Third Alternative when applicable)
 - discriminative_tests (ADD)
 Optional: adversarial_critique (ADD), research_thread (EDIT context)
@@ -376,7 +376,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Propose at least 2 resolutions (level-split, recode, hidden variable, both wrong).
 3) Add 1–2 tests that would discriminate between resolutions.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - adversarial_critique (ADD; capture the paradox + attack)
 - discriminative_tests (ADD)
 Optional: hypothesis_slate (ADD/EDIT), anomaly_register (ADD if unresolved)
@@ -414,7 +414,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) For each anomaly, state what it conflicts with and what would resolve it.
 3) Add 1–2 tests aimed at resolving the highest-leverage anomaly.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - anomaly_register (ADD)
 - discriminative_tests (ADD)
 Optional: assumption_ledger (ADD), adversarial_critique (ADD)
@@ -452,7 +452,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Propose 1 neglected angle that still preserves discriminative leverage (not novelty-for-novelty).
 3) Add a Third Alternative hypothesis or a test that probes the neglected angle.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - hypothesis_slate (ADD; Third Alternative when applicable)
 - discriminative_tests (ADD)
 Optional: adversarial_critique (ADD), research_thread (EDIT context)
@@ -490,7 +490,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) State the kill reason in one sentence (what new evidence/test makes it obsolete?).
 3) If killing creates a vacuum, add a replacement hypothesis/test (often a Third Alternative).
 
-Output (required): 1–4 ` ```delta ` JSON blocks targeting:
+Output (required): 1–4 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - hypothesis_slate / discriminative_tests / assumption_ledger (KILL)
 Optional: hypothesis_slate (ADD), discriminative_tests (ADD)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -527,7 +527,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Use those constraints to rule out at least 1 mechanism or to sharpen predictions.
 3) Add an explicit scale/physics assumption (⊞) and at least 1 test that depends on it.
 
-Output (required): 2–6 ` ```delta ` JSON blocks targeting:
+Output (required): 2–6 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - assumption_ledger (ADD with `scale_check: true`)
 - discriminative_tests (ADD)
 Optional: hypothesis_slate (EDIT), predictions_table (ADD)
@@ -566,7 +566,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Design a cheap pilot that would kill the key alternative (maximize speed/clarity).
 3) Add the pilot test with explicit potency checks and scoring.
 
-Output (required): 1–4 ` ```delta ` JSON blocks targeting:
+Output (required): 1–4 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: predictions_table (ADD), assumption_ledger (ADD)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -598,7 +598,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Specify what to look for and how it would discriminate hypotheses.
 3) Add a “have a look” test + potency check.
 
-Output (required): 1–4 ` ```delta ` JSON blocks targeting:
+Output (required): 1–4 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (ADD)
 Optional: predictions_table (ADD)
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
@@ -630,7 +630,7 @@ Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
 2) Add a potency/viability control that distinguishes “won’t” from “can’t”.
 3) Apply the potency check to the highest-risk test(s).
 
-Output (required): 1–4 ` ```delta ` JSON blocks targeting:
+Output (required): 1–4 fenced `delta` JSON blocks per specs/delta_output_format_v0.1.md targeting:
 - discriminative_tests (EDIT to strengthen `potency_check`)
 Optional: assumption_ledger (ADD) if the check reveals a new load-bearing assumption
 Anchors: prefer transcript `§n`; otherwise `anchors: ["inference"]`.
