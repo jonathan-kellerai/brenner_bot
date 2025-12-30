@@ -51,6 +51,14 @@ function makeRequest(args: {
 }
 
 describe("proxy()", () => {
+  it("does not gate public corpus files", () => {
+    withEnv({ BRENNER_LAB_MODE: undefined, BRENNER_LAB_SECRET: undefined }, () => {
+      const request = makeRequest({ pathname: "/_corpus/complete_brenner_transcript.md" });
+      const response = proxy(request);
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+    });
+  });
+
   it("fails closed when BRENNER_LAB_MODE is disabled", () => {
     withEnv({ BRENNER_LAB_MODE: undefined }, () => {
       const request = makeRequest({ pathname: "/sessions/new" });

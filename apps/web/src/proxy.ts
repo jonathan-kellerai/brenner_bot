@@ -62,12 +62,6 @@ function hasCloudflareAccessHeaders(request: NextRequest): boolean {
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // Never serve raw markdown files directly from `public/corpus/`.
-  // Corpus documents should be accessed via `/corpus/[doc]` where we can enforce policy.
-  if (pathname.startsWith("/_corpus/") && pathname.endsWith(".md")) {
-    return new NextResponse("Not found", { status: 404 });
-  }
-
   // Protect orchestration routes (sessions, API endpoints that trigger Agent Mail)
   // Fail-closed: deny access unless explicitly enabled
   if (pathname.startsWith("/sessions")) {
@@ -89,5 +83,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/_corpus/:path*", "/sessions/:path*"],
+  matcher: ["/sessions/:path*"],
 };

@@ -351,7 +351,13 @@ export async function POST(
   if (action === "compile") {
     const compiled = await compileThread({ projectKey, threadId });
     if (!compiled.ok) {
-      return NextResponse.json(compiled.response, { status: compiled.response.code === "NETWORK_ERROR" ? 502 : 500 });
+      let status = 500;
+      if (compiled.response.code === "NETWORK_ERROR") {
+        status = 502;
+      } else if (compiled.response.code === "MERGE_ERROR") {
+        status = 422;
+      }
+      return NextResponse.json(compiled.response, { status });
     }
 
     return NextResponse.json({ success: true, action: "compile", ...compiled.result });
@@ -376,7 +382,12 @@ export async function POST(
 
     const compiled = await compileThread({ projectKey, threadId });
     if (!compiled.ok) {
-      const status = compiled.response.code === "NETWORK_ERROR" ? 502 : compiled.response.code === "MERGE_ERROR" ? 422 : 500;
+      let status = 500;
+      if (compiled.response.code === "NETWORK_ERROR") {
+        status = 502;
+      } else if (compiled.response.code === "MERGE_ERROR") {
+        status = 422;
+      }
       return NextResponse.json(compiled.response, { status });
     }
 
