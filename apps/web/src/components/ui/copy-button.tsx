@@ -40,10 +40,6 @@ function CheckIcon({ className }: { className?: string }) {
         strokeLinejoin="round"
         d="M4.5 12.75l6 6 9-13.5"
         className="animate-draw-check"
-        style={{
-          strokeDasharray: 30,
-          strokeDashoffset: 30,
-        }}
       />
     </svg>
   );

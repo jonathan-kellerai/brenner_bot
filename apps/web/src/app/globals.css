@@ -227,7 +227,7 @@
 
 /* --- DRAW & PATH --- */
 @keyframes draw-check {
-  0% { stroke-dashoffset: 24; }
+  0% { stroke-dashoffset: 30; }
   100% { stroke-dashoffset: 0; }
 }
 
@@ -1449,7 +1449,7 @@
   /* --- Draw & Path --- */
   .animate-draw-check {
     animation: draw-check var(--duration-normal) var(--ease-out) both;
-    stroke-dasharray: 24;
+    stroke-dasharray: 30;
   }
 
   .animate-draw-line {
@@ -1459,6 +1459,10 @@
   /* --- Click & Ripple --- */
   .animate-click-scale {
     animation: click-scale var(--duration-fast) var(--ease-out);
+  }
+
+  .animate-ripple {
+    animation: ripple 0.6s var(--ease-out) forwards;
   }
 
   /* --- Celebration --- */
