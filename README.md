@@ -2,6 +2,12 @@
 
 **🌐 Live at [brennerbot.org](https://brennerbot.org)**
 
+<p align="center">
+  <img src="apps/web/public/brennerbot_illustration.jpeg" alt="BrennerBot Illustration" width="600" />
+  <br />
+  <em>Harness the scientific methods of Sydney Brenner using AI Agents</em>
+</p>
+
 ---
 
 **Brenner Bot is a research "seed crystal"**: a curated primary-source corpus (Sydney Brenner transcripts) plus multi-model syntheses, powering **collaborative scientific research conversations** that follow the "Brenner approach."
