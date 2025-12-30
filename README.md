@@ -282,6 +282,13 @@ The CLI source does **not** need to be a single `.ts` file. Bun follows the impo
   - The starter prompt used to elicit the “inner threads / symmetries / heuristics” analysis.
   - Designed to be paired with transcript excerpts.
 
+### Protocol kernel
+
+- **`artifact_schema_v0.1.md`**
+  - Canonical markdown schema for session artifacts (7 required sections, stable IDs, validation rules).
+- **`artifact_delta_spec_v0.1.md`**
+  - Deterministic delta/merge rules for multi-agent updates (ADD/EDIT/KILL, conflict policy, ordering).
+
 ### Model syntheses (batched)
 
 These are long-form writeups produced from transcript excerpts. They're useful as *candidate lenses*, not truth.
