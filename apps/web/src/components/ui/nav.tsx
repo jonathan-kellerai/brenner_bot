@@ -36,6 +36,16 @@ const GlossaryIcon = () => (
   </svg>
 )
 
+const OperatorsIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 3.75H5.25A1.5 1.5 0 003.75 5.25V9A1.5 1.5 0 005.25 10.5H9A1.5 1.5 0 0010.5 9V5.25A1.5 1.5 0 009 3.75zM18.75 3.75H15A1.5 1.5 0 0013.5 5.25V9A1.5 1.5 0 0015 10.5h3.75A1.5 1.5 0 0020.25 9V5.25a1.5 1.5 0 00-1.5-1.5zM9 13.5H5.25a1.5 1.5 0 00-1.5 1.5v3.75a1.5 1.5 0 001.5 1.5H9a1.5 1.5 0 001.5-1.5V15a1.5 1.5 0 00-1.5-1.5zM18.75 13.5H15a1.5 1.5 0 00-1.5 1.5v3.75a1.5 1.5 0 001.5 1.5h3.75a1.5 1.5 0 001.5-1.5V15a1.5 1.5 0 00-1.5-1.5z"
+    />
+  </svg>
+)
+
 interface NavItem {
   href: string
   label: string
@@ -45,6 +55,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { href: "/", label: "Home", icon: <HomeIcon /> },
   { href: "/corpus", label: "Corpus", icon: <BookIcon /> },
+  { href: "/operators", label: "Operators", icon: <OperatorsIcon /> },
   { href: "/distillations", label: "Distillations", icon: <SparklesIcon /> },
   { href: "/glossary", label: "Glossary", icon: <GlossaryIcon /> },
   { href: "/method", label: "Method", icon: <BeakerIcon /> },
