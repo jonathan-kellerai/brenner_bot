@@ -2620,6 +2620,274 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["mrc-lab", "conversational-science", "kitchen-table-science"],
     category: "brenner",
   },
+
+  // ============================================================================
+  // Fifth Batch: Additional Terms from Transcript (December 2025)
+  // ============================================================================
+
+  // --- Key People ---
+
+  "erwin-schrodinger": {
+    term: "Erwin Schrodinger",
+    short: "Physicist whose book 'What Is Life?' influenced a generation of molecular biologists.",
+    long:
+      "Schrodinger's 1944 book asked how physics could explain heredity and life. Many molecular biologists cite it as their inspiration for entering the field, though Brenner identified a 'fundamental error' in Schrodinger's thinking.",
+    why:
+      "Brenner noted that 'every one of one's colleagues has always said that the book that influenced them most is What Is Life.' But he saw that Schrodinger missed the need for a program to build the machinery. Transcript anchor: §44.",
+    related: ["von-neumann", "what-is-life", "schrodingers-error"],
+    category: "biology",
+  },
+  "what-is-life": {
+    term: "What Is Life?",
+    short: "Schrodinger's influential 1944 book on the physical basis of heredity.",
+    long:
+      "Schrodinger's book asked how the stability of genetic information could be explained by physics. It introduced the concept of 'aperiodic crystals' (now understood as DNA) and inspired many physicists to enter biology.",
+    why:
+      "While influential, Brenner saw that Schrodinger's framework was incomplete. Von Neumann's automata theory provided the missing piece: the distinction between program and machine. Transcript anchor: §44.",
+    related: ["erwin-schrodinger", "von-neumann", "schrodingers-error"],
+    category: "biology",
+  },
+  "schrodingers-error": {
+    term: "Schrodinger's Error",
+    short: "The mistaken belief that you can calculate an organism directly from its chromosomes.",
+    long:
+      "Brenner identified Schrodinger's 'fundamental error': assuming you could compute an organism from its genetic sequence alone. Von Neumann showed that you need both the program (DNA) AND the machinery (ribosomes, etc.) to execute it.",
+    why:
+      "Brenner contrasted Schrodinger with von Neumann: 'the program has to build the machinery to execute the program.' You cannot predict the phenotype from genotype without knowing the cellular context. Transcript anchor: §46.",
+    analogy:
+      "Like expecting to run software without a computer. The program is necessary but not sufficient; you need the execution environment too.",
+    related: ["von-neumann", "erwin-schrodinger", "what-is-life"],
+    category: "brenner",
+  },
+  "jack-dunitz": {
+    term: "Jack Dunitz",
+    short: "Crystallographer who first told Brenner about the DNA structure.",
+    long:
+      "Jack Dunitz was a crystallographer Brenner met at Oxford. In April 1953, Dunitz told Brenner that Watson and Crick had solved the structure of DNA, prompting their trip to Cambridge to see the model.",
+    why:
+      "This moment was pivotal: 'Jack Dunitz then told me... that Francis Crick and Jim Watson had solved the structure of DNA... we decided to go across to see it.' Transcript anchor: §55.",
+    related: ["francis-crick", "james-watson", "cavendish-laboratory"],
+    category: "biology",
+  },
+  "aaron-klug": {
+    term: "Aaron Klug",
+    short: "Structural biologist who came to the LMB and worked on virus structures.",
+    long:
+      "Aaron Klug joined the LMB and made fundamental contributions to understanding virus structure and the development of image reconstruction methods in electron microscopy. He won the Nobel Prize in Chemistry in 1982.",
+    why:
+      "Brenner mentioned Klug as one of the important people who joined the LMB in the 1960s, along with Hugh Huxley working on muscle proteins. Transcript anchor: §89.",
+    related: ["mrc-lab", "electron-microscopy", "max-perutz"],
+    category: "biology",
+  },
+  "max-perutz": {
+    term: "Max Perutz",
+    short: "Crystallographer who determined the first protein structure (hemoglobin).",
+    long:
+      "Max Perutz led the MRC unit that became the Laboratory of Molecular Biology. He solved the structure of hemoglobin using X-ray crystallography, sharing the 1962 Nobel Prize with John Kendrew.",
+    why:
+      "Perutz's work on hemoglobin was foundational for structural biology. Brenner described the excitement when 'Max got this' structure after years of work. Transcript anchor: §89.",
+    related: ["mrc-lab", "john-kendrew", "phase-problem", "isomorphous-replacement"],
+    category: "biology",
+  },
+  "john-kendrew": {
+    term: "John Kendrew",
+    short: "Crystallographer who solved the first protein structure (myoglobin).",
+    long:
+      "John Kendrew determined the structure of myoglobin, the first protein structure ever solved. He shared the 1962 Nobel Prize with Max Perutz. The first low-resolution structure 'looked like just a roll of sausages.'",
+    why:
+      "Brenner recalled 'when John got the first 6A structure of myoglobin and it looked like just a roll of sausages.' This was a landmark achievement in structural biology. Transcript anchor: §89.",
+    related: ["mrc-lab", "max-perutz", "phase-problem"],
+    category: "biology",
+  },
+
+  // --- Key Concepts ---
+
+  "wiring-diagram": {
+    term: "Wiring Diagram",
+    short: "The complete map of neural connections in a nervous system.",
+    long:
+      "A wiring diagram shows every neuron and every synapse in a nervous system. Brenner and colleagues reconstructed the complete C. elegans wiring diagram from serial section electron microscopy, enabling computational analysis of neural circuits.",
+    why:
+      "Brenner emphasized that 'obtaining a complete wiring diagram is essential to understand complex biological systems. So the big job was: find the wiring diagram.' Transcript anchor: §146.",
+    related: ["connectome", "serial-section", "electron-microscopy", "neuron"],
+    category: "biology",
+  },
+  heteroduplex: {
+    term: "Heteroduplex",
+    short: "A double-stranded DNA molecule with strands from different sources.",
+    long:
+      "Heteroduplexes form when DNA from two different sources is denatured and reannealed. Mismatches or deletions appear as bubbles or loops in electron microscopy, revealing sequence differences.",
+    why:
+      "Brenner joked about the ubiquity of the technique: 'I thought one day that I would make one of these things out of rope on a beach and just photograph it.' Transcript anchor: §103.",
+    related: ["electron-microscopy", "deletion-mapping", "dna"],
+    category: "method",
+  },
+  "enzyme-induction": {
+    term: "Enzyme Induction",
+    short: "The rapid synthesis of enzymes in response to a signal.",
+    long:
+      "Enzyme induction occurs when adding a substrate or inducer triggers rapid synthesis of the enzymes needed to metabolize it. Jacob and Monod studied the kinetics of induction, which led to the operon model.",
+    why:
+      "The speed of enzyme induction was puzzling: 'they had been studying the kinetics of enzyme induction after you add the gene to a cell and found that this happened extremely rapidly.' Transcript anchor: §96.",
+    related: ["operon", "jacques-monod", "francois-jacob", "pajamo-experiment"],
+    category: "biology",
+  },
+  chemoaffinity: {
+    term: "Chemoaffinity",
+    short: "Sperry's theory that neurons find targets through molecular matching.",
+    long:
+      "Roger Sperry proposed that each neuron has specific molecular markers that match with its target. This 'chemoaffinity hypothesis' explained how neural wiring could be specified genetically.",
+    why:
+      "Brenner discussed how 'Sperry had put forward what was called the chemoaffinity... each recipient had a molecule and each donor had a molecule, and only when they matched could the nerves wire up.' Transcript anchor: §163.",
+    related: ["wiring-diagram", "neuron", "synapse", "connectome"],
+    category: "biology",
+  },
+  "commaless-code": {
+    term: "Commaless Code",
+    short: "Crick's hypothesis that overlapping frames would produce nonsense.",
+    long:
+      "Crick proposed a 'commaless code' where only 20 of the 64 possible triplets would be sense codons, automatically preventing out-of-frame reading. This elegant idea turned out to be wrong when the real code was deciphered.",
+    why:
+      "Brenner discussed how 'sense and nonsense' thinking led to the commaless code concept, which was a beautiful but incorrect theory about how the genetic code might work. Transcript anchor: §108.",
+    related: ["genetic-code", "codon", "reading-frame", "frameshift"],
+    category: "biology",
+  },
+  "diamond-code": {
+    term: "Diamond Code",
+    short: "Gamow's overlapping triplet code hypothesis.",
+    long:
+      "George Gamow proposed that amino acids fit into diamond-shaped holes in the DNA major groove, with overlapping triplets specifying the sequence. This was an early attempt to solve the coding problem.",
+    why:
+      "Brenner discussed eliminating 'all overlapping triplet code' including Gamow's proposal. Sequence data from proteins eventually ruled out overlapping codes. Transcript anchor: §68-69.",
+    related: ["genetic-code", "george-gamow", "overlapping-code", "rna-tie-club"],
+    category: "biology",
+  },
+  "vacuous-theory": {
+    term: "Vacuous Theory",
+    short: "Brenner's critique: the more general the theory, the more empty it is.",
+    long:
+      "Brenner warned against overly general theories that explain everything and nothing. When Gunther Stent claimed development was 'solved' by the operon model, Brenner countered that 'the more general the theory the more vacuous it is.'",
+    why:
+      "This is a key Brenner principle: general frameworks may feel satisfying but lack predictive power. Real biology requires specific, testable mechanisms. Transcript anchor: §126.",
+    analogy:
+      "Like saying 'evolution explains everything' without specifying the actual selection pressures, mutations, and mechanisms at work.",
+    related: ["theory-kill", "discriminative-experiment", "third-alternative"],
+    category: "brenner",
+  },
+  "sb-educational-society": {
+    term: "SB Educational Society",
+    short: "Brenner's method of learning: colleagues must explain their work with 5 minutes notice.",
+    long:
+      "Brenner formed the 'SB Educational Society' where colleagues had to explain their research with only 5 minutes notice. His reasoning: 'if you had to prepare anything on what you were doing at the moment you'd better get worried, because it means you don't know what you're doing.'",
+    why:
+      "This reflects Brenner's belief that scientists should always be ready to articulate their work clearly. It also kept him educated across diverse fields. Transcript anchor: §158.",
+    related: ["saturday-morning-coffee", "conversational-science", "mrc-lab"],
+    category: "brenner",
+  },
+
+  // --- Historical Places ---
+
+  "cavendish-laboratory": {
+    term: "Cavendish Laboratory",
+    short: "The Cambridge physics lab where Brenner first saw the DNA model.",
+    long:
+      "The Cavendish Laboratory at Cambridge was where Watson and Crick built the DNA model. In April 1953, Brenner traveled there with Jack Dunitz and 'saw the DNA model for the first time... that's when I saw that this was it.'",
+    why:
+      "The moment of seeing the model was transformative: 'In a flash you could just see that everything... the curtain had been lifted and everything was now clear what to do.' Transcript anchor: §55.",
+    related: ["francis-crick", "james-watson", "jack-dunitz", "mrc-lab"],
+    category: "biology",
+  },
+  germiston: {
+    term: "Germiston",
+    short: "The South African town where Sydney Brenner was born and raised.",
+    long:
+      "Germiston is a town near Johannesburg where Brenner grew up. His father was a cobbler and they lived 'in two rooms at the back of his shop.' Despite the provincial setting, Brenner's early chemistry experiments in a garage launched his scientific career.",
+    why:
+      "Brenner's origins in a 'provincial place in a provincial country' shaped his drive to reach 'the testing ground at the centre.' Transcript anchor: §1-5.",
+    related: ["testing-ground", "power-of-ignorance"],
+    category: "brenner",
+  },
+
+  // --- Experimental Concepts ---
+
+  revertant: {
+    term: "Revertant",
+    short: "A mutant that has regained the wild-type phenotype.",
+    long:
+      "A revertant is a mutant that recovers normal function, either by back-mutation to the original sequence or by a second-site suppressor mutation. Revertants are valuable for studying gene function and interactions.",
+    why:
+      "Selecting for revertants was a powerful genetic tool. Brenner used reversion analysis extensively to understand suppressor mutations and genetic interactions.",
+    related: ["suppressor-mutation", "wild-type", "mutation", "genetic-screen"],
+    category: "biology",
+  },
+  "neuron-hypothesis": {
+    term: "Neuron Hypothesis",
+    short: "The principle that nervous systems are built from discrete cells connected by synapses.",
+    long:
+      "The neuron hypothesis, established by Cajal and others, showed that nervous systems are composed of individual cells (neurons) connected at synapses, not continuous networks. This was a foundational breakthrough.",
+    why:
+      "Brenner told a student asking about 'the next breakthrough in the nervous system': 'you are 50 years too late, it's already happened, it's called the neuron hypothesis.' Transcript anchor: §184.",
+    related: ["neuron", "synapse", "connectome", "wiring-diagram"],
+    category: "biology",
+  },
+  "machine-language-of-biology": {
+    term: "Machine Language of Biology",
+    short: "The low-level instructions that actually execute biological programs.",
+    long:
+      "Brenner distinguished between high-level descriptions of behavior and the actual 'machine language' of biology: the specific neurons, connections, and molecular mechanisms that implement function.",
+    why:
+      "Brenner criticized simulations in Fortran: 'a proper simulation must be done in the machine language of the object being simulated.' You need lists of neurons, connections, and operations. Transcript anchor: §147.",
+    related: ["wiring-diagram", "von-neumann", "turing-machine", "one-dimensional-sequence"],
+    category: "brenner",
+  },
+
+  // --- C. elegans Specifics ---
+
+  male: {
+    term: "Male (C. elegans)",
+    short: "Rare males used for genetic crosses in C. elegans.",
+    long:
+      "C. elegans hermaphrodites occasionally produce males (about 0.1% of progeny). Males can mate with hermaphrodites, enabling genetic crosses to move mutations between strains. Males arise from X chromosome nondisjunction.",
+    why:
+      "Brenner noted that 'these nematodes have occasional males which crop up in cultures and you can use these males to move genes from one animal to another.' Transcript anchor: §148.",
+    related: ["c-elegans", "hermaphrodite", "self-fertilizing-hermaphrodite", "isogenic"],
+    category: "biology",
+  },
+  "behavioral-screen": {
+    term: "Behavioral Screen",
+    short: "A genetic screen that selects mutants based on abnormal behavior.",
+    long:
+      "Behavioral screens identify mutants by how they move, feed, mate, or respond to stimuli. In C. elegans, Brenner selected movement mutants by placing animals on one side of a plate and bacteria on the other: only animals that could move would reach the food.",
+    why:
+      "Brenner developed elegant behavioral screens: 'taking a petri dish and putting a few thousand nematodes on one side of it and giving some bacteria on the other side... only the ones that can move will get there very efficiently.' Transcript anchor: §153.",
+    related: ["unc-mutant", "behavioral-mutant", "genetic-screen", "chemotaxis"],
+    category: "method",
+  },
+
+  // --- Philosophical Principles ---
+
+  "program-builds-machine": {
+    term: "Program Builds Machine",
+    short: "Von Neumann's insight: the genetic program must construct its own execution machinery.",
+    long:
+      "Von Neumann showed that in self-replicating systems, the program (genome) must encode instructions for building the machine (cell) that executes the program. This is fundamentally different from computer programs that run on pre-existing hardware.",
+    why:
+      "Brenner quoted von Neumann: 'the program has to build the machinery to execute the program.' This distinguishes biology from conventional computation. Transcript anchor: §47.",
+    analogy:
+      "A Python script runs on pre-built hardware. DNA must first build the ribosome that reads it. The genome is both blueprint and bootstrap.",
+    related: ["von-neumann", "schrodingers-error", "turing-machine"],
+    category: "brenner",
+  },
+  "cultivation-of-organisms": {
+    term: "Cultivation of Organisms",
+    short: "The craft of growing and maintaining experimental organisms.",
+    long:
+      "Brenner emphasized that he 'did all of these experiments with my own hands, for the simple reason that I loved the cultivation of organisms.' Mastering the practical craft of growing organisms was essential for doing good experimental biology.",
+    why:
+      "Brenner saw cultivation as both art and necessity: 'I just loved the idea of growing all these strange bacteria... to bring it to the stage that in fact other people can take it over.' Transcript anchor: §143.",
+    related: ["c-elegans", "model-organism", "n2", "bacteriophage"],
+    category: "brenner",
+  },
 };
 
 // ============================================================================
