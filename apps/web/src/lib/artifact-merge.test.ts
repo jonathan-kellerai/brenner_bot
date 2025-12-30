@@ -601,6 +601,35 @@ describe("Deterministic merging", () => {
 });
 
 // ============================================================================
+// Tests: mergeArtifactWithTimestamps metadata
+// ============================================================================
+
+describe("mergeArtifactWithTimestamps metadata", () => {
+  test("backfills missing contributor contributed_at", () => {
+    const base = createEmptyArtifact("TEST-001");
+    base.metadata.contributors.push({ agent: "Agent1" });
+
+    const delta = makeTimestampedDelta(
+      "ADD",
+      "hypothesis_slate",
+      null,
+      { name: "H1", claim: "C", mechanism: "M" },
+      "2025-01-01T00:00:00Z",
+      "Agent1",
+    );
+
+    const result = mergeArtifactWithTimestamps(base, [delta]);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.artifact.metadata.contributors).toHaveLength(1);
+    expect(result.artifact.metadata.contributors[0].agent).toBe("Agent1");
+    expect(result.artifact.metadata.contributors[0].contributed_at).toBe("2025-01-01T00:00:00Z");
+  });
+});
+
+// ============================================================================
 // Tests: Test ranking
 // ============================================================================
 

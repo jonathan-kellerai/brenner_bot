@@ -760,7 +760,7 @@ export function mergeArtifactWithTimestamps(
           contributed_at: delta.timestamp,
         });
       } else if (
-        existingContributor.contributed_at &&
+        !existingContributor.contributed_at ||
         delta.timestamp > existingContributor.contributed_at
       ) {
         existingContributor.contributed_at = delta.timestamp;
