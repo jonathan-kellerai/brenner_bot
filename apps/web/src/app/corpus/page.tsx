@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, type ReactNode } from "react";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { AnimatedElement, HeroBackground } from "@/components/ui/animated-element";
 
@@ -123,7 +123,7 @@ const XMarkIcon = ({ className = "size-4" }: { className?: string }) => (
 // CATEGORY CONFIG
 // ============================================================================
 
-const categories: Record<CategoryKey, { title: string; description: string; icon: React.ReactNode; color: string }> = {
+const categories: Record<CategoryKey, { title: string; description: string; icon: ReactNode; color: string }> = {
   primary: {
     title: "Primary Sources",
     description: "The original transcript and curated quotes",
@@ -150,9 +150,8 @@ const categories: Record<CategoryKey, { title: string; description: string; icon
 
 function getCategory(id: string): CategoryKey {
   if (id.startsWith("distillation")) return "distillations";
-  if (id.includes("metaprompt") || id === "quote-bank") return "prompts";
-  if (id === "quote-bank") return "primary";
-  return id === "transcript" ? "primary" : "prompts";
+  if (id === "transcript" || id === "quote-bank") return "primary";
+  return "prompts";
 }
 
 function getReadTime(id: string): string {
@@ -182,7 +181,6 @@ function getModelBadge(id: string): { label: string; colorClass: string } | null
 interface DocCardProps {
   doc: CorpusDoc;
   index: number;
-  isExpanded?: boolean;
 }
 
 function DocCard({ doc, index }: DocCardProps) {
@@ -476,20 +474,6 @@ export default function CorpusIndexPage() {
     }));
   }, []);
 
-  // Keyboard shortcut for search focus
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        const searchInput = document.querySelector('input[type="text"]') as HTMLInputElement;
-        searchInput?.focus();
-      }
-    };
-
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, []);
-
   return (
     <div className="space-y-6 sm:space-y-8 lg:space-y-10">
       {/* Hero Section */}
@@ -609,11 +593,6 @@ export default function CorpusIndexPage() {
           </section>
         </AnimatedElement>
       )}
-
-      {/* Keyboard shortcut hint - Desktop only */}
-      <div className="hidden lg:flex justify-center text-xs text-muted-foreground/60 pb-4">
-        Press <kbd className="mx-1 px-1.5 py-0.5 rounded bg-muted font-mono">⌘K</kbd> to search
-      </div>
     </div>
   );
 }

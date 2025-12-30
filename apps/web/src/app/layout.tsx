@@ -118,10 +118,10 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Providers>
-        <SearchProvider>
-        <div className="min-h-dvh flex flex-col bg-background text-foreground">
-          {/* Reading Progress */}
-          <ReadingProgress />
+          <SearchProvider>
+            <div className="min-h-dvh flex flex-col bg-background text-foreground">
+              {/* Reading Progress */}
+              <ReadingProgress />
 
           {/* Header */}
           <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
@@ -219,8 +219,8 @@ export default function RootLayout({
 
           {/* Toast Notifications */}
           <Toaster />
-        </div>
-        </SearchProvider>
+            </div>
+          </SearchProvider>
         </Providers>
       </body>
     </html>
