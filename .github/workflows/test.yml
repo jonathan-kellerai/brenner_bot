@@ -161,3 +161,379 @@ jobs:
       - name: Run CLI tests
         run: bun test brenner.test.ts
         continue-on-error: true
+
+  installer-smoke-unix:
+    name: Installer Smoke (bash)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (apps/web)
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      - name: Build local brenner artifact
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p dist
+
+          os="$(uname -s)"
+          arch="$(uname -m)"
+
+          case "$os" in
+            Linux) os="linux" ;;
+            Darwin) os="darwin" ;;
+            *) echo "Unsupported OS: $os" >&2; exit 1 ;;
+          esac
+
+          case "$arch" in
+            x86_64|amd64) arch="x64" ;;
+            arm64|aarch64) arch="arm64" ;;
+            *) echo "Unsupported arch: $arch" >&2; exit 1 ;;
+          esac
+
+          platform="${os}-${arch}"
+          outfile="brenner-${platform}"
+
+          target=""
+          case "$platform" in
+            linux-x64) target="bun-linux-x64-baseline" ;;
+            linux-arm64) target="bun-linux-arm64" ;;
+            darwin-x64) target="bun-darwin-x64" ;;
+            darwin-arm64) target="bun-darwin-arm64" ;;
+            *) : ;;
+          esac
+
+          if [[ -n "$target" ]]; then
+            bun build --compile --minify --target="$target" --outfile "dist/${outfile}" ./brenner.ts
+          else
+            bun build --compile --minify --outfile "dist/${outfile}" ./brenner.ts
+          fi
+
+          if command -v sha256sum >/dev/null 2>&1; then
+            checksum="$(sha256sum "dist/${outfile}" | awk '{print $1}')"
+          else
+            checksum="$(shasum -a 256 "dist/${outfile}" | awk '{print $1}')"
+          fi
+
+          echo "platform=$platform" >> "$GITHUB_OUTPUT"
+          echo "artifact_path=$GITHUB_WORKSPACE/dist/${outfile}" >> "$GITHUB_OUTPUT"
+          echo "checksum=$checksum" >> "$GITHUB_OUTPUT"
+
+      - name: Run install.sh against file:// artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          export HOME="${RUNNER_TEMP}/brenner-install-home"
+          export SHELL="/bin/bash"
+          mkdir -p "$HOME"
+
+          dest="$HOME/.local/bin"
+          mkdir -p "$dest"
+
+          artifact_url="file://${{ steps.build.outputs.artifact_path }}"
+          checksum="${{ steps.build.outputs.checksum }}"
+          log="${RUNNER_TEMP}/installer.log"
+
+          bash ./install.sh \
+            --dest "$dest" \
+            --artifact-url "$artifact_url" \
+            --checksum "$checksum" \
+            --easy-mode \
+            --verify \
+            --skip-ntm --skip-cass --skip-cm 2>&1 | tee "$log"
+
+      - name: Upload installer log (failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-log-unix-${{ matrix.os }}
+          path: ${{ runner.temp }}/installer.log
+          retention-days: 7
+
+  installer-smoke-windows:
+    name: Installer Smoke (pwsh)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (apps/web)
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      - name: Build local brenner artifact
+        id: build
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          bun build --compile --minify --target=bun-windows-x64-baseline --outfile dist/brenner-win-x64.exe ./brenner.ts
+
+          $artifactPath = (Resolve-Path "dist/brenner-win-x64.exe").Path
+          $checksum = (Get-FileHash -Path $artifactPath -Algorithm SHA256).Hash
+
+          "artifact_path=$artifactPath" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          "checksum=$checksum" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+
+      - name: Run install.ps1 against file:// artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+
+          $dest = Join-Path $env:RUNNER_TEMP "brenner-bin"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+
+          $artifactPath = "${{ steps.build.outputs.artifact_path }}"
+          $artifactUrl = (New-Object System.Uri($artifactPath)).AbsoluteUri
+          $checksum = "${{ steps.build.outputs.checksum }}"
+
+          $log = Join-Path $env:RUNNER_TEMP "installer.log"
+          Start-Transcript -Path $log -Force | Out-Null
+          try {
+            & .\install.ps1 -Dest $dest -ArtifactUrl $artifactUrl -Checksum $checksum -EasyMode -Verify -SkipNtm -SkipCass -SkipCm
+            if ($LASTEXITCODE -ne 0) { throw "Installer exit code: $LASTEXITCODE" }
+          } finally {
+            Stop-Transcript | Out-Null
+          }
+
+      - name: Upload installer log (failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: installer-log-windows
+          path: ${{ runner.temp }}/installer.log
+          retention-days: 7
+
+  installer-smoke-linux:
+    name: Installer Smoke (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (apps/web)
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      - name: Build local brenner artifact
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          bun build --compile --target=bun-linux-x64-baseline --outfile dist/brenner-linux-x64 ./brenner.ts
+          sha256sum dist/brenner-linux-x64 > dist/brenner-linux-x64.sha256
+          echo "==> dist/brenner-linux-x64.sha256"
+          cat dist/brenner-linux-x64.sha256
+
+      - name: Run install.sh against file:// artifact
+        run: |
+          set -euo pipefail
+          export HOME="${RUNNER_TEMP}/installer-home"
+          mkdir -p "$HOME"
+          DEST="${HOME}/.local/bin"
+          CHECKSUM="$(awk '{print $1}' dist/brenner-linux-x64.sha256)"
+          ./install.sh \
+            --artifact-url "file://$PWD/dist/brenner-linux-x64" \
+            --checksum "$CHECKSUM" \
+            --dest "$DEST" \
+            --easy-mode \
+            --verify \
+            --skip-ntm \
+            --skip-cass \
+            --skip-cm
+          "$DEST/brenner" --version
+
+  installer-smoke-windows:
+    name: Installer Smoke (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies (apps/web)
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      - name: Build local brenner artifact
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          bun build --compile --target=bun-windows-x64-baseline --outfile dist/brenner-win-x64.exe ./brenner.ts
+          $checksum = (Get-FileHash -Algorithm SHA256 dist/brenner-win-x64.exe).Hash.ToLower()
+          "$checksum  brenner-win-x64.exe" | Out-File -FilePath dist/brenner-win-x64.exe.sha256 -Encoding ascii
+          Write-Host "==> dist/brenner-win-x64.exe.sha256"
+          Get-Content dist/brenner-win-x64.exe.sha256
+
+      - name: Run install.ps1 against file:// artifact
+        shell: pwsh
+        run: |
+          $dest = Join-Path $env:RUNNER_TEMP "brenner-bin"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+
+          $artifactPath = (Resolve-Path "dist/brenner-win-x64.exe").Path
+          $artifactUrl = (New-Object System.Uri($artifactPath)).AbsoluteUri
+          $checksum = (Get-FileHash -Algorithm SHA256 "dist/brenner-win-x64.exe").Hash.ToLower()
+
+          Write-Host "ArtifactUrl: $artifactUrl"
+          Write-Host "Checksum:   $checksum"
+
+          ./install.ps1 -ArtifactUrl $artifactUrl -Checksum $checksum -Dest $dest -EasyMode -Verify -SkipNtm -SkipCass -SkipCm
+
+          & (Join-Path $dest "brenner.exe") --version
+          & (Join-Path $dest "brenner.exe") doctor --json --skip-ntm --skip-cass --skip-cm
+
+  installer-smoke-bash:
+    name: Installer Smoke (bash)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        run: bun install --frozen-lockfile || bun install
+
+      - name: Build local brenner artifact
+        id: build
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+
+          os="$(uname -s)"
+          arch="$(uname -m)"
+
+          case "$os" in
+            Linux) os_id="linux" ;;
+            Darwin) os_id="darwin" ;;
+            *) echo "Unsupported OS: $os" >&2; exit 1 ;;
+          esac
+
+          case "$arch" in
+            x86_64|amd64) arch_id="x64" ;;
+            arm64|aarch64) arch_id="arm64" ;;
+            *) echo "Unsupported arch: $arch" >&2; exit 1 ;;
+          esac
+
+          artifact_name="brenner-${os_id}-${arch_id}"
+          bun build --compile ./brenner.ts --outfile "dist/${artifact_name}"
+
+          if command -v sha256sum >/dev/null 2>&1; then
+            checksum="$(sha256sum "dist/${artifact_name}" | awk '{print $1}')"
+          else
+            checksum="$(shasum -a 256 "dist/${artifact_name}" | awk '{print $1}')"
+          fi
+
+          echo "artifact_name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "checksum=${checksum}" >> "$GITHUB_OUTPUT"
+
+      - name: Run install.sh against file:// artifact (offline)
+        shell: bash
+        env:
+          HOME: ${{ runner.temp }}/installer-home
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME"
+
+          chmod +x ./install.sh
+          artifact_url="file://${GITHUB_WORKSPACE}/dist/${{ steps.build.outputs.artifact_name }}"
+          checksum="${{ steps.build.outputs.checksum }}"
+
+          ./install.sh \
+            --easy-mode \
+            --verify \
+            --skip-ntm --skip-cass --skip-cm \
+            --artifact-url "$artifact_url" \
+            --checksum "$checksum" 2>&1 | tee "${RUNNER_TEMP}/install-sh.log"
+
+      - name: Upload install.sh log (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: install-sh-log-${{ matrix.os }}
+          path: ${{ runner.temp }}/install-sh.log
+          retention-days: 7
+
+  installer-smoke-pwsh:
+    name: Installer Smoke (pwsh)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install root dependencies
+        shell: pwsh
+        run: |
+          bun install --frozen-lockfile
+          if ($LASTEXITCODE -ne 0) { bun install }
+
+      - name: Build local brenner artifact
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          bun build --compile ./brenner.ts --outfile dist/brenner-win-x64.exe
+
+      - name: Run install.ps1 against file:// artifact (offline)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dest = Join-Path $env:RUNNER_TEMP "brenner-bin"
+          New-Item -ItemType Directory -Force -Path $dest | Out-Null
+
+          $artifactPath = Join-Path $env:GITHUB_WORKSPACE "dist/brenner-win-x64.exe"
+          $artifactUri = (New-Object System.Uri($artifactPath)).AbsoluteUri
+          $checksum = (Get-FileHash -Path $artifactPath -Algorithm SHA256).Hash.ToLower()
+
+          ./install.ps1 `
+            -ArtifactUrl $artifactUri `
+            -Checksum $checksum `
+            -Dest $dest `
+            -EasyMode `
+            -Verify `
+            -SkipNtm `
+            -SkipCass `
+            -SkipCm 2>&1 | Tee-Object -FilePath (Join-Path $env:RUNNER_TEMP "install-ps1.log")
+
+      - name: Upload install.ps1 log (on failure)
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: install-ps1-log-windows
+          path: ${{ runner.temp }}/install-ps1.log
+          retention-days: 7

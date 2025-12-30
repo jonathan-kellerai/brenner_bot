@@ -52,6 +52,23 @@ function Ensure-Directory([string]$Path) {
   }
 }
 
+function Get-LocalPathFromFileUrl([string]$Url) {
+  try {
+    $uri = [Uri]$Url
+    if ($uri.Scheme -eq "file" -and $uri.LocalPath) {
+      return $uri.LocalPath
+    }
+  } catch {
+    # fall back to manual parsing
+  }
+
+  $path = $Url.Substring("file://".Length)
+  if ($path -match '^/+[A-Za-z]:/') {
+    $path = $path.TrimStart("/")
+  }
+  return $path
+}
+
 function Ensure-DestOnPath([string]$Dest, [switch]$EasyMode) {
   $destAbs = (Resolve-Path $Dest).Path
   $userPath = [Environment]::GetEnvironmentVariable("PATH", "User")
@@ -82,6 +99,11 @@ function Parse-Sha256([string]$Content) {
 }
 
 function Fetch-Text([string]$Url) {
+  if ($Url -like "file://*") {
+    $localPath = Get-LocalPathFromFileUrl $Url
+    if (-not (Test-Path $localPath)) { Fail "Local file not found: $localPath" }
+    return Get-Content -Raw -Path $localPath
+  }
   try {
     return (Invoke-WebRequest -Uri $Url -UseBasicParsing).Content
   } catch {
@@ -92,6 +114,12 @@ function Fetch-Text([string]$Url) {
 
 function Download-File([string]$Url, [string]$OutFile) {
   Info "Downloading $Url"
+  if ($Url -like "file://*") {
+    $localPath = Get-LocalPathFromFileUrl $Url
+    if (-not (Test-Path $localPath)) { Fail "Local file not found: $localPath" }
+    Copy-Item -Path $localPath -Destination $OutFile -Force
+    return
+  }
   try {
     Invoke-WebRequest -Uri $Url -OutFile $OutFile -UseBasicParsing
   } catch {
@@ -333,4 +361,3 @@ if ($Verify) {
 } else {
   Info "Install complete."
 }
-
