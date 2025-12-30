@@ -1,0 +1,26 @@
+{
+  "metadata": {
+    "session_id": "",
+    "created_at": "not-a-timestamp",
+    "updated_at": "also-not-a-timestamp",
+    "version": 0,
+    "contributors": [],
+    "status": "invalid-status"
+  },
+  "sections": {
+    "research_thread": null,
+    "hypothesis_slate": [
+      {
+        "id": "H1",
+        "name": "Lineage-based computation",
+        "claim": "Cell fate is determined by tracking lineage history.",
+        "mechanism": "Cells maintain internal state."
+      }
+    ],
+    "predictions_table": [],
+    "discriminative_tests": [],
+    "assumption_ledger": [],
+    "anomaly_register": [],
+    "adversarial_critique": []
+  }
+}

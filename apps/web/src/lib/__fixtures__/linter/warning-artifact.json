@@ -1,0 +1,123 @@
+{
+  "metadata": {
+    "session_id": "GOLDEN-WARNINGS-001",
+    "created_at": "2025-12-30T05:30:00Z",
+    "updated_at": "2025-12-30T06:00:00Z",
+    "version": 1,
+    "contributors": [
+      { "agent": "PinkSnow", "program": "claude-code", "model": "opus-4.5" }
+    ],
+    "status": "active"
+  },
+  "sections": {
+    "research_thread": {
+      "id": "RT",
+      "statement": "How does cell fate work?",
+      "context": "Background context.",
+      "why_it_matters": "It matters.",
+      "anchors": ["§1"]
+    },
+    "hypothesis_slate": [
+      {
+        "id": "H1",
+        "name": "Lineage hypothesis",
+        "claim": "Fate via lineage.",
+        "mechanism": "Internal state.",
+        "anchors": ["§2"]
+      },
+      {
+        "id": "H2",
+        "name": "Gradient hypothesis",
+        "claim": "Fate via gradients.",
+        "mechanism": "External signals.",
+        "anchors": ["§3"]
+      },
+      {
+        "id": "H3",
+        "name": "Third Alternative",
+        "claim": "Both wrong.",
+        "mechanism": "Epigenetics.",
+        "third_alternative": true
+      }
+    ],
+    "predictions_table": [
+      {
+        "id": "P1",
+        "condition": "Condition 1",
+        "predictions": { "H1": "A", "H2": "B", "H3": "?" }
+      },
+      {
+        "id": "P2",
+        "condition": "Condition 2",
+        "predictions": { "H1": "A", "H2": "A", "H3": "?" }
+      },
+      {
+        "id": "P3",
+        "condition": "Condition 3",
+        "predictions": { "H1": "B", "H2": "A", "H3": "?" }
+      }
+    ],
+    "discriminative_tests": [
+      {
+        "id": "T1",
+        "name": "Test 1",
+        "procedure": "Do the test.",
+        "discriminates": "H1 vs H2",
+        "expected_outcomes": { "H1": "Result A", "H2": "Result B" },
+        "potency_check": "Controls in place.",
+        "score": { "likelihood_ratio": 3, "cost": 2, "speed": 2, "ambiguity": 3 }
+      },
+      {
+        "id": "T2",
+        "name": "Test 2",
+        "procedure": "Do another test.",
+        "discriminates": "H1 vs H2",
+        "expected_outcomes": { "H1": "Result X", "H2": "Result Y" },
+        "potency_check": "Different controls.",
+        "score": { "likelihood_ratio": 2, "cost": 2, "speed": 2, "ambiguity": 2 }
+      }
+    ],
+    "assumption_ledger": [
+      {
+        "id": "A1",
+        "name": "Scale check: basic physics",
+        "statement": "Diffusion is fast enough for signalling.",
+        "load": "If wrong, gradient-based mechanism fails.",
+        "test": "Measure diffusion rates.",
+        "scale_check": true,
+        "calculation": "D ~ 10 um^2/s, L ~ 50 um => tau ~ 250s"
+      },
+      {
+        "id": "A2",
+        "name": "Another assumption",
+        "statement": "More assumptions.",
+        "load": "Also important.",
+        "test": "Another test."
+      },
+      {
+        "id": "A3",
+        "name": "Third assumption",
+        "statement": "Yet more assumptions.",
+        "load": "Critical.",
+        "test": "Verify."
+      }
+    ],
+    "anomaly_register": [],
+    "adversarial_critique": [
+      {
+        "id": "C1",
+        "name": "Self-critique",
+        "attack": "Our framing might be wrong.",
+        "evidence": "Evidence suggests alternatives.",
+        "current_status": "Under investigation."
+      },
+      {
+        "id": "C2",
+        "name": "Another critique",
+        "attack": "Methodological concern.",
+        "evidence": "Literature review needed.",
+        "current_status": "Pending."
+      }
+    ]
+  }
+}

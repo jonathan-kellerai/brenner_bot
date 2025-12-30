@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "session_id": "GOLDEN-VALID-001",
+    "created_at": "2025-12-30T05:30:00Z",
+    "updated_at": "2025-12-30T06:00:00Z",
+    "version": 1,
+    "contributors": [
+      { "agent": "PinkSnow", "program": "claude-code", "model": "opus-4.5" }
+    ],
+    "status": "active"
+  },
+  "sections": {
+    "research_thread": {
+      "id": "RT",
+      "statement": "How does the C. elegans embryo determine cell fate?",
+      "context": "C. elegans has an invariant cell lineage.",
+      "why_it_matters": "Understanding the coordinate system determines which experiments are informative.",
+      "anchors": ["§150", "§161"]
+    },
+    "hypothesis_slate": [
+      {
+        "id": "H1",
+        "name": "Lineage-based computation",
+        "claim": "Cell fate is determined by tracking lineage history.",
+        "mechanism": "Cells maintain internal state updated at division.",
+        "anchors": ["§150", "§161"]
+      },
+      {
+        "id": "H2",
+        "name": "Gradient-based computation",
+        "claim": "Cell fate is determined by reading positional signals.",
+        "mechanism": "Cells integrate morphogen concentrations.",
+        "anchors": ["§155", "§161"]
+      },
+      {
+        "id": "H3",
+        "name": "Third Alternative",
+        "claim": "Both hypotheses are wrong or the dichotomy is false.",
+        "mechanism": "Could involve epigenetic memory, mechanical forces, or stochastic commitment.",
+        "anchors": ["§103"],
+        "third_alternative": true
+      }
+    ],
+    "predictions_table": [
+      {
+        "id": "P1",
+        "condition": "Early transplant (4-8 cell stage)",
+        "predictions": { "H1": "Fate unchanged", "H2": "Fate changes", "H3": "indeterminate" }
+      },
+      {
+        "id": "P2",
+        "condition": "Late transplant (gastrulation)",
+        "predictions": { "H1": "Fate unchanged", "H2": "Fate changes", "H3": "indeterminate" }
+      },
+      {
+        "id": "P3",
+        "condition": "Ablate signalling neighbours",
+        "predictions": { "H1": "No effect", "H2": "Fate changes", "H3": "indeterminate" }
+      }
+    ],
+    "discriminative_tests": [
+      {
+        "id": "T1",
+        "name": "Stage-dependent transplantation assay",
+        "procedure": "Transplant cells at multiple developmental stages to ectopic positions.",
+        "discriminates": "H1 vs H2",
+        "expected_outcomes": { "H1": "Fate unchanged at all stages", "H2": "Fate changes at all stages" },
+        "potency_check": "Include late-stage transplants as positive control.",
+        "feasibility": "Requires C. elegans micromanipulation expertise.",
+        "score": { "likelihood_ratio": 3, "cost": 2, "speed": 2, "ambiguity": 3 }
+      },
+      {
+        "id": "T2",
+        "name": "Morphogen source ablation",
+        "procedure": "Laser-ablate cells that produce candidate morphogens.",
+        "discriminates": "H2 vs H1",
+        "expected_outcomes": { "H1": "Fates normal", "H2": "Fates disrupted" },
+        "potency_check": "Verify gradient disruption via reporter imaging.",
+        "feasibility": "Established in C. elegans labs.",
+        "score": { "likelihood_ratio": 3, "cost": 2, "speed": 2, "ambiguity": 2 }
+      }
+    ],
+    "assumption_ledger": [
+      {
+        "id": "A1",
+        "name": "Invariant lineage is reproducible",
+        "statement": "Every wild-type C. elegans embryo follows the same division pattern.",
+        "load": "If wrong, transplant results aren't generalizable.",
+        "test": "Lineage tracing in N>10 embryos.",
+        "status": "verified"
+      },
+      {
+        "id": "A2",
+        "name": "Cell identity is stable post-commitment",
+        "statement": "Once committed, fate doesn't change.",
+        "load": "If wrong, transplant assays become uninterpretable.",
+        "test": "Lineage tracing of committed cells.",
+        "status": "unchecked"
+      },
+      {
+        "id": "A3",
+        "name": "Scale check: diffusion vs cell cycle",
+        "statement": "Morphogen diffusion must be fast enough relative to cell cycle.",
+        "load": "If wrong, H2 becomes implausible.",
+        "test": "Live imaging of gradient reporters.",
+        "scale_check": true,
+        "calculation": "D ~ 10 um^2/s, L ~ 50 um => tau = L^2/D ~ 250s ~ 4 min. Cell cycle ~ 15-30 min.",
+        "implication": "Gradient-based signalling is physically plausible."
+      }
+    ],
+    "anomaly_register": [],
+    "adversarial_critique": [
+      {
+        "id": "C1",
+        "name": "The dichotomy is anachronistic",
+        "attack": "The lineage-vs-gradient distinction was formulated before modern tools.",
+        "evidence": "Single-cell trajectory analysis shows unexpected clusters.",
+        "current_status": "Moderate concern - should review recent literature.",
+        "real_third_alternative": true
+      },
+      {
+        "id": "C2",
+        "name": "Epigenetic memory as the real third alternative",
+        "attack": "Cells may use chromatin states, neither lineage nor gradient.",
+        "evidence": "Epigenetic inheritance is well-documented.",
+        "current_status": "High priority for investigation."
+      }
+    ]
+  }
+}
