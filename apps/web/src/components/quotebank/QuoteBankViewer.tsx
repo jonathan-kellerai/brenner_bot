@@ -4,6 +4,7 @@ import { useState, useMemo } from "react";
 import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
 import { filterQuotesByTag, searchQuotes } from "@/lib/quotebank-parser";
 import { ReferenceCopyButton, CopyButton } from "@/components/ui/copy-button";
+import { useDebounce } from "@/hooks/useDebounce";
 
 // ============================================================================
 // HERO
@@ -277,6 +278,9 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Debounce search query for better performance
+  const [debouncedQuery] = useDebounce(searchQuery, 200);
+
   // Calculate quote counts per tag
   const quoteCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -288,17 +292,17 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
     return counts;
   }, [data.quotes]);
 
-  // Filter and search
+  // Filter and search (using debounced query)
   const filteredQuotes = useMemo(() => {
     let result = data.quotes;
     if (selectedTag) {
       result = filterQuotesByTag(result, selectedTag);
     }
-    if (searchQuery.trim()) {
-      result = searchQuotes(result, searchQuery);
+    if (debouncedQuery.trim()) {
+      result = searchQuotes(result, debouncedQuery);
     }
     return result;
-  }, [data.quotes, selectedTag, searchQuery]);
+  }, [data.quotes, selectedTag, debouncedQuery]);
 
   return (
     <>
