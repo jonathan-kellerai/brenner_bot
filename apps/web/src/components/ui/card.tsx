@@ -14,6 +14,8 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
           "hover:shadow-lg hover:-translate-y-1",
           "hover:border-primary/30",
           "dark:hover:shadow-primary/5",
+          // Touch-friendly: scale feedback on tap
+          "touch-manipulation active:scale-[0.98] active:shadow-md",
         ],
         className
       )}
@@ -111,7 +113,7 @@ const FeatureCard = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDi
       ref={ref}
       data-slot="feature-card"
       className={cn(
-        "feature-card group cursor-pointer",
+        "feature-card group cursor-pointer touch-manipulation active:scale-[0.98]",
         className
       )}
       {...props}
