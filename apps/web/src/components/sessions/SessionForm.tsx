@@ -25,6 +25,7 @@ import {
 } from "@/hooks/mutations/useSessionMutation";
 import { sessionFormSchema, sessionFieldValidators } from "@/lib/schemas/session";
 import { Jargon } from "@/components/jargon";
+import { OperatorSelector, DEFAULT_OPERATORS, type OperatorSelection } from "./OperatorSelector";
 
 // ============================================================================
 // Icons
@@ -106,6 +107,9 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
   const router = useRouter();
   const searchParams = useSearchParams();
   const mutation = useSessionMutation();
+
+  // Operator selection state (for prompt builder)
+  const [operatorSelection, setOperatorSelection] = React.useState<OperatorSelection>(DEFAULT_OPERATORS);
 
   const form = useForm({
     defaultValues: {

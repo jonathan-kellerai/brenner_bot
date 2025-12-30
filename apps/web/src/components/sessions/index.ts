@@ -7,3 +7,4 @@
 export { SessionForm } from "./SessionForm";
 export { RefreshControls } from "./RefreshControls";
 export { SessionActions } from "./SessionActions";
+export { OperatorSelector, DEFAULT_OPERATORS, type OperatorSelection } from "./OperatorSelector";
