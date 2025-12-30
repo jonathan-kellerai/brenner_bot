@@ -402,8 +402,54 @@ export default async function SessionDetailPage({
         </div>
       </header>
 
+      {/* Round Indicator */}
+      <section className="rounded-xl border border-primary/20 bg-gradient-to-r from-primary/5 to-transparent p-5 space-y-4 animate-fade-in-up stagger-1">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center justify-center size-14 rounded-xl bg-primary/10 border border-primary/20">
+              <span className="text-2xl font-bold text-primary">{status.round}</span>
+            </div>
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">Round</div>
+              <div className="font-semibold text-foreground">
+                {status.round === 0
+                  ? "Initial Collection"
+                  : status.round === 1
+                    ? "First Compile"
+                    : `Iteration ${status.round}`}
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <div className="text-center px-4 py-2 rounded-lg bg-muted/50 border border-border">
+              <div className="text-lg font-bold text-foreground">{status.deltasInCurrentRound}</div>
+              <div className="text-xs text-muted-foreground">deltas this round</div>
+            </div>
+            {status.round > 0 && (
+              <div className="text-center px-4 py-2 rounded-lg bg-muted/50 border border-border">
+                <div className="text-lg font-bold text-foreground">{status.critiquesInCurrentRound}</div>
+                <div className="text-xs text-muted-foreground">critiques</div>
+              </div>
+            )}
+          </div>
+        </div>
+        <div className="text-sm text-muted-foreground">
+          {status.round === 0 ? (
+            status.deltasInCurrentRound === 0 ? (
+              <>Waiting for agents to submit <span className="font-mono text-foreground">DELTA[...]</span> responses.</>
+            ) : (
+              <>Collecting responses. When all roles have contributed, run <span className="font-semibold text-primary">Compile</span> to create the first artifact.</>
+            )
+          ) : status.critiquesInCurrentRound === 0 ? (
+            <>Artifact v{status.round} compiled. Send for <span className="font-semibold text-warning">Critique</span> to identify gaps and iterate.</>
+          ) : (
+            <>Critiques received. Submit new <span className="font-mono text-foreground">DELTA[...]</span> responses addressing feedback, then <span className="font-semibold text-primary">Compile</span> again.</>
+          )}
+        </div>
+      </section>
+
       {/* Status */}
-      <section className="rounded-xl border border-border bg-card p-5 space-y-4 animate-fade-in-up stagger-1">
+      <section className="rounded-xl border border-border bg-card p-5 space-y-4 animate-fade-in-up stagger-2">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="space-y-1">
             <div className="text-sm text-muted-foreground">Phase</div>
@@ -478,7 +524,7 @@ export default async function SessionDetailPage({
       />
 
       {/* Compiled Artifact */}
-      <section className="space-y-3 animate-fade-in-up stagger-2">
+      <section className="space-y-3 animate-fade-in-up stagger-3">
         <div className="flex items-baseline justify-between gap-4">
           <h2 className="text-lg font-semibold tracking-tight">Compiled <Jargon term="artifact">Artifact</Jargon></h2>
           <span className="text-xs text-muted-foreground">From latest <span className="font-mono">COMPILED:</span> message</span>
@@ -560,7 +606,7 @@ export default async function SessionDetailPage({
       </section>
 
       {/* Parsed Deltas */}
-      <section className="space-y-4 animate-fade-in-up stagger-3">
+      <section className="space-y-4 animate-fade-in-up stagger-4">
         <h2 className="text-lg font-semibold tracking-tight">Parsed <Jargon term="delta">Deltas</Jargon></h2>
         {deltaMessages.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
@@ -650,7 +696,7 @@ export default async function SessionDetailPage({
       </section>
 
       {/* Timeline */}
-      <section className="space-y-4 animate-fade-in-up stagger-4">
+      <section className="space-y-4 animate-fade-in-up stagger-5">
         <h2 className="text-lg font-semibold tracking-tight">Thread Timeline</h2>
         {messagesSorted.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
