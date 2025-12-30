@@ -638,3 +638,122 @@ describe("getPendingAgents", () => {
     expect(pending).not.toContain("AgentA");
   });
 });
+
+// ============================================================================
+// Round Tracking Tests
+// ============================================================================
+
+import { getMessagesInCurrentRound, getDeltaMessagesForCurrentRound } from "./threadStatus";
+
+describe("round tracking", () => {
+  it("reports round 0 before any COMPILED messages", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "DELTA[gpt]: Hypotheses", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "DELTA[opus]: Tests", from: "ClaudeAgent", created_ts: "2025-01-01T02:00:00Z" }),
+    ];
+
+    const status = computeThreadStatus(messages);
+    expect(status.round).toBe(0);
+    expect(status.deltasInCurrentRound).toBe(2);
+    expect(status.critiquesInCurrentRound).toBe(0);
+  });
+
+  it("reports round 1 after first COMPILED message", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "DELTA[gpt]: Hypotheses", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "COMPILED: v1 initial artifact", from: "Operator", created_ts: "2025-01-01T02:00:00Z" }),
+    ];
+
+    const status = computeThreadStatus(messages);
+    expect(status.round).toBe(1);
+    expect(status.deltasInCurrentRound).toBe(0); // No deltas after COMPILED
+    expect(status.critiquesInCurrentRound).toBe(0);
+  });
+
+  it("counts deltas and critiques in current round correctly", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "DELTA[gpt]: Initial hypotheses", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "COMPILED: v1 initial", from: "Operator", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "CRITIQUE: H2 mechanism issues", from: "GeminiAgent", created_ts: "2025-01-01T03:00:00Z" }),
+      createMessage({ subject: "DELTA[opus]: Revised H2", from: "ClaudeAgent", created_ts: "2025-01-01T04:00:00Z" }),
+    ];
+
+    const status = computeThreadStatus(messages);
+    expect(status.round).toBe(1);
+    expect(status.deltasInCurrentRound).toBe(1); // Only the DELTA after COMPILED
+    expect(status.critiquesInCurrentRound).toBe(1);
+  });
+
+  it("increments round with each COMPILED message", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "COMPILED: v1", from: "Operator", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "COMPILED: v2", from: "Operator", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "COMPILED: v3", from: "Operator", created_ts: "2025-01-01T03:00:00Z" }),
+    ];
+
+    const status = computeThreadStatus(messages);
+    expect(status.round).toBe(3);
+  });
+});
+
+describe("getMessagesInCurrentRound", () => {
+  it("returns all DELTAs after KICKOFF when no COMPILED exists", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "DELTA[gpt]: Hypotheses", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "DELTA[opus]: Tests", from: "ClaudeAgent", created_ts: "2025-01-01T02:00:00Z" }),
+    ];
+
+    const currentRound = getMessagesInCurrentRound(messages);
+    expect(currentRound.length).toBe(2);
+    expect(currentRound[0].subject).toContain("DELTA[gpt]");
+    expect(currentRound[1].subject).toContain("DELTA[opus]");
+  });
+
+  it("returns only messages after latest COMPILED", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "DELTA[gpt]: Initial", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "COMPILED: v1", from: "Operator", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "CRITIQUE: Issues with H2", from: "GeminiAgent", created_ts: "2025-01-01T03:00:00Z" }),
+      createMessage({ subject: "DELTA[opus]: Revised", from: "ClaudeAgent", created_ts: "2025-01-01T04:00:00Z" }),
+    ];
+
+    const currentRound = getMessagesInCurrentRound(messages);
+    expect(currentRound.length).toBe(2);
+    expect(currentRound[0].subject).toContain("CRITIQUE");
+    expect(currentRound[1].subject).toContain("DELTA[opus]");
+  });
+
+  it("filters out non-DELTA and non-CRITIQUE messages", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "COMPILED: v1", from: "Operator", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "ACK: Received", from: "Agent", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "DELTA[gpt]: New delta", from: "CodexAgent", created_ts: "2025-01-01T03:00:00Z" }),
+    ];
+
+    const currentRound = getMessagesInCurrentRound(messages);
+    expect(currentRound.length).toBe(1);
+    expect(currentRound[0].subject).toContain("DELTA[gpt]");
+  });
+});
+
+describe("getDeltaMessagesForCurrentRound", () => {
+  it("returns only DELTA messages (excludes CRITIQUE)", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
+      createMessage({ subject: "COMPILED: v1", from: "Operator", created_ts: "2025-01-01T01:00:00Z" }),
+      createMessage({ subject: "CRITIQUE: Problems", from: "GeminiAgent", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "DELTA[opus]: Fixes", from: "ClaudeAgent", created_ts: "2025-01-01T03:00:00Z" }),
+    ];
+
+    const deltas = getDeltaMessagesForCurrentRound(messages);
+    expect(deltas.length).toBe(1);
+    expect(deltas[0].subject).toContain("DELTA[opus]");
+  });
+});
