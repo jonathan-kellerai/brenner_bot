@@ -588,6 +588,7 @@ async function getCassMemoryContext(task: string, options: CassMemoryContextOpti
 function formatCassMemoryContextForKickoff(result: CassMemoryContextResult): string | null {
   const ctx = result.context;
   if (!ctx) return null;
+  if (!ctx.success) return null;
 
   const hasAny =
     ctx.relevantBullets.length > 0 ||
@@ -595,6 +596,8 @@ function formatCassMemoryContextForKickoff(result: CassMemoryContextResult): str
     ctx.suggestedCassQueries.length > 0 ||
     ctx.historySnippets.length > 0;
   if (!hasAny) return null;
+
+  const normalizeLine = (value: string): string => value.replace(/\s+/g, " ").trim();
 
   const lines: string[] = [];
   lines.push("## MEMORY CONTEXT (cass-memory)");
@@ -606,7 +609,7 @@ function formatCassMemoryContextForKickoff(result: CassMemoryContextResult): str
   lines.push("### Relevant rules");
   if (ctx.relevantBullets.length > 0) {
     for (const bullet of ctx.relevantBullets.slice(0, 5)) {
-      lines.push(`- ${bullet.id ? `[${bullet.id}] ` : ""}${bullet.content}`);
+      lines.push(`- ${bullet.id ? `[${bullet.id}] ` : ""}${normalizeLine(bullet.content)}`);
     }
   } else {
     lines.push("- (none returned)");
@@ -616,7 +619,7 @@ function formatCassMemoryContextForKickoff(result: CassMemoryContextResult): str
   lines.push("### Known pitfalls / anti-patterns");
   if (ctx.antiPatterns.length > 0) {
     for (const bullet of ctx.antiPatterns.slice(0, 5)) {
-      lines.push(`- ${bullet.id ? `[${bullet.id}] ` : ""}${bullet.content}`);
+      lines.push(`- ${bullet.id ? `[${bullet.id}] ` : ""}${normalizeLine(bullet.content)}`);
     }
   } else {
     lines.push("- (none returned)");
@@ -634,7 +637,7 @@ function formatCassMemoryContextForKickoff(result: CassMemoryContextResult): str
     lines.push("");
     lines.push("### Prior sessions (optional)");
     for (const snippet of ctx.historySnippets.slice(0, 3)) {
-      lines.push(`- ${snippet.snippet}`);
+      lines.push(`- ${normalizeLine(snippet.snippet)}`);
     }
   }
 
@@ -748,6 +751,7 @@ Examples:
 function composePrompt(options: {
   templatePath: string;
   excerpt: string;
+  memoryContext?: string;
   theme?: string;
   domain?: string;
   question?: string;
@@ -762,6 +766,10 @@ function composePrompt(options: {
   chunks.push("## TRANSCRIPT EXCERPT(S)");
   chunks.push(options.excerpt.trim());
   chunks.push("");
+  if (options.memoryContext) {
+    chunks.push(options.memoryContext.trim());
+    chunks.push("");
+  }
   if (options.theme) {
     chunks.push("## FOCUS THEME");
     chunks.push(options.theme.trim());
@@ -1412,12 +1420,10 @@ async function main(): Promise<void> {
     if (unified) {
       // Legacy mode: send same message to all recipients
       const templatePath = resolve(asStringFlag(flags, "template") ?? "metaprompt_by_gpt_52.md");
-      const excerptWithMemory = kickoffConfig.memoryContext
-        ? `${excerpt.trim()}\n\n${kickoffConfig.memoryContext.trim()}`
-        : excerpt;
       const body = composePrompt({
         templatePath,
-        excerpt: excerptWithMemory,
+        excerpt,
+        memoryContext: kickoffConfig.memoryContext,
         theme: asStringFlag(flags, "theme"),
         domain: asStringFlag(flags, "domain"),
         question,

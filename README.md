@@ -310,6 +310,7 @@ Status legend:
 |---|---|---|
 | `--version` / `version` | Print brenner version + build metadata | ✅ |
 | `doctor [--json]` | Verify local toolchain health (for installers/CI) | ✅ |
+| `memory context "<task>"` | Fetch cass-memory context JSON (debug tool) | ✅ |
 | `excerpt build [--sections <A,B>] [--tags <A,B>] ...` | Build a cited excerpt block (from transcript sections or quote-bank tags) | ✅ |
 | `mail health` | Check Agent Mail readiness | ✅ |
 | `mail tools` | List Agent Mail MCP tools | ✅ |
