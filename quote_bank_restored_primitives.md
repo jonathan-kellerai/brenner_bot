@@ -546,13 +546,13 @@ Tags: `genetics`, `mutants`, `function`, `loss-of-function`
 
 ---
 
-## §216 — Inside-out genetics (liberation from life-cycles)
+## §216 — Liberation from life cycles
 
 > We have now been liberated from the tyranny of the life-cycles of organisms, from their modes of reproduction. We can do genetics now on everything, anything.
 
-Takeaway: Tooling can change the feasible experiment class; when you’re unblocked by life-cycle time, you can choose organisms for *the question*, not for breeding convenience.
+Takeaway: Classical genetics required breeding, which required short generation times. Molecular cloning freed us from this constraint. Now you pick the organism for the question, not because it breeds fast.
 
-Tags: `tooling`, `cheap-loop`, `organism-selection`
+Tags: `molecular-biology`, `organism-choice`, `constraints`, `liberation`
 
 ---
 
