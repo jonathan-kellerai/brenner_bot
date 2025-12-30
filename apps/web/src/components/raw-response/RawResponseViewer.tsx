@@ -196,7 +196,8 @@ function renderInlineMarkdown(text: string): ReactNode {
     if (linkMatch) {
       const normalized = normalizeMarkdownHref(linkMatch[2]);
       if (!normalized) {
-        parts.push(linkMatch[1]);
+        // Invalid link - render text with jargon detection
+        parts.push(<JargonText key={key++}>{linkMatch[1]}</JargonText>);
         remaining = remaining.slice(linkMatch[0].length);
         continue;
       }
@@ -209,7 +210,7 @@ function renderInlineMarkdown(text: string): ReactNode {
           target={normalized.external ? "_blank" : undefined}
           rel={normalized.external ? "noopener noreferrer" : undefined}
         >
-          {linkMatch[1]}
+          <JargonText>{linkMatch[1]}</JargonText>
         </a>
       );
       remaining = remaining.slice(linkMatch[0].length);
