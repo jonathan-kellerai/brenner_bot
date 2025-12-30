@@ -1,0 +1,363 @@
+"use client";
+
+import { useState, useMemo } from "react";
+import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
+import { filterQuotesByTag, searchQuotes } from "@/lib/quotebank-parser";
+
+// ============================================================================
+// HERO
+// ============================================================================
+
+interface QuoteBankHeroProps {
+  title: string;
+  description: string;
+  quoteCount: number;
+  tagCount: number;
+}
+
+function QuoteBankHero({ title, description, quoteCount, tagCount }: QuoteBankHeroProps) {
+  return (
+    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/20 mb-12">
+      {/* Decorative elements */}
+      <div className="absolute top-0 right-0 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute bottom-0 left-0 w-64 h-64 bg-primary/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+
+      {/* Quote decoration */}
+      <div className="absolute top-8 right-8 text-[180px] font-serif text-amber-500/10 leading-none select-none hidden lg:block">
+        &ldquo;
+      </div>
+
+      <div className="relative px-8 py-12 lg:px-12 lg:py-16">
+        {/* Badge */}
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-sm font-medium mb-6">
+          <QuoteIcon className="size-4" />
+          Reference Collection
+        </div>
+
+        {/* Title */}
+        <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-foreground mb-4">
+          {title}
+        </h1>
+
+        {/* Description */}
+        <p className="text-lg text-muted-foreground mb-8 max-w-2xl">
+          {description}
+        </p>
+
+        {/* Stats */}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-card/80 backdrop-blur-sm border border-border/50 text-sm">
+            <span className="text-2xl font-bold text-foreground">{quoteCount}</span>
+            <span className="text-muted-foreground">quotes</span>
+          </div>
+          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-card/80 backdrop-blur-sm border border-border/50 text-sm">
+            <span className="text-2xl font-bold text-foreground">{tagCount}</span>
+            <span className="text-muted-foreground">categories</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// TAG CLOUD
+// ============================================================================
+
+interface TagCloudProps {
+  tags: string[];
+  selectedTag: string | null;
+  onTagSelect: (tag: string | null) => void;
+  quoteCounts: Record<string, number>;
+}
+
+function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps) {
+  return (
+    <div className="mb-8">
+      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
+        Filter by Category
+      </h3>
+      <div className="flex flex-wrap gap-2">
+        <button
+          onClick={() => onTagSelect(null)}
+          className={`
+            px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+            ${
+              selectedTag === null
+                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+            }
+          `}
+        >
+          All
+        </button>
+        {tags.map((tag) => (
+          <button
+            key={tag}
+            onClick={() => onTagSelect(tag === selectedTag ? null : tag)}
+            className={`
+              group px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+              ${
+                selectedTag === tag
+                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+              }
+            `}
+          >
+            {tag.replace(/-/g, " ")}
+            <span className={`
+              ml-1.5 text-xs
+              ${selectedTag === tag ? "opacity-80" : "opacity-50 group-hover:opacity-70"}
+            `}>
+              {quoteCounts[tag] || 0}
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================================
+// SEARCH
+// ============================================================================
+
+interface SearchProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function Search({ value, onChange }: SearchProps) {
+  return (
+    <div className="relative mb-8">
+      <SearchIcon className="absolute left-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder="Search quotes..."
+        className="w-full pl-12 pr-4 py-3 rounded-xl bg-card border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all"
+      />
+      {value && (
+        <button
+          onClick={() => onChange("")}
+          className="absolute right-4 top-1/2 -translate-y-1/2 size-5 text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <XIcon />
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ============================================================================
+// QUOTE CARD
+// ============================================================================
+
+interface QuoteCardProps {
+  quote: Quote;
+  index: number;
+}
+
+function QuoteCard({ quote, index }: QuoteCardProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  return (
+    <article
+      className={`
+        group relative rounded-2xl border border-border bg-card overflow-hidden
+        hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5
+        transition-all duration-300 animate-fade-in-up
+      `}
+      style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
+    >
+      {/* Reference badge */}
+      <div className="absolute top-4 right-4">
+        <span className="font-mono text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+          {quote.reference}
+        </span>
+      </div>
+
+      <div className="p-6 lg:p-8">
+        {/* Title */}
+        <h3 className="text-lg lg:text-xl font-semibold text-foreground mb-4 pr-16 group-hover:text-primary transition-colors">
+          {quote.title}
+        </h3>
+
+        {/* Quote text */}
+        <div className="relative">
+          <div className="absolute -left-2 -top-2 text-4xl text-primary/20 font-serif select-none">
+            &ldquo;
+          </div>
+          <blockquote className="pl-4 text-base lg:text-lg leading-relaxed text-foreground/85 italic font-serif">
+            {isExpanded || quote.text.length < 300
+              ? quote.text
+              : `${quote.text.slice(0, 300)}...`}
+          </blockquote>
+          {quote.text.length >= 300 && (
+            <button
+              onClick={() => setIsExpanded(!isExpanded)}
+              className="mt-2 text-sm text-primary hover:underline"
+            >
+              {isExpanded ? "Show less" : "Read more"}
+            </button>
+          )}
+        </div>
+
+        {/* Why it matters */}
+        {quote.whyItMatters && (
+          <div className="mt-6 pt-6 border-t border-border/50">
+            <div className="flex items-start gap-3">
+              <div className="flex-shrink-0 size-6 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <LightbulbIcon className="size-3.5 text-amber-500" />
+              </div>
+              <div>
+                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                  Why it matters
+                </div>
+                <p className="text-sm text-foreground/80 leading-relaxed">
+                  {quote.whyItMatters}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Tags */}
+        {quote.tags.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {quote.tags.map((tag) => (
+              <span
+                key={tag}
+                className="px-2 py-0.5 text-xs rounded-md bg-muted text-muted-foreground"
+              >
+                {tag.replace(/-/g, " ")}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    </article>
+  );
+}
+
+// ============================================================================
+// MAIN VIEWER
+// ============================================================================
+
+interface QuoteBankViewerProps {
+  data: ParsedQuoteBank;
+}
+
+export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Calculate quote counts per tag
+  const quoteCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    data.quotes.forEach((q) => {
+      q.tags.forEach((t) => {
+        counts[t] = (counts[t] || 0) + 1;
+      });
+    });
+    return counts;
+  }, [data.quotes]);
+
+  // Filter and search
+  const filteredQuotes = useMemo(() => {
+    let result = data.quotes;
+    if (selectedTag) {
+      result = filterQuotesByTag(result, selectedTag);
+    }
+    if (searchQuery.trim()) {
+      result = searchQuotes(result, searchQuery);
+    }
+    return result;
+  }, [data.quotes, selectedTag, searchQuery]);
+
+  return (
+    <>
+      <QuoteBankHero
+        title={data.title}
+        description={data.description}
+        quoteCount={data.quotes.length}
+        tagCount={data.allTags.length}
+      />
+
+      <div className="max-w-4xl mx-auto">
+        <Search value={searchQuery} onChange={setSearchQuery} />
+
+        <TagCloud
+          tags={data.allTags}
+          selectedTag={selectedTag}
+          onTagSelect={setSelectedTag}
+          quoteCounts={quoteCounts}
+        />
+
+        {/* Results count */}
+        <div className="mb-6 text-sm text-muted-foreground">
+          Showing {filteredQuotes.length} of {data.quotes.length} quotes
+          {selectedTag && (
+            <span className="ml-2">
+              in <span className="text-primary font-medium">{selectedTag.replace(/-/g, " ")}</span>
+            </span>
+          )}
+        </div>
+
+        {/* Quote grid */}
+        <div className="space-y-6">
+          {filteredQuotes.map((quote, index) => (
+            <QuoteCard key={quote.reference} quote={quote} index={index} />
+          ))}
+        </div>
+
+        {filteredQuotes.length === 0 && (
+          <div className="text-center py-16">
+            <div className="text-4xl mb-4">🔍</div>
+            <h3 className="text-lg font-medium text-foreground mb-2">No quotes found</h3>
+            <p className="text-muted-foreground">
+              Try adjusting your search or filter criteria
+            </p>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+// ============================================================================
+// ICONS
+// ============================================================================
+
+function QuoteIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+    </svg>
+  );
+}
+
+function SearchIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+  );
+}
+
+function XIcon() {
+  return (
+    <svg className="size-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+    </svg>
+  );
+}
+
+function LightbulbIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 18v-5.25m0 0a6.01 6.01 0 001.5-.189m-1.5.189a6.01 6.01 0 01-1.5-.189m3.75 7.478a12.06 12.06 0 01-4.5 0m3.75 2.383a14.406 14.406 0 01-3 0M14.25 18v-.192c0-.983.658-1.823 1.508-2.316a7.5 7.5 0 10-7.517 0c.85.493 1.509 1.333 1.509 2.316V18" />
+    </svg>
+  );
+}
