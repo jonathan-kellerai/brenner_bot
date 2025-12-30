@@ -297,14 +297,18 @@ function formatNumber(n: number): string {
   return n.toString();
 }
 
-function generateAnchorId(title: string, partNumber?: number): string {
+function generateAnchorId(title: string, partNumber?: number, index?: number): string {
   const slug = title
     .toLowerCase()
     .replace(/[^a-z0-9\s-]/g, "")
     .replace(/\s+/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-  return partNumber ? `part-${partNumber}-${slug}` : slug;
+
+  // Fallback for empty slugs (e.g., symbol-only titles)
+  const safeSlug = slug || `section-${index ?? 0}`;
+
+  return partNumber ? `part-${partNumber}-${safeSlug}` : safeSlug;
 }
 
 // ============================================================================
@@ -321,6 +325,7 @@ interface TocEntry {
 
 function extractTocEntries(data: ParsedDistillation): TocEntry[] {
   const entries: TocEntry[] = [];
+  let sectionIndex = 0;
 
   for (const part of data.parts) {
     // Add part as entry if multiple parts
@@ -336,12 +341,13 @@ function extractTocEntries(data: ParsedDistillation): TocEntry[] {
     // Add sections
     for (const section of part.sections) {
       entries.push({
-        id: generateAnchorId(section.title, data.parts.length > 1 ? part.number : undefined),
+        id: generateAnchorId(section.title, data.parts.length > 1 ? part.number : undefined, sectionIndex),
         title: section.title,
         level: section.level,
         partNumber: data.parts.length > 1 ? part.number : undefined,
         partTitle: data.parts.length > 1 ? part.title : undefined,
       });
+      sectionIndex++;
     }
   }
 
