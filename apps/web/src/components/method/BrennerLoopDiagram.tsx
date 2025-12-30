@@ -286,58 +286,85 @@ export function BrennerLoopDiagram() {
         </div>
       </div>
 
-      {/* Mobile: Vertical timeline */}
+      {/* Mobile: Vertical timeline with tappable cards */}
       <div className="lg:hidden space-y-0">
-        {loopStages.map((stage, index) => (
-          <div key={stage.stage} className="relative flex gap-4">
-            {/* Timeline line */}
-            <div className="flex flex-col items-center">
-              <div
-                className={`flex items-center justify-center size-10 rounded-full font-bold text-sm shadow-lg ${
-                  index === loopStages.length - 1
-                    ? "bg-accent text-accent-foreground"
-                    : "bg-primary text-primary-foreground"
+        {loopStages.map((stage, index) => {
+          const isIterateStage = index === loopStages.length - 1;
+          const isExpanded = activeStage === stage.stage;
+
+          return (
+            <div key={stage.stage} className="relative flex gap-4">
+              {/* Timeline line */}
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={() => setActiveStage(isExpanded ? null : stage.stage)}
+                  className={`flex items-center justify-center size-11 rounded-full font-bold text-sm shadow-lg transition-all duration-200 touch-manipulation active:scale-95 ${
+                    isIterateStage
+                      ? "bg-accent text-accent-foreground"
+                      : "bg-primary text-primary-foreground"
+                  } ${isExpanded ? "ring-2 ring-offset-2 ring-offset-background ring-primary scale-110" : ""}`}
+                  aria-expanded={isExpanded}
+                  aria-label={`Stage ${stage.stage}: ${stage.title}`}
+                >
+                  {stage.stage}
+                </button>
+                {index < loopStages.length - 1 && (
+                  <div className={`w-0.5 h-full min-h-[60px] my-1 transition-colors duration-200 ${
+                    isExpanded ? "bg-primary/50" : "bg-border"
+                  }`} />
+                )}
+                {isIterateStage && (
+                  <div className="flex flex-col items-center mt-2">
+                    <svg
+                      className="size-5 text-accent"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
+                      />
+                    </svg>
+                    <span className="text-[10px] text-muted-foreground mt-1">
+                      Loop back
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              {/* Content card */}
+              <button
+                onClick={() => setActiveStage(isExpanded ? null : stage.stage)}
+                className={`flex-1 pb-6 text-left touch-manipulation transition-all duration-200 ${
+                  isExpanded ? "opacity-100" : "opacity-80"
                 }`}
               >
-                {stage.stage}
-              </div>
-              {index < loopStages.length - 1 && (
-                <div className="w-0.5 h-full min-h-[60px] bg-border my-1" />
-              )}
-              {index === loopStages.length - 1 && (
-                <div className="flex flex-col items-center mt-2">
-                  <svg
-                    className="size-5 text-accent"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3"
-                    />
-                  </svg>
-                  <span className="text-[10px] text-muted-foreground mt-1">
-                    Loop back
-                  </span>
+                <div className={`rounded-xl p-3 -ml-1 transition-all duration-200 ${
+                  isExpanded
+                    ? "bg-muted/50 border border-border shadow-sm"
+                    : "hover:bg-muted/30"
+                }`}>
+                  <h3 className={`font-semibold mb-1 transition-colors duration-200 ${
+                    isExpanded ? "text-primary" : "text-foreground"
+                  }`}>
+                    {stage.title}
+                  </h3>
+                  <p className="text-sm text-muted-foreground mb-2 leading-relaxed">
+                    {stage.description}
+                  </p>
+                  <blockquote className={`text-xs italic text-muted-foreground border-l-2 pl-2 transition-all duration-200 ${
+                    isExpanded ? "border-primary/50" : "border-primary/30"
+                  }`}>
+                    &ldquo;{stage.quote}&rdquo;
+                  </blockquote>
                 </div>
-              )}
+              </button>
             </div>
-
-            {/* Content */}
-            <div className="flex-1 pb-6">
-              <h3 className="font-semibold text-foreground mb-1">{stage.title}</h3>
-              <p className="text-sm text-muted-foreground mb-2">
-                {stage.description}
-              </p>
-              <blockquote className="text-xs italic text-muted-foreground border-l-2 border-primary/30 pl-2">
-                &ldquo;{stage.quote}&rdquo;
-              </blockquote>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
