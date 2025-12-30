@@ -6,6 +6,5 @@
     "metaprompt": 15,
     "distillation": 117
   },
-  "indexSizeBytes": 663567,
-  "buildTimeMs": 163
+  "indexSizeBytes": 663567
 }

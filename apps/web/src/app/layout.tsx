@@ -159,7 +159,7 @@ export default function RootLayout({
 
           {/* Main Content */}
           <main className="flex-1 pb-mobile-nav">
-            <div className="container-default py-8 lg:py-12 animate-fade-in">
+            <div className="container-default py-8 lg:py-12">
               {children}
             </div>
           </main>
