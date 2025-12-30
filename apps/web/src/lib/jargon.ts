@@ -1557,16 +1557,6 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["temperature-sensitive", "mutagenesis", "genetic-screen"],
     category: "biology",
   },
-  "temperature-sensitive": {
-    term: "Temperature-Sensitive",
-    short: "A mutation causing a protein to function at low but not high temperature.",
-    long:
-      "Temperature-sensitive (ts) mutations produce proteins that fold and function correctly at permissive temperature (e.g., 15°C) but misfold or denature at restrictive temperature (e.g., 25°C). This conditionality allows genetic analysis of essential genes.",
-    why:
-      "Temperature-sensitive mutations were a key tool in Brenner's C. elegans genetics, allowing study of genes required for viability.",
-    related: ["conditional-lethal", "mutation", "genetic-screen"],
-    category: "biology",
-  },
   "rii-region": {
     term: "rII Region",
     short: "The phage T4 genetic region where Benzer mapped mutations to single nucleotides.",
@@ -3144,16 +3134,6 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["genetic-pathway", "genetic-dissection", "suppressor-mutation"],
     category: "method",
   },
-  "genetic-pathway": {
-    term: "Genetic Pathway",
-    short: "An ordered sequence of genes required for a biological process.",
-    long:
-      "Through epistasis analysis, genes can be ordered into pathways showing the sequence of events in a biological process. Pathway analysis became central to developmental genetics and cell biology.",
-    why:
-      "Brenner described how epistasis analysis allowed them to 'analyse what came to be called genetic pathways.' This organized genes into functional relationships. Transcript anchor: §172.",
-    related: ["analysis-of-epistasis", "operon", "genetic-dissection"],
-    category: "biology",
-  },
 
   // --- Nonsense Mutations ---
 
@@ -3287,18 +3267,6 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     why:
       "Brenner 'started to master the techniques of serial sectioning' and earlier had done 'three-dimensional reconstruction of embryos from serial sections' in medical school. Transcript anchor: §153.",
     related: ["wiring-diagram", "electron-microscopy", "hal-biology"],
-    category: "method",
-  },
-  "negative-staining": {
-    term: "Negative Staining",
-    short: "A technique that made electron microscopy accessible to non-specialists.",
-    long:
-      "Negative staining uses a heavy metal stain that surrounds but doesn't penetrate the specimen, creating contrast by darkening the background. It requires minimal sample preparation compared to traditional EM methods.",
-    why:
-      "Brenner noted the 'invention of negative staining' was 'very remarkable technology because what it did was it took electron microscopy out of the hands of the elite and gave it to the people.' Transcript anchor: §86.",
-    analogy:
-      "Outlining a shape with a marker rather than coloring it in: the outline shows the shape without penetrating it.",
-    related: ["electron-microscopy", "serial-sectioning", "biochemistry-without-license"],
     category: "method",
   },
   "computers-as-servants": {

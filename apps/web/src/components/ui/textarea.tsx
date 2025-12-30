@@ -49,15 +49,20 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
           className={cn(
             // Base styles - text-base on mobile for better readability, text-sm on desktop
             "flex min-h-[120px] w-full rounded-lg border border-border bg-background px-3 py-3 text-base sm:text-sm",
-            "transition-all duration-150 ease-out",
+            "transition-all duration-200 ease-out",
             "placeholder:text-muted-foreground/70",
-            "focus:outline-none focus:border-primary focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            // Enhanced focus state with glow effect
+            "focus:outline-none focus:border-primary",
+            "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+            "focus:shadow-[0_0_0_3px_oklch(0.58_0.19_195_/_0.1),_0_0_20px_oklch(0.58_0.19_195_/_0.1)]",
+            "dark:focus:shadow-[0_0_0_3px_oklch(0.72_0.18_195_/_0.15),_0_0_20px_oklch(0.72_0.18_195_/_0.15)]",
             "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted/50",
             // Touch-friendly: prevent zoom on focus in iOS
             "touch-manipulation",
             "resize-y",
             autoResize && "resize-none overflow-hidden",
-            error && "border-destructive focus:ring-destructive/50",
+            // Error state with red glow
+            error && "border-destructive focus:ring-destructive/50 focus:shadow-[0_0_0_3px_oklch(0.60_0.22_25_/_0.1),_0_0_20px_oklch(0.60_0.22_25_/_0.1)]",
             className
           )}
           ref={textareaRef}

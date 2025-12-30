@@ -2404,21 +2404,21 @@ p, li, span, div {
      CARDS - Enhanced with Layered Effects
      ======================================================================== */
 
-  /* Feature card with glow on hover */
+  /* Feature card with glow and animated gradient border on hover */
   .feature-card {
-    @apply relative rounded-2xl border bg-card p-6 overflow-hidden;
+    @apply relative rounded-2xl border border-transparent bg-card overflow-hidden;
+    background-clip: padding-box;
     transition:
       transform var(--duration-normal) var(--ease-out),
-      box-shadow var(--duration-normal) var(--ease-out),
-      border-color var(--duration-normal) var(--ease-out);
+      box-shadow var(--duration-normal) var(--ease-out);
   }
 
   .feature-card:hover {
     transform: translateY(-6px);
     box-shadow: var(--elevation-lg), var(--glow-soft);
-    border-color: var(--primary);
   }
 
+  /* Inner gradient overlay on hover */
   .feature-card::before {
     content: "";
     position: absolute;
@@ -2432,10 +2432,41 @@ p, li, span, div {
       oklch(0.80 0.14 75 / 0.04) 100%
     );
     pointer-events: none;
+    z-index: 1;
   }
 
   .feature-card:hover::before {
     opacity: 1;
+  }
+
+  /* Animated gradient border */
+  .feature-card::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      oklch(0.58 0.19 195 / 0.3),
+      oklch(0.80 0.14 75 / 0.2),
+      oklch(0.70 0.15 280 / 0.2),
+      oklch(0.58 0.19 195 / 0.3)
+    );
+    background-size: 300% 300%;
+    -webkit-mask:
+      linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity var(--duration-normal) var(--ease-out);
+  }
+
+  .feature-card:hover::after {
+    opacity: 1;
+    animation: gradient-shift 3s ease infinite;
   }
 
   /* Premium card with gradient border */

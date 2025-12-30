@@ -11,7 +11,8 @@ const buttonVariants = cva(
     "disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed",
     "[&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
     "outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-    "active:scale-[0.98]",
+    // Press feedback: scale down slightly on press with subtle ripple
+    "active:scale-[0.98] ripple",
   ].join(" "),
   {
     variants: {

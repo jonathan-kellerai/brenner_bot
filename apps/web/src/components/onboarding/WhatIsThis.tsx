@@ -206,7 +206,7 @@ export function WhatIsThis({ className }: { className?: string }) {
 
               {/* Dismiss hint */}
               <p className="text-xs text-muted-foreground/70 text-center">
-                This introduction won't show again once you dismiss it.
+                This introduction won&apos;t show again once you dismiss it.
               </p>
             </div>
           </div>

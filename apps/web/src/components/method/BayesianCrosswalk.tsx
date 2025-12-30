@@ -187,7 +187,7 @@ function ObjectiveFunction() {
         </div>
       </div>
       <p className="text-sm text-muted-foreground text-center mt-4 max-w-xl mx-auto">
-        Brenner's genius was making the denominator small (DIY methods, clever design, digital handles)
+        Brenner&apos;s genius was making the denominator small (DIY methods, clever design, digital handles)
         while keeping the numerator large (exclusion tests, paradox resolution). He did this by
         <em className="text-foreground"> changing the problem</em> rather than brute-forcing the experiment.
       </p>

@@ -1,13 +1,22 @@
 import { cn } from "@/lib/utils"
 
+interface SkeletonProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Use the sweep variant for a more premium shimmer effect */
+  variant?: "default" | "sweep" | "pulse"
+}
+
 function Skeleton({
   className,
+  variant = "default",
   ...props
-}: React.HTMLAttributes<HTMLDivElement>) {
+}: SkeletonProps) {
   return (
     <div
       className={cn(
-        "animate-shimmer rounded-lg",
+        "rounded-lg",
+        variant === "default" && "animate-shimmer",
+        variant === "sweep" && "skeleton-shimmer",
+        variant === "pulse" && "skeleton animate-pulse",
         className
       )}
       {...props}

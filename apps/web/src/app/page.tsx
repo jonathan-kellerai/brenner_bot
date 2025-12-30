@@ -2,6 +2,8 @@ import Link from "next/link";
 import { FeatureCard } from "@/components/ui/card";
 import { Jargon } from "@/components/jargon";
 import { WhatIsThis } from "@/components/onboarding/WhatIsThis";
+import { HeroBackground } from "@/components/ui/animated-element";
+import { StatsSection } from "@/components/home/stats-section";
 
 // Icons
 const BookIcon = () => (
@@ -68,10 +70,13 @@ export default function Home() {
   return (
     <div className="space-y-12 sm:space-y-16 lg:space-y-24">
       {/* Hero Section */}
-      <section className="relative">
-        {/* Background gradient */}
-        <div className="absolute inset-0 -z-10 hero-gradient opacity-50 rounded-2xl sm:rounded-3xl" />
-
+      <HeroBackground
+        showOrbs
+        showGrid
+        className="rounded-2xl sm:rounded-3xl"
+        primaryOrbClass="bg-primary/25 dark:bg-primary/30"
+        accentOrbClass="bg-accent/20 dark:bg-accent/25"
+      >
         <div className="py-10 sm:py-12 lg:py-20 text-center space-y-4 sm:space-y-6 px-4 sm:px-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium animate-fade-in">
             <span className="relative flex size-2">
@@ -114,7 +119,7 @@ export default function Home() {
             </Link>
           </div>
         </div>
-      </section>
+      </HeroBackground>
 
       {/* What Is This? - First-time visitor onboarding */}
       <WhatIsThis className="px-4 sm:px-0" />
@@ -195,28 +200,7 @@ export default function Home() {
       )}
 
       {/* Stats/Info Section */}
-      <section className="py-6 sm:py-8">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-          {[
-            { value: "236", label: "Interview Segments" },
-            { value: "3", label: "Model Distillations" },
-            { value: "12+", label: "Operator Types" },
-            { value: "40k+", label: "Words of Wisdom" },
-          ].map((stat, index) => (
-            <div
-              key={stat.label}
-              className={`text-center p-4 sm:p-5 rounded-xl bg-muted/30 hover:bg-muted/50 sm:bg-muted/20 sm:hover:bg-muted/40 border border-transparent hover:border-border/50 transition-all duration-300 animate-fade-in stagger-${index + 1} group cursor-default`}
-            >
-              <div className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gradient-primary group-hover:scale-105 transition-transform duration-300">
-                {stat.value}
-              </div>
-              <div className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-1.5 group-hover:text-foreground/70 transition-colors duration-300">
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </div>
-      </section>
+      <StatsSection />
 
       {/* Quote Section */}
       <section className="py-6 sm:py-8 px-4 sm:px-0">
