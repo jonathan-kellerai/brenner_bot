@@ -873,6 +873,112 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["control", "null-hypothesis"],
     category: "method",
   },
+  paradigm: {
+    term: "Paradigm",
+    short: "A framework of assumptions, methods, and problems that defines a scientific field.",
+    long:
+      "A paradigm (in Kuhn's sense) is the shared worldview of a scientific community. It determines what counts as a good question, valid evidence, and acceptable explanation. Paradigm shifts revolutionize fields.",
+    analogy:
+      "Think of it like a lens—different paradigms make different things visible and hide others.",
+    why:
+      "Brenner operated across paradigms (biochemistry, information theory, genetics), importing methods between them.",
+    related: ["representation-change", "cross-domain-import"],
+    category: "method",
+  },
+  induction: {
+    term: "Induction",
+    short: "Generalizing from specific observations to broader principles.",
+    long:
+      "Induction moves from particular instances to general rules. Observing many white swans leads to 'all swans are white' (until you see a black one). Induction is fallible but essential for discovery.",
+    analogy:
+      "Think of it like noticing a pattern and guessing it will continue.",
+    related: ["hypothesis", "falsification"],
+    category: "method",
+  },
+  deduction: {
+    term: "Deduction",
+    short: "Deriving specific conclusions from general principles.",
+    long:
+      "Deduction moves from general rules to specific predictions. If all DNA is made of ATGC, then this DNA must be made of ATGC. Deduction is logically certain if premises are true.",
+    analogy:
+      "Think of it like applying a rule you already know to a new case.",
+    related: ["hypothesis", "falsification", "induction"],
+    category: "method",
+  },
+  operationalization: {
+    term: "Operationalization",
+    short: "Defining abstract concepts in terms of measurable procedures.",
+    long:
+      "Operationalization turns vague ideas into specific measurements. 'Intelligence' becomes 'IQ test score.' 'Movement defect' becomes 'thrashes per minute.' Without operationalization, experiments are impossible.",
+    why:
+      "Brenner's experiments required operationalizing abstract concepts like 'behavior' into scorable phenotypes.",
+    related: ["phenotype", "materialize"],
+    category: "method",
+  },
+  "blind-experiment": {
+    term: "Blind Experiment",
+    short: "A design where the experimenter doesn't know treatment assignments.",
+    long:
+      "In a blind experiment, the person measuring outcomes doesn't know which subjects got which treatment. This prevents unconscious bias in measurement or interpretation.",
+    related: ["control", "double-blind"],
+    category: "method",
+  },
+  "double-blind": {
+    term: "Double-blind",
+    short: "Neither experimenter nor subject knows treatment assignment.",
+    long:
+      "Double-blind designs hide treatment assignment from both experimenters and subjects. This prevents both unconscious experimenter bias and placebo effects in subjects.",
+    analogy:
+      "Think of it like a taste test where even the person pouring doesn't know which cup is which.",
+    related: ["blind-experiment", "control"],
+    category: "method",
+  },
+  confound: {
+    term: "Confound",
+    short: "A hidden variable that varies with treatment and could explain results.",
+    long:
+      "A confound is something that changes along with your manipulation, making it impossible to know which caused the effect. Good experimental design eliminates or controls for confounds.",
+    analogy:
+      "Think of it like testing whether exercise improves mood while only studying people who exercise outdoors—is it the exercise or the sunlight?",
+    related: ["control", "replication"],
+    category: "method",
+  },
+  "p-hacking": {
+    term: "P-hacking",
+    short: "Manipulating analysis until results appear statistically significant.",
+    long:
+      "P-hacking includes trying many analyses and only reporting ones that 'work,' optional stopping, or post-hoc hypothesis changes. It inflates false positive rates and undermines science.",
+    why:
+      "Brenner's emphasis on designing discriminative experiments upfront is an antidote to p-hacking.",
+    related: ["null-hypothesis", "falsification", "replication"],
+    category: "method",
+  },
+  reproducibility: {
+    term: "Reproducibility",
+    short: "Whether results can be obtained again using the same methods.",
+    long:
+      "Reproducibility means another lab can get the same results following your protocol. Irreproducible results are a crisis in science—they may reflect error, fraud, or insufficient detail in methods.",
+    related: ["replication", "operationalization"],
+    category: "method",
+  },
+  "forward-genetics": {
+    term: "Forward Genetics",
+    short: "Starting with a phenotype and working backward to find the gene.",
+    long:
+      "Forward genetics screens for mutants with interesting phenotypes, then identifies which genes are affected. This is the classical approach Brenner used in C. elegans.",
+    why:
+      "Brenner's C. elegans screens exemplify forward genetics—start with behavior, find mutations, map genes.",
+    related: ["mutagenesis", "phenotype", "c-elegans"],
+    category: "method",
+  },
+  "reverse-genetics": {
+    term: "Reverse Genetics",
+    short: "Starting with a gene and asking what phenotype its mutation causes.",
+    long:
+      "Reverse genetics deliberately mutates a known gene and observes the resulting phenotype. This became possible with molecular biology tools and complements forward genetics.",
+    related: ["forward-genetics", "genotype", "phenotype"],
+    category: "method",
+  },
 
   // -------------------------------------------------------------------------
   // Project-Specific Terms
@@ -949,6 +1055,62 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "Beads (bd command) tracks development issues in a .beads/ directory. Issue IDs like brenner_bot-5so serve as join keys with Agent Mail threads.",
     related: ["thread", "agent-mail"],
+    category: "project",
+  },
+  quotebank: {
+    term: "Quote Bank",
+    short: "A curated collection of quotable passages from the Brenner corpus.",
+    long:
+      "The quote bank organizes memorable passages from Brenner's transcript by theme, operator, or concept. It enables quick access to relevant quotes for research sessions and UI display.",
+    related: ["corpus", "excerpt", "anchor"],
+    category: "project",
+  },
+  distillation: {
+    term: "Distillation",
+    short: "A processed, structured summary derived from the raw corpus.",
+    long:
+      "Distillations extract and organize key insights from Brenner's transcript—operator definitions, methodology principles, and thematic summaries. They make the corpus more accessible.",
+    related: ["corpus", "excerpt"],
+    category: "project",
+  },
+  "hypothesis-slate": {
+    term: "Hypothesis Slate",
+    short: "A structured list of competing hypotheses to be evaluated.",
+    long:
+      "A hypothesis slate is a core artifact type listing competing explanations for a phenomenon. Each hypothesis includes predictions, testable claims, and links to supporting/contradicting evidence.",
+    related: ["artifact", "discriminative-test", "assumption-ledger"],
+    category: "project",
+  },
+  "discriminative-test": {
+    term: "Discriminative Test",
+    short: "An experiment designed to distinguish between competing hypotheses.",
+    long:
+      "A discriminative test is an artifact type describing experiments that would give different results under different hypotheses. It operationalizes Brenner's emphasis on potent experiments.",
+    related: ["hypothesis-slate", "artifact", "potency"],
+    category: "project",
+  },
+  session: {
+    term: "Session",
+    short: "A research interaction between human and AI agents on a specific question.",
+    long:
+      "A session is a bounded research conversation that produces artifacts. Sessions start with kickoff prompts, involve multiple agent turns, and end with compiled outputs.",
+    related: ["kickoff", "thread", "artifact"],
+    category: "project",
+  },
+  metaprompt: {
+    term: "Metaprompt",
+    short: "A template that generates specific prompts for different research contexts.",
+    long:
+      "Metaprompts are parameterized templates that produce tailored prompts based on corpus excerpts, operator focus, and research questions. They enable consistent, high-quality kickoffs.",
+    related: ["kickoff", "session", "excerpt"],
+    category: "project",
+  },
+  "operator-library": {
+    term: "Operator Library",
+    short: "The collection of Brenner operators defined in the system.",
+    long:
+      "The operator library defines the set of cognitive moves Brenner used. Each operator has a symbol, definition, examples, and anti-patterns. It's the core intellectual content of BrennerBot.",
+    related: ["level-split", "recode", "exclusion-test"],
     category: "project",
   },
 
