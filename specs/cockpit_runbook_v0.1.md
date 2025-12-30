@@ -144,7 +144,10 @@ Compose the kickoff prompt:
 
 #### (Optional) Inject procedural memory (`cm context`)
 
-If you want the kickoff to benefit from prior work, run `cm context` before sending the kickoff and paste a *small* subset into the prompt under a dedicated section.
+If you want the kickoff to benefit from prior work:
+
+- **CLI path (recommended):** `./brenner.ts session start --with-memory ...` injects a small, formatted **MEMORY CONTEXT (cass-memory)** section automatically (fail-soft if `cm` is unavailable).
+- **Manual path:** run `cm context` before sending the kickoff and paste a *small* subset into the prompt under a dedicated section.
 
 Recommended defaults:
 - Use `--no-history` for faster, cleaner context.
@@ -372,6 +375,29 @@ cm playbook add "Rule: ..." --category "prompt-hygiene"
 # Optional: mark a session as processed (if you used cm onboard workflows)
 cm onboard mark-done /path/to/session.jsonl
 ```
+
+### Hygiene rules: what gets written back to memory
+
+Treat `cm playbook` entries as **durable procedural rules**, not a scratchpad.
+
+Write back a rule only when:
+- It is **generalizable** (it will likely be true for future sessions).
+- It is **actionable** (“if/when X, do Y”).
+- It reduces **repeat failure** (prevents a known pitfall) or improves **evidence-per-week**.
+
+Do **not** write back:
+- “Facts” about Brenner or the corpus. Put transcript-grounded claims in repo artifacts with `§n` citations.
+- Unverified hypotheses or session-specific conclusions.
+- Secrets, tokens, internal URLs, or any sensitive operational detail.
+- Anything that would be embarrassing/damaging if it appeared in a public git repo.
+
+Minimum provenance to include in the rule text:
+- Why it was learned (1 sentence).
+- Where it was learned (thread id and/or artifact path).
+
+Human review requirement:
+- The operator must **read and approve** every rule before `cm playbook add`.
+- For high-impact categories (e.g. `safety-and-gating`, `protocol-kernel`), prefer a second pass after a short cooldown.
 
 ### Recommended `cm` playbook categories (Brenner Loop)
 
