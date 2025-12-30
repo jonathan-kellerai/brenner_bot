@@ -65,7 +65,11 @@ interface JargonProps {
  */
 export function Jargon({ term, children, className }: JargonProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    if (typeof window.matchMedia !== "function") return false;
+    return window.matchMedia("(max-width: 768px)").matches;
+  });
   const [tooltipLayout, setTooltipLayout] = useState<{
     position: "top" | "bottom";
     style: CSSProperties;
@@ -91,6 +95,7 @@ export function Jargon({ term, children, className }: JargonProps) {
   // Detect mobile on mount
   useEffect(() => {
     const checkMobile = () => {
+      if (typeof window.matchMedia !== "function") return;
       setIsMobile(window.matchMedia("(max-width: 768px)").matches);
     };
     checkMobile();
@@ -205,8 +210,9 @@ export function Jargon({ term, children, className }: JargonProps) {
   }, [isOpen, isMobile]);
 
   if (!jargonData) {
-    // If term not found, just render children without styling
-    return <>{children || term}</>;
+    // If term not found, render plain content (preserve styling if className was provided)
+    const content = children || term;
+    return <span className={className}>{content}</span>;
   }
 
   const displayText = children || jargonData.term;
