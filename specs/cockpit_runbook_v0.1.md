@@ -23,6 +23,15 @@ cd /data/projects/mcp_agent_mail
 bash scripts/run_server_with_token.sh
 ```
 
+### Agent Mail connection env vars (optional)
+
+BrennerBot defaults to a local Agent Mail server at `http://127.0.0.1:8765/mcp/`.
+Override via:
+
+- `AGENT_MAIL_BASE_URL` (default `http://127.0.0.1:8765`)
+- `AGENT_MAIL_PATH` (default `/mcp/`)
+- `AGENT_MAIL_BEARER_TOKEN` (optional; required if Agent Mail auth is enabled)
+
 ### `ntm` is installed
 
 Confirm `ntm` is on PATH:
@@ -33,6 +42,26 @@ ntm --help
 Optional dependency check:
 ```bash
 ntm deps
+```
+
+### Terminal agent CLIs are installed and logged in
+
+The cockpit assumes you can run each agent locally (subscriptions, not vendor APIs):
+
+- Codex CLI (GPT‑5.2)
+- Claude Code (Opus 4.5)
+- Gemini CLI (Gemini 3)
+
+If `ntm deps` fails, fix that first (it will tell you which CLI is missing).
+
+### Corpus files are present (local dev)
+
+In this repo, primary corpus sources live at the repo root (example: `complete_brenner_transcript.md`).
+The web app build copies them into `apps/web/public/corpus/` via:
+
+```bash
+cd apps/web
+bun run scripts/copy-corpus.ts
 ```
 
 ---
@@ -128,6 +157,99 @@ Compose the kickoff prompt:
 Notes:
 - `--sender` must be an adjective+noun name (Agent Mail convention).
 - `--to` values must match names returned by `./brenner.ts mail agents`.
+- By default, `./brenner.ts session start` sends **role-specific prompts** to each recipient (see next section). Use `--unified` if you want everyone to receive the same kickoff prompt.
+
+### 3.4 Roles + response contract (what agents must send back)
+
+The default 3‑agent Brenner Loop assigns roles as:
+
+| Recipient | Role | Subject prefix | Spec |
+|---|---|---|---|
+| Codex / GPT | Hypothesis Generator | `DELTA[gpt]: ...` | `specs/role_prompts_v0.1.md` |
+| Claude / Opus | Test Designer | `DELTA[opus]: ...` | `specs/role_prompts_v0.1.md` |
+| Gemini | Adversarial Critic | `DELTA[gemini]: ...` | `specs/role_prompts_v0.1.md` |
+
+**All agent contributions must be mergeable**, not essays:
+- Message bodies contain one or more fenced JSON blocks in the ` ```delta ` format.
+- Deltas follow: `specs/delta_output_format_v0.1.md` and `specs/artifact_delta_spec_v0.1.md`.
+
+Minimal agent reply skeleton (what you want agents to send):
+
+~~~markdown
+Subject: DELTA[gpt]: Added H3 third alternative + predictions
+Thread:  RS-20251230-cell-fate
+
+## Deltas
+
+```delta
+{ "operation": "ADD", "section": "hypothesis_slate", "target_id": null, "payload": { ... }, "rationale": "..." }
+```
+~~~
+
+### 3.5 Collection (get deltas into the Agent Mail thread)
+
+As the operator, you’re doing two things:
+1) keep agents unblocked (make sure they saw the kickoff + have the thread id)
+2) collect their `DELTA[...]` messages inside the thread
+
+Useful CLI commands:
+
+```bash
+# View your inbox (add --threads to group by thread)
+./brenner.ts mail inbox --project-key "$PWD" --agent FuchsiaDog --threads
+
+# Read a specific thread (include examples / guidance for agents)
+./brenner.ts mail thread --project-key "$PWD" --thread-id "$THREAD_ID" --include-examples
+```
+
+Common nudge (send to all `ntm` panes):
+```bash
+ntm send "$THREAD_ID" --all "Check Agent Mail thread: $THREAD_ID and reply with DELTA[...] blocks (see specs/delta_output_format_v0.1.md)"
+```
+
+### 3.6 Compile + publish (v0 manual workflow)
+
+**Current state**: the artifact compiler is specified, but the operator-facing `session compile`/`session publish` CLI commands are not implemented yet.
+Until they exist, compilation is an explicit human step.
+
+**Goal**: turn a thread’s deltas into a single canonical artifact, then publish it back into the same thread.
+
+1) Start from the canonical schema: `specs/artifact_schema_v0.1.md`.
+2) Apply agent deltas per: `specs/artifact_delta_spec_v0.1.md`.
+3) Save a local artifact file (example): `artifact_v1.md`.
+4) Publish it back to Agent Mail as a `COMPILED:` message:
+
+```bash
+./brenner.ts mail send \
+  --project-key "$PWD" \
+  --sender FuchsiaDog \
+  --to BlueLake,PurpleMountain,RedForest \
+  --thread-id "$THREAD_ID" \
+  --subject "COMPILED: v1 artifact" \
+  --body-file artifact_v1.md \
+  --ack-required
+```
+
+Then iterate:
+- Ask for critique (`CRITIQUE:`), request revisions, collect new `DELTA[...]`, publish `COMPILED: v2 ...`, etc.
+
+### 3.7 Conversation protocol (copy/paste)
+
+Paste this at the top of a new thread to force “conversation as hypothesis search”:
+
+~~~markdown
+## Conversation Protocol (Brenner-style)
+
+We are using conversation as cheap hypothesis search + cheap pruning.
+
+Rules:
+1) Say the “stupid thing” quickly (cheap generation).
+2) Apply a “severe audience” immediately (cheap pruning): what would kill this?
+3) Always include a **third alternative** (misspecification): “both could be wrong.”
+4) Prefer **forbidden patterns** and discriminative tests over supportive arguments.
+5) Keep levels split (program vs interpreter; message vs machine).
+6) If we can’t cite it, label it `[inference]` and move on.
+~~~
 
 ---
 
@@ -154,7 +276,7 @@ ntm spawn "$THREAD_ID" --cc=1 --cod=1 --gmi=1
 ntm send "$THREAD_ID" --all "Check Agent Mail thread: $THREAD_ID and reply with DELTA[...]"
 ```
 
-Next steps (not covered here): compile deltas → render canonical artifact → publish `COMPILED` back to the thread → optionally persist to `artifacts/{thread_id}.md`.
+Next steps: compile deltas → render canonical artifact → publish `COMPILED` back to the thread → optionally persist to `artifacts/{thread_id}.md`.
 
 ---
 
@@ -200,3 +322,24 @@ All of these would live as markdown templates under `.ntm/templates/`:
 If we decide to commit a project config, add a tiny `.ntm/config.toml` with a “Brenner Loop” category mapping to the templates above, so operators can:
 - run `ntm palette` → pick “Brenner: reply with DELTA” → choose target panes → send
 - avoid remembering template names/flags
+
+---
+
+## 6) Post-session wrap-up checklist (artifacts + memory outcomes)
+
+Use this to “land the plane” after a session:
+
+- [ ] Publish a final `COMPILED: vN ...` message into the thread (attach/paste artifact content).
+- [ ] Mark outstanding items (missing acks, missing roles) explicitly in the thread as `INFO:` or `BLOCKED:`.
+- [ ] (Optional) Persist the artifact into git at `artifacts/{thread_id}.md` (explicit operator action).
+- [ ] (Optional) Record procedural memory outcomes with `cm` (examples below).
+
+If you use `cm` (cass-memory) for procedural memory:
+
+```bash
+# Optional: stash a new rule learned from the session
+cm playbook add "Rule: ..." --category "research"
+
+# Optional: mark a session as processed (if you used cm onboard workflows)
+cm onboard mark-done /path/to/session.jsonl
+```
