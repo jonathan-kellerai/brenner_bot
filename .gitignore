@@ -1,9 +1,8 @@
-# bv (beads viewer) local config and caches
+# Beads viewer (bv) local config and caches
 .bv/
 
 # Vercel
 .vercel/
-apps/web/.vercel/
 
 # Local env files (never commit secrets)
 .env
@@ -15,42 +14,20 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
-# Node / Next.js build artifacts
+# Dependencies
 node_modules/
-apps/web/node_modules/
+
+# Build/test outputs
 .next/
-apps/web/.next/
+out/
 dist/
 build/
 coverage/
-apps/web/coverage/
-
-# Playwright
 playwright-report/
 test-results/
-apps/web/playwright-report/
-apps/web/test-results/
-
-# Misc generated
 *.tsbuildinfo
 *.log
-.DS_Store
-Thumbs.db
-
-# dependencies
-node_modules/
-**/node_modules/
-
-# build/test outputs
-dist/
-**/dist/
-coverage/
-**/coverage/
-apps/web/playwright-report/
-apps/web/test-results/
-apps/web/.next/
-apps/web/out/
-*.tsbuildinfo
 
 # OS junk
 .DS_Store
+Thumbs.db
