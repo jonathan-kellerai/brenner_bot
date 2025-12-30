@@ -1849,6 +1849,288 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["genetic-code", "codon", "forbidden-pattern", "exclusion-test"],
     category: "biology",
   },
+
+  // -------------------------------------------------------------------------
+  // Key Experiments and Techniques
+  // -------------------------------------------------------------------------
+  "pajamo-experiment": {
+    term: "PaJaMo Experiment",
+    short: "The Pardee-Jacob-Monod experiment that revealed gene regulation dynamics.",
+    long:
+      "The PaJaMo experiment (1959) by Pardee, Jacob, and Monod used bacterial conjugation to study when genes became active after transfer. It showed that enzyme synthesis began immediately, suggesting the existence of a short-lived intermediate between DNA and protein.",
+    why:
+      "Brenner discussed PaJaMo with Jacob, and the puzzle it created led directly to the concept of messenger RNA. The experiment showed information transfer was rapid, ruling out stable intermediates. Transcript anchor: §96-97.",
+    related: ["mrna", "operon", "francois-jacob", "tape-rna"],
+    category: "biology",
+  },
+  "volkin-astrachan-rna": {
+    term: "Volkin-Astrachan RNA",
+    short: "The mysterious RNA fraction with DNA-like composition found after phage infection.",
+    long:
+      "Volkin and Astrachan discovered a small RNA fraction made after phage infection whose base composition matched the phage DNA rather than ribosomal RNA. This 'mystery RNA' was later recognized as messenger RNA.",
+    why:
+      "The mystery of Volkin-Astrachan RNA lingered until Brenner, Jacob, and Meselson showed it was the messenger carrying information from DNA to ribosomes. Transcript anchor: §97.",
+    related: ["mrna", "tape-rna", "pajamo-experiment", "ribosome"],
+    category: "biology",
+  },
+  "density-gradient": {
+    term: "Density Gradient Centrifugation",
+    short: "Separating molecules by mass using heavy isotopes and centrifugation.",
+    long:
+      "Density gradient centrifugation (developed by Meselson and Stahl) separates molecules based on buoyant density. By labeling with heavy isotopes like 13C and 15N, you can distinguish old from new molecules by their weight, enabling experiments that track molecular inheritance.",
+    why:
+      "Brenner used this technique in the definitive mRNA experiment: showing new RNA appeared on old ribosomes by weighing them. The trick of using magnesium to compete with caesium was essential. Transcript anchors: §99-101.",
+    related: ["mrna", "ribosome", "meselson-stahl"],
+    category: "method",
+  },
+  "sequence-hypothesis": {
+    term: "Sequence Hypothesis",
+    short: "Crick's principle that DNA sequence determines protein sequence.",
+    long:
+      "The Sequence Hypothesis (Crick, 1958) states that the sequence of bases in DNA specifies the sequence of amino acids in proteins. This seemingly obvious idea was revolutionary: it meant genetic information was digital, encoded in a linear sequence that could be read and decoded.",
+    why:
+      "Brenner identifies this as one of the three foundations of molecular biology, alongside Sanger's proof of protein structure and the Watson-Crick DNA model. Transcript anchor: §71.",
+    related: ["genetic-code", "co-linearity", "central-dogma", "francis-crick"],
+    category: "biology",
+  },
+  "central-dogma": {
+    term: "Central Dogma",
+    short: "Information flows from DNA to RNA to protein, never backward to DNA.",
+    long:
+      "The Central Dogma (Crick, 1958) describes the flow of sequence information: DNA can be copied to DNA, transcribed to RNA, and RNA translated to protein, but sequence information cannot flow backward from protein to nucleic acid. This constrains how organisms store and transmit information.",
+    why:
+      "The Central Dogma defined the logical structure of molecular biology. Brenner's work on mRNA, the genetic code, and gene-protein relationships all operated within this framework.",
+    related: ["sequence-hypothesis", "genetic-code", "transcription", "translation"],
+    category: "biology",
+  },
+  "self-assembly": {
+    term: "Self-Assembly",
+    short: "Complex structures that build themselves from their component parts.",
+    long:
+      "Self-assembly is the spontaneous organization of components into ordered structures without external direction. Virus capsids, ribosomes, and membranes all self-assemble from their protein and nucleic acid parts according to information encoded in their sequences.",
+    why:
+      "Brenner emphasized self-assembly as fundamental to understanding how genomes encode organisms. If structures self-assemble, the genome need only specify the parts; the instructions for building are implicit in the parts themselves. Transcript anchor: §115.",
+    related: ["protein", "ribosome", "phenotype"],
+    category: "biology",
+  },
+  "serial-section": {
+    term: "Serial Section",
+    short: "Cutting tissue into sequential thin slices for 3D reconstruction.",
+    long:
+      "Serial sectioning cuts a specimen into hundreds or thousands of sequential ultrathin slices (typically 50-70nm thick) for electron microscopy. By imaging each section and aligning them, you can reconstruct the complete 3D structure of cells and tissues.",
+    why:
+      "Brenner and colleagues used serial-section electron microscopy to reconstruct the complete C. elegans nervous system, producing the first connectome. This heroic effort took over a decade.",
+    related: ["electron-microscopy", "connectome", "c-elegans", "reconstruction"],
+    category: "method",
+  },
+  "electron-microscopy": {
+    term: "Electron Microscopy",
+    short: "Imaging with electrons to achieve nanometer resolution.",
+    long:
+      "Electron microscopy uses electron beams instead of light to image specimens, achieving resolution down to individual atoms. For biology, transmission EM reveals internal cell structure while scanning EM shows surface topology.",
+    why:
+      "EM was essential for C. elegans work: seeing muscle structure in mutants, tracing neural connections via serial sections, and understanding cell ultrastructure. Brenner democratized EM by taking it out of elite hands. Transcript anchors: §86, §159.",
+    related: ["serial-section", "negative-staining", "connectome", "democratize"],
+    category: "method",
+  },
+  "laser-ablation": {
+    term: "Laser Ablation",
+    short: "Killing specific cells with a focused laser beam to test their function.",
+    long:
+      "Laser ablation uses a focused laser microbeam to kill individual cells in a living organism. By removing specific cells and observing the consequences, you can determine what each cell does. In C. elegans, the transparent body allows targeting any cell.",
+    why:
+      "Laser ablation enabled functional analysis of the C. elegans nervous system: kill a neuron and see what behavior is lost. This connected the anatomical connectome to function.",
+    related: ["c-elegans", "neuron", "connectome", "cell-lineage"],
+    category: "method",
+  },
+  cistron: {
+    term: "Cistron",
+    short: "Benzer's term for the functional unit of the gene defined by complementation.",
+    long:
+      "A cistron is a genetic unit defined operationally by the cis-trans test (complementation test). Two mutations are in the same cistron if they fail to complement when in trans (on different chromosomes). The cistron roughly corresponds to a single protein-coding gene.",
+    why:
+      "Benzer introduced 'cistron' to distinguish the functional unit (defined by complementation) from the unit of mutation (muton) and recombination (recon). This clarified confusion about what 'gene' meant. Transcript anchor: §70.",
+    related: ["complementation", "gene", "seymour-benzer", "rii-region"],
+    category: "biology",
+  },
+  "deletion-mapping": {
+    term: "Deletion Mapping",
+    short: "Using chromosomal deletions to rapidly localize mutations.",
+    long:
+      "Deletion mapping uses strains carrying defined chromosomal deletions. If a mutation fails to recombine with a deletion, it must lie within the deleted region. A set of overlapping deletions can quickly map mutations to small intervals without extensive recombination analysis.",
+    why:
+      "Benzer used deletion mapping to efficiently localize thousands of rII mutations. Brenner applied similar logic: use coarse methods first (anatomical dissection) before fine resolution.",
+    related: ["fine-structure-mapping", "recombination", "seymour-benzer"],
+    category: "method",
+  },
+  "intragenic-suppressor": {
+    term: "Intragenic Suppressor",
+    short: "A second mutation within the same gene that restores function.",
+    long:
+      "An intragenic suppressor is a mutation that compensates for another mutation within the same gene. Frameshift suppressors are the classic example: a +1 insertion combined with a -1 deletion restores the reading frame, producing functional protein.",
+    why:
+      "Brenner used intragenic suppressors to prove the triplet nature of the genetic code. If +1 and -1 mutations in the same gene restore function, the code must read in fixed triplets that can be shifted and restored. Transcript anchor: §107-109.",
+    related: ["suppressor-mutation", "frameshift", "reading-frame", "genetic-code"],
+    category: "biology",
+  },
+  reconstruction: {
+    term: "Reconstruction",
+    short: "Building 3D structure from serial section images.",
+    long:
+      "Reconstruction is the process of tracing structures through serial sections and assembling them into a 3D model. For the C. elegans connectome, this meant tracing every neuron through thousands of sections and identifying every synaptic connection.",
+    why:
+      "The C. elegans reconstruction was a decade-long effort that produced the first complete wiring diagram of a nervous system. Brenner initiated this work, which John White and colleagues completed.",
+    related: ["serial-section", "connectome", "electron-microscopy"],
+    category: "method",
+  },
+
+  // -------------------------------------------------------------------------
+  // C. elegans Specific Terms
+  // -------------------------------------------------------------------------
+  "unc-mutant": {
+    term: "Unc Mutant",
+    short: "Uncoordinated mutants with defective movement in C. elegans.",
+    long:
+      "Unc (uncoordinated) mutants have abnormal movement: paralysis, twitching, coiling, or uncoordinated locomotion. The unc genes encode proteins required for muscle function, neural transmission, or neuromuscular connectivity. There are over 100 unc genes.",
+    why:
+      "Movement mutants were Brenner's entry point into C. elegans genetics. You could see them: 'paralysed mutants had defective muscles that we could see in the electron microscope.' Transcript anchors: §163, §165.",
+    related: ["c-elegans", "behavioral-mutant", "genetic-screen", "neuron"],
+    category: "biology",
+  },
+  "behavioral-mutant": {
+    term: "Behavioral Mutant",
+    short: "A mutant with altered behavior rather than altered structure.",
+    long:
+      "Behavioral mutants have normal anatomy but abnormal behavior: defective chemotaxis, altered feeding, abnormal egg-laying, or disrupted mating. These reveal genes required for neural function rather than neural development.",
+    why:
+      "Brenner saw behavioral mutants as the key to understanding the nervous system genetically. The phenotype is visible (you watch the worm), heritable, and genetically tractable. Transcript anchor: §164, §170.",
+    related: ["unc-mutant", "c-elegans", "chemotaxis", "genetic-screen"],
+    category: "biology",
+  },
+  chemotaxis: {
+    term: "Chemotaxis",
+    short: "Movement toward or away from chemical signals.",
+    long:
+      "Chemotaxis is directed movement in response to chemical gradients. C. elegans chemotaxes toward food (bacteria) and away from noxious chemicals. Chemotaxis assays on petri dishes provided quantitative behavioral phenotypes for genetic screens.",
+    why:
+      "Chemotaxis was an ideal behavioral assay: quantitative, reproducible, and revealing of sensory and motor function. Mutants with chemotaxis defects identified genes for sensory neurons, signal transduction, and motor control.",
+    related: ["behavioral-mutant", "c-elegans", "genetic-screen"],
+    category: "biology",
+  },
+  tracks: {
+    term: "Tracks",
+    short: "The trails C. elegans worms leave on bacterial lawns.",
+    long:
+      "C. elegans worms crawling on bacterial lawns leave visible tracks in the bacteria. The pattern of tracks reveals movement phenotypes: wild-type worms leave sinusoidal tracks, while movement mutants leave characteristic abnormal patterns.",
+    why:
+      "Brenner used tracks as a rapid screen for movement mutants: 'I had picked up the plate and it caught the light and I noticed that there were tracks where the worms had crawled and that these did look different.' Transcript anchor: §154, §158.",
+    related: ["unc-mutant", "c-elegans", "behavioral-mutant"],
+    category: "biology",
+  },
+  n2: {
+    term: "N2",
+    short: "The standard wild-type C. elegans strain used worldwide.",
+    long:
+      "N2 is the reference wild-type strain of C. elegans, originally isolated by Brenner in Bristol, England. All standard genetics compares mutants to N2. The N2 genome was the first animal genome sequenced.",
+    why:
+      "Choosing and standardizing on a single wild-type strain was essential for reproducibility. N2 became the 'E. coli' of animal genetics: the universal reference.",
+    related: ["c-elegans", "wild-type", "model-organism"],
+    category: "biology",
+  },
+  dauer: {
+    term: "Dauer",
+    short: "A stress-resistant dormant larval stage in C. elegans.",
+    long:
+      "Dauer (German for 'enduring') is an alternative third larval stage entered under starvation or crowding. Dauer larvae are stress-resistant, long-lived, and non-feeding. When conditions improve, they resume development. Dauer genetics revealed conserved longevity pathways.",
+    why:
+      "Dauer provided a model for understanding how organisms sense and respond to environmental conditions. The insulin/IGF-1 pathway controlling dauer entry is conserved to humans and affects aging.",
+    related: ["c-elegans", "phenotype", "genetic-pathway"],
+    category: "biology",
+  },
+  vulva: {
+    term: "Vulva",
+    short: "The C. elegans egg-laying structure; a model for cell fate decisions.",
+    long:
+      "The C. elegans vulva is formed from six precursor cells that adopt different fates based on signaling. Vulval development became a paradigm for studying cell-cell signaling, fate specification, and the genetics of development.",
+    why:
+      "Vulval development exemplified how C. elegans genetics could dissect developmental mechanisms. The same signaling pathways (Ras, Notch, Wnt) operate in humans.",
+    related: ["c-elegans", "cell-lineage", "genetic-pathway", "phenotype"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Additional Historical/Conceptual Terms
+  // -------------------------------------------------------------------------
+  "meselson-stahl": {
+    term: "Meselson-Stahl Experiment",
+    short: "The 'most beautiful experiment in biology' proving semiconservative DNA replication.",
+    long:
+      "Meselson and Stahl (1958) used density gradient centrifugation with heavy nitrogen to show that DNA replicates semiconservatively: each daughter molecule contains one old and one new strand. The elegant experimental design became a model for decisive experiments.",
+    why:
+      "Brenner used the Meselson-Stahl technique (density labeling) for the mRNA experiment. The approach exemplifies using physical chemistry to answer biological questions.",
+    related: ["density-gradient", "dna", "decision-experiment"],
+    category: "biology",
+  },
+  "sanger-sequencing": {
+    term: "Sanger Sequencing",
+    short: "Fred Sanger's method for reading DNA sequences using chain termination.",
+    long:
+      "Sanger sequencing (dideoxy method) uses chain-terminating nucleotides to generate DNA fragments of every length, which when separated by size reveal the sequence. This technology enabled the genomic era, including the C. elegans and human genome projects.",
+    why:
+      "Brenner recognized that 'genetics just turned out to be the poor man's way of doing the DNA sequence.' Sanger sequencing eventually made classical genetics unnecessary for many purposes. Transcript anchor: §78.",
+    related: ["dna", "genetic-code", "c-elegans"],
+    category: "method",
+  },
+  "genetic-map": {
+    term: "Genetic Map",
+    short: "A diagram showing the relative positions of genes based on recombination frequency.",
+    long:
+      "A genetic map orders genes along chromosomes based on how frequently they recombine. Genes that rarely recombine are close together; genes that recombine freely are far apart. Genetic maps preceded physical maps and enabled positional cloning.",
+    why:
+      "Brenner built the first genetic map of C. elegans, essential infrastructure for the field. Mapping was the prerequisite for cloning genes and understanding their molecular nature.",
+    related: ["recombination", "gene", "c-elegans", "fine-structure-mapping"],
+    category: "method",
+  },
+  "positional-cloning": {
+    term: "Positional Cloning",
+    short: "Isolating a gene by walking along the chromosome from nearby markers.",
+    long:
+      "Positional cloning identifies a gene by its chromosomal position rather than its biochemical function. Starting from linked genetic markers, you 'walk' along overlapping clones until you reach the gene. This enabled cloning genes known only by their mutant phenotype.",
+    why:
+      "Positional cloning connected classical genetics to molecular biology. You could go from a mutant phenotype to the gene sequence without knowing the protein. This was essential for C. elegans molecular genetics.",
+    related: ["genetic-map", "gene", "mutation", "forward-genetics"],
+    category: "method",
+  },
+  "two-dimensional-world": {
+    term: "Two-Dimensional World",
+    short: "The advantage of organisms that live on surfaces rather than in volumes.",
+    long:
+      "Brenner wanted an organism with a two-dimensional world: 'like bacteria, which can live on the surface of a petri dish.' Organisms in 2D are easier to observe, manipulate, and screen. C. elegans crawls on agar surfaces, enabling visual screens impossible with swimming organisms.",
+    why:
+      "This criterion was decisive in choosing C. elegans over rotifers (which swim in 3D). The practical advantage of 2D life enabled the large-scale genetic screens that made C. elegans powerful. Transcript anchor: §129.",
+    related: ["c-elegans", "genetic-screen", "model-organism", "gedanken-organism"],
+    category: "brenner",
+  },
+  "invariant-cell-number": {
+    term: "Invariant Cell Number",
+    short: "The fixed number of cells in C. elegans adults: exactly 959 somatic cells.",
+    long:
+      "Adult C. elegans hermaphrodites have exactly 959 somatic cells (plus germline). This invariance means every cell can be identified and its lineage traced. The same cells appear in the same positions in every individual, enabling complete anatomical description.",
+    why:
+      "Invariant cell number was one of C. elegans' key advantages: 'these had a small number of cells, they were limited.' This made complete description possible. Transcript anchor: §130.",
+    related: ["c-elegans", "cell-lineage", "connectome", "model-organism"],
+    category: "biology",
+  },
+  "complete-description": {
+    term: "Complete Description",
+    short: "The goal of exhaustively describing an organism at cellular resolution.",
+    long:
+      "Complete description means knowing every cell, every connection, every gene. For C. elegans, this included the complete cell lineage (every cell division), the complete connectome (every neural connection), and eventually the complete genome sequence.",
+    why:
+      "Brenner's strategy was to achieve complete description as the foundation for understanding. 'The important thing is to choose a tractable problem that is complete in itself.' Complete description makes nothing hidden.",
+    related: ["c-elegans", "connectome", "cell-lineage", "invariant-cell-number"],
+    category: "brenner",
+  },
 };
 
 // ============================================================================
