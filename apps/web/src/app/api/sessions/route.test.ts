@@ -1,4 +1,24 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+const toolsCallMock = vi.hoisted(() =>
+  vi.fn(async (tool: string) => {
+    if (tool === "ensure_project") return { structuredContent: { slug: "test-project" } };
+    if (tool === "send_message") {
+      return { structuredContent: { deliveries: [{ payload: { id: 123 } }] } };
+    }
+    return { structuredContent: {} };
+  })
+);
+
+vi.mock("@/lib/agentMail", () => ({
+  AgentMailClient: class AgentMailClientMock {
+    toolsCall = toolsCallMock;
+  },
+}));
+
+vi.mock("@/lib/prompts", () => ({
+  composePrompt: async () => "COMPOSED",
+}));
 
 vi.mock("next/headers", () => ({
   headers: async () => new Headers(),
@@ -17,6 +37,10 @@ function makeRequest(body: unknown): NextRequest {
 }
 
 describe("POST /api/sessions", () => {
+  beforeEach(() => {
+    toolsCallMock.mockClear();
+  });
+
   it("rejects recipients that become empty after trimming", async () => {
     const response = await POST(
       makeRequest({
@@ -35,5 +59,44 @@ describe("POST /api/sessions", () => {
       error: "Missing recipients",
     });
   });
-});
 
+  it.each([
+    ["/abs/path/to/repo"],
+    ["C:\\repo\\brenner_bot"],
+    ["\\\\server\\share\\brenner_bot"],
+  ])("calls ensure_project for absolute projectKey: %s", async (projectKey) => {
+    const response = await POST(
+      makeRequest({
+        projectKey,
+        sender: "Operator",
+        recipients: ["Claude"],
+        threadId: "TEST-ABS",
+        excerpt: "### Excerpt\n\n> **§1**: \"Hello\"\n",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toMatchObject({ success: true, threadId: "TEST-ABS" });
+
+    expect(toolsCallMock).toHaveBeenCalledWith("ensure_project", { human_key: projectKey });
+  });
+
+  it("does not call ensure_project for relative projectKey", async () => {
+    const response = await POST(
+      makeRequest({
+        projectKey: "relative/repo",
+        sender: "Operator",
+        recipients: ["Claude"],
+        threadId: "TEST-REL",
+        excerpt: "### Excerpt\n\n> **§1**: \"Hello\"\n",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    const json = await response.json();
+    expect(json).toMatchObject({ success: true, threadId: "TEST-REL" });
+
+    expect(toolsCallMock.mock.calls.some(([tool]) => tool === "ensure_project")).toBe(false);
+  });
+});
