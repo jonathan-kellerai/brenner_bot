@@ -17,24 +17,24 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "Brenner Bot Lab",
-    template: "%s | Brenner Bot Lab",
+    default: "BrennerBot",
+    template: "%s | BrennerBot",
   },
   description:
     "Research lab for operationalizing Sydney Brenner's scientific methodology via multi-agent collaboration.",
   keywords: ["Sydney Brenner", "research methodology", "AI", "multi-agent", "science"],
-  authors: [{ name: "Brenner Bot Lab" }],
+  authors: [{ name: "BrennerBot" }],
   openGraph: {
     type: "website",
     locale: "en_US",
     url: "https://brennerbot.org",
-    siteName: "Brenner Bot Lab",
-    title: "Brenner Bot Lab",
+    siteName: "BrennerBot",
+    title: "BrennerBot",
     description: "Research lab for operationalizing Sydney Brenner's scientific methodology.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Brenner Bot Lab",
+    title: "BrennerBot",
     description: "Research lab for operationalizing Sydney Brenner's scientific methodology.",
   },
 };
@@ -95,7 +95,7 @@ export default function RootLayout({
                   <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold transition-transform group-hover:scale-105">
                     B
                   </span>
-                  <span className="hidden sm:inline">Brenner Bot Lab</span>
+                  <span className="hidden sm:inline">BrennerBot</span>
                 </Link>
 
                 {/* Desktop Navigation */}
@@ -130,7 +130,7 @@ export default function RootLayout({
                     <span className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold">
                       B
                     </span>
-                    <span className="font-semibold">Brenner Bot Lab</span>
+                    <span className="font-semibold">BrennerBot</span>
                   </div>
                   <p className="text-sm text-muted-foreground max-w-md">
                     Research lab for operationalizing Sydney Brenner&apos;s scientific methodology

@@ -1,4 +1,4 @@
-# AGENTS.md — Brenner Bot Project
+# AGENTS.md — BrennerBot Project
 
 ## RULE 1 – ABSOLUTE (DO NOT EVER VIOLATE THIS)
 
@@ -71,7 +71,7 @@ Targets include libc + CPU variants (e.g. `bun-linux-x64-musl`, `bun-linux-x64-b
 
 ## Project Architecture
 
-Brenner Bot is a **documents-first research project** that will grow into a web-based multi-agent “research lab”
+BrennerBot is a **documents-first research project** that will grow into a web-based multi-agent “research lab”
 coordinated via Agent Mail.
 
 ### A) Corpus + syntheses (current)

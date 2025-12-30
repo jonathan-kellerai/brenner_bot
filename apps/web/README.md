@@ -1,4 +1,4 @@
-This is the Brenner Bot web app (Next.js App Router + React 19), bootstrapped with `create-next-app` and using **Bun** for all JS/TS tooling.
+This is the BrennerBot web app (Next.js App Router + React 19), bootstrapped with `create-next-app` and using **Bun** for all JS/TS tooling.
 
 ## Getting Started
 

@@ -1,4 +1,4 @@
-# Brenner Bot Lab Mode: Threat Model & Auth Specification
+# BrennerBot Lab Mode: Threat Model & Auth Specification
 
 > **Status**: Draft specification
 > **Task**: brenner_bot-5so.4.4.1
@@ -252,7 +252,7 @@ async function validateCfAccessJwt(token: string): Promise<boolean> {
 
 | Setting | Value |
 |---------|-------|
-| **Application name** | Brenner Bot Lab |
+| **Application name** | BrennerBot |
 | **Application domain** | `brennerbot.org` |
 | **Path** | `/sessions/*`, `/api/agent-mail/*`, `/api/sessions/*` |
 | **Session duration** | 24 hours |

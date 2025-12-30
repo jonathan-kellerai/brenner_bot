@@ -80,8 +80,7 @@ export default function Home() {
           </div>
 
           <h1 className="text-4xl lg:text-6xl font-bold tracking-tight animate-fade-in-up stagger-1">
-            <span className="text-gradient-primary">Brenner Bot</span>{" "}
-            <span className="text-foreground">Lab</span>
+            <span className="text-gradient-primary">BrennerBot</span>
           </h1>
 
           <p className="max-w-2xl mx-auto text-lg lg:text-xl text-muted-foreground leading-relaxed animate-fade-in-up stagger-2">
