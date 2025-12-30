@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   jargonDictionary,
   searchJargon,
@@ -51,6 +52,39 @@ const SparklesIcon = ({ className = "size-4" }: { className?: string }) => (
   </svg>
 );
 
+const MagnifyingGlassIcon = ({ className = "size-12" }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+  </svg>
+);
+
+// ============================================================================
+// HIGHLIGHT HELPER
+// ============================================================================
+
+function HighlightedText({ text, query }: { text: string; query: string }) {
+  if (!query.trim()) {
+    return <>{text}</>;
+  }
+
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "gi");
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-primary/20 text-foreground rounded px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </>
+  );
+}
+
 // ============================================================================
 // CONSTANTS
 // ============================================================================
@@ -83,93 +117,136 @@ interface TermCardProps {
   term: JargonTerm;
   isExpanded: boolean;
   onToggle: () => void;
+  searchQuery: string;
 }
 
-function TermCard({ termKey, term, isExpanded, onToggle }: TermCardProps) {
+function TermCard({ termKey, term, isExpanded, onToggle, searchQuery }: TermCardProps) {
   return (
-    <div
+    <motion.div
       id={termKey}
-      className={`rounded-xl border bg-card overflow-hidden transition-all duration-200 ${
-        isExpanded ? "border-primary/30 shadow-lg" : "border-border hover:border-border/80"
+      layout
+      className={`rounded-xl border bg-card overflow-hidden ${
+        isExpanded ? "border-primary/30 shadow-lg" : "border-border hover:border-border/80 hover:shadow-sm"
       }`}
+      initial={false}
+      animate={{
+        borderColor: isExpanded ? "oklch(0.58 0.19 195 / 0.3)" : "var(--border)",
+      }}
+      transition={{ duration: 0.2 }}
     >
       {/* Header - always visible */}
-      <button
+      <motion.button
         onClick={onToggle}
-        className="w-full p-4 flex items-start justify-between gap-4 text-left"
+        className="w-full p-4 flex items-start justify-between gap-4 text-left touch-manipulation"
+        whileTap={{ scale: 0.995 }}
       >
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            <span className="font-semibold text-foreground">{term.term}</span>
+          <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+            <span className="font-semibold text-foreground">
+              <HighlightedText text={term.term} query={searchQuery} />
+            </span>
             <span className={`px-2 py-0.5 text-xs rounded-full border ${CATEGORY_COLORS[term.category]}`}>
               {CATEGORY_LABELS[term.category]}
             </span>
           </div>
-          <p className="text-sm text-muted-foreground line-clamp-2">{term.short}</p>
+          <p className="text-sm text-muted-foreground line-clamp-2">
+            <HighlightedText text={term.short} query={searchQuery} />
+          </p>
         </div>
-        <ChevronDownIcon
-          className={`size-5 text-muted-foreground transition-transform flex-shrink-0 mt-1 ${
-            isExpanded ? "rotate-180" : ""
-          }`}
-        />
-      </button>
+        <motion.div
+          animate={{ rotate: isExpanded ? 180 : 0 }}
+          transition={{ duration: 0.2, ease: "easeInOut" }}
+          className="flex-shrink-0 mt-1"
+        >
+          <ChevronDownIcon className="size-5 text-muted-foreground" />
+        </motion.div>
+      </motion.button>
 
       {/* Expanded content */}
-      {isExpanded && (
-        <div className="px-4 pb-4 space-y-4 border-t border-border/50 pt-4">
-          {/* Full explanation */}
-          <div>
-            <p className="text-sm text-foreground leading-relaxed">{term.long}</p>
-          </div>
+      <AnimatePresence initial={false}>
+        {isExpanded && (
+          <motion.div
+            key="content"
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: "auto", opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div className="px-4 pb-4 space-y-4 border-t border-border/50 pt-4">
+              {/* Full explanation */}
+              <motion.div
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.05 }}
+              >
+                <p className="text-sm text-foreground leading-relaxed">{term.long}</p>
+              </motion.div>
 
-          {/* Why box */}
-          {term.why && (
-            <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-              <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
-                <LightbulbIcon className="size-4" />
-                <span className="text-xs font-medium uppercase tracking-wide">Why it matters</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{term.why}</p>
-            </div>
-          )}
+              {/* Why box */}
+              {term.why && (
+                <motion.div
+                  className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3"
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 mb-1">
+                    <LightbulbIcon className="size-4" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Why it matters</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{term.why}</p>
+                </motion.div>
+              )}
 
-          {/* Analogy box */}
-          {term.analogy && (
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-3">
-              <div className="flex items-center gap-2 text-primary mb-1">
-                <SparklesIcon className="size-4" />
-                <span className="text-xs font-medium uppercase tracking-wide">Think of it like...</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{term.analogy}</p>
-            </div>
-          )}
+              {/* Analogy box */}
+              {term.analogy && (
+                <motion.div
+                  className="rounded-lg border border-primary/20 bg-primary/5 p-3"
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <div className="flex items-center gap-2 text-primary mb-1">
+                    <SparklesIcon className="size-4" />
+                    <span className="text-xs font-medium uppercase tracking-wide">Think of it like...</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{term.analogy}</p>
+                </motion.div>
+              )}
 
-          {/* Related terms */}
-          {term.related && term.related.length > 0 && (
-            <div>
-              <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Related terms:
-              </span>
-              <div className="flex flex-wrap gap-2 mt-1">
-                {term.related.map((relatedKey) => {
-                  const relatedTerm = jargonDictionary[relatedKey];
-                  if (!relatedTerm) return null;
-                  return (
-                    <Link
-                      key={relatedKey}
-                      href={`#${relatedKey}`}
-                      className="text-sm px-2 py-0.5 rounded-full border border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
-                    >
-                      {relatedTerm.term}
-                    </Link>
-                  );
-                })}
-              </div>
+              {/* Related terms */}
+              {term.related && term.related.length > 0 && (
+                <motion.div
+                  initial={{ y: -10, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.2 }}
+                >
+                  <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Related terms:
+                  </span>
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    {term.related.map((relatedKey) => {
+                      const relatedTerm = jargonDictionary[relatedKey];
+                      if (!relatedTerm) return null;
+                      return (
+                        <Link
+                          key={relatedKey}
+                          href={`#${relatedKey}`}
+                          className="text-sm px-2 py-0.5 rounded-full border border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+                        >
+                          {relatedTerm.term}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
   );
 }
 
@@ -267,15 +344,26 @@ export default function GlossaryPage() {
       {/* Search + Filters */}
       <div className="space-y-4">
         {/* Search */}
-        <div className="relative">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-5 text-muted-foreground" />
+        <div className="relative group/search">
+          <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 size-5 text-muted-foreground group-focus-within/search:text-primary transition-colors" />
           <input
             type="text"
             placeholder="Search terms..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-colors"
+            className="w-full h-12 sm:h-11 pl-11 pr-4 text-base sm:text-sm rounded-xl border border-border bg-background text-foreground placeholder:text-muted-foreground/70 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all"
           />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              aria-label="Clear search"
+            >
+              <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
 
         {/* Category pills */}

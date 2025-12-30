@@ -3,6 +3,7 @@
 import * as React from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { motion } from "framer-motion"
 import { cn } from "@/lib/utils"
 
 // Icons
@@ -61,7 +62,7 @@ const navItems: NavItem[] = [
   { href: "/method", label: "Method", icon: <BeakerIcon /> },
 ]
 
-// Desktop Header Navigation
+// Desktop Header Navigation with animated indicator
 export function HeaderNav({ className }: { className?: string }) {
   const pathname = usePathname()
 
@@ -82,7 +83,15 @@ export function HeaderNav({ className }: { className?: string }) {
           >
             {item.label}
             {isActive && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary rounded-full" />
+              <motion.span
+                layoutId="nav-indicator"
+                className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary rounded-full"
+                transition={{
+                  type: "spring",
+                  stiffness: 400,
+                  damping: 30,
+                }}
+              />
             )}
           </Link>
         )
@@ -91,9 +100,36 @@ export function HeaderNav({ className }: { className?: string }) {
   )
 }
 
-// Mobile Bottom Navigation
+// Mobile Bottom Navigation with sliding indicator
 export function BottomNav({ className }: { className?: string }) {
   const pathname = usePathname()
+  const navRef = React.useRef<HTMLDivElement>(null)
+  const [indicatorStyle, setIndicatorStyle] = React.useState({ left: 0, width: 0 })
+
+  // Calculate active index
+  const activeIndex = React.useMemo(() => {
+    return navItems.findIndex((item) =>
+      pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+    )
+  }, [pathname])
+
+  // Update indicator position when active index changes
+  React.useEffect(() => {
+    if (!navRef.current || activeIndex < 0) return
+
+    const navElement = navRef.current
+    const items = navElement.querySelectorAll<HTMLAnchorElement>("[data-nav-item]")
+    const activeItem = items[activeIndex]
+
+    if (activeItem) {
+      const navRect = navElement.getBoundingClientRect()
+      const itemRect = activeItem.getBoundingClientRect()
+      setIndicatorStyle({
+        left: itemRect.left - navRect.left + itemRect.width / 2 - 12, // Center 24px indicator
+        width: 24,
+      })
+    }
+  }, [activeIndex])
 
   return (
     <nav
@@ -102,17 +138,44 @@ export function BottomNav({ className }: { className?: string }) {
         className
       )}
     >
-      <div className="flex items-center justify-around h-16">
+      <div ref={navRef} className="relative flex items-center justify-around h-16">
+        {/* Sliding indicator */}
+        {activeIndex >= 0 && (
+          <motion.div
+            className="absolute top-1.5 h-1 rounded-full bg-primary"
+            initial={false}
+            animate={{
+              left: indicatorStyle.left,
+              width: indicatorStyle.width,
+            }}
+            transition={{
+              type: "spring",
+              stiffness: 500,
+              damping: 35,
+              mass: 1,
+            }}
+          />
+        )}
+
         {navItems.map((item) => {
           const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
           return (
             <Link
               key={item.href}
               href={item.href}
+              data-nav-item
               className="bottom-nav-item touch-target"
               data-active={isActive}
             >
-              {item.icon}
+              <motion.div
+                animate={{
+                  scale: isActive ? 1.1 : 1,
+                  y: isActive ? -1 : 0,
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 25 }}
+              >
+                {item.icon}
+              </motion.div>
               <span className="text-xs">{item.label}</span>
             </Link>
           )
