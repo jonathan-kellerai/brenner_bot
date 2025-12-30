@@ -1,0 +1,11 @@
+{
+  "totalEntries": 431,
+  "byCategory": {
+    "transcript": 236,
+    "quote-bank": 63,
+    "metaprompt": 15,
+    "distillation": 117
+  },
+  "indexSizeBytes": 663567,
+  "buildTimeMs": 161
+}
