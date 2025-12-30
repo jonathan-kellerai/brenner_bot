@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
+import { RefreshControls } from "@/components/sessions";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
 import { computeThreadStatus, type SessionPhase } from "@/lib/threadStatus";
@@ -292,13 +293,16 @@ export default async function SessionsListPage() {
             Browse and monitor research sessions
           </p>
         </div>
-        <Link
-          href="/sessions/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-        >
-          <PlusIcon className="size-4" />
-          New Session
-        </Link>
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          <RefreshControls />
+          <Link
+            href="/sessions/new"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          >
+            <PlusIcon className="size-4" />
+            New Session
+          </Link>
+        </div>
       </header>
 
       {/* Error state */}

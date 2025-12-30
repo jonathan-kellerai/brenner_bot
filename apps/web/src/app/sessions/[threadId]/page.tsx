@@ -4,6 +4,7 @@ import { cookies, headers } from "next/headers";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import rehypeHighlight from "rehype-highlight";
+import { RefreshControls } from "@/components/sessions";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
 import { computeThreadStatusFromThread, parseSubjectType } from "@/lib/threadStatus";
@@ -277,7 +278,8 @@ export default async function SessionDetailPage({
             <h1 className="text-2xl font-bold tracking-tight">Session</h1>
             <div className="text-sm text-muted-foreground font-mono">{threadId}</div>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
+            <RefreshControls />
             <span className="text-xs text-muted-foreground font-mono">refreshed {now}</span>
             <Link href="/sessions/new" className="text-sm text-primary hover:underline">
               New Session
