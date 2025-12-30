@@ -75,8 +75,8 @@ const INDEXABLE_CATEGORIES: DocCategory[] = [
 // ============================================================================
 
 function readCorpusFile(filename: string): string {
-  // Try public/corpus first (for build process)
-  const publicPath = join(__dirname, "../public/corpus", filename);
+  // Try public/_corpus first (for build process)
+  const publicPath = join(__dirname, "../public/_corpus", filename);
   if (existsSync(publicPath)) {
     return readFileSync(publicPath, "utf-8");
   }

@@ -59,7 +59,7 @@ export function proxy(request: NextRequest) {
 
   // Never serve raw markdown files directly from `public/corpus/`.
   // Corpus documents should be accessed via `/corpus/[doc]` where we can enforce policy.
-  if (pathname.startsWith("/corpus/") && pathname.endsWith(".md")) {
+  if (pathname.startsWith("/_corpus/") && pathname.endsWith(".md")) {
     return new NextResponse("Not found", { status: 404 });
   }
 
@@ -83,5 +83,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/corpus/:path*", "/sessions/:path*"],
+  matcher: ["/_corpus/:path*", "/sessions/:path*"],
 };

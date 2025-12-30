@@ -19,8 +19,8 @@ async function fileExists(path: string): Promise<boolean> {
 }
 
 async function resolveTemplatePath(filename: string): Promise<string> {
-  // First try public/corpus/ (Vercel deployment)
-  const publicPath = resolve(process.cwd(), "public/corpus", filename);
+  // First try public/_corpus/ (Vercel deployment)
+  const publicPath = resolve(process.cwd(), "public/_corpus", filename);
   if (await fileExists(publicPath)) {
     return publicPath;
   }

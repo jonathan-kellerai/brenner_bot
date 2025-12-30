@@ -176,10 +176,10 @@ async function fileExists(path: string): Promise<boolean> {
  * Returns null if file is not accessible (e.g., in Vercel serverless).
  */
 async function tryReadFromFilesystem(filename: string): Promise<string | null> {
-  const publicPath = resolve(process.cwd(), "public/corpus", filename);
+  const publicPath = resolve(process.cwd(), "public/_corpus", filename);
   const repoRootPath = resolve(process.cwd(), "../..", filename);
 
-  // Try public/corpus/ first (local dev after copy-corpus)
+  // Try public/_corpus/ first (local dev after copy-corpus)
   if (await fileExists(publicPath)) {
     return readFile(publicPath, "utf8");
   }

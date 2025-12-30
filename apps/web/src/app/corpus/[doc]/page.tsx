@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { QueryClient, HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { readCorpusDoc, CORPUS_DOCS } from "@/lib/corpus";
-import { corpusDocKeys } from "@/hooks/queries";
+import { corpusDocKeys } from "@/hooks/queries/keys";
 import { DocumentContentClient } from "./DocumentContentClient";
 import type { Metadata } from "next";
 

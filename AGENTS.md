@@ -294,6 +294,49 @@ bun run type-check   # type-check (if configured)
 
 ---
 
+## Corpus Files and Vercel Deployment (CRITICAL)
+
+**⚠️ ABSOLUTE RULE: The `apps/web/public/_corpus/` directory MUST be committed to git.**
+
+### Why This Matters
+
+The web app serves corpus documents (transcript, distillations, quote bank, etc.) from `public/_corpus/`. The build process also uses these files to generate the search index.
+
+**The Problem That Occurred:**
+1. Someone added `/public/_corpus/` to `.gitignore`
+2. The files existed locally (copied by `bun run build`)
+3. But they were never committed to git
+4. Vercel deploys only git-tracked files
+5. On Vercel: no corpus files → search index build fails → **ENTIRE SITE BREAKS**
+6. Every page returned "Application error: a server-side exception has occurred"
+
+### The Fix
+
+The `.gitignore` file now explicitly documents that `public/_corpus/` is NOT ignored:
+
+```gitignore
+# Note: public/_corpus/ is NOT gitignored - these files MUST be committed
+# so they deploy to Vercel. The copy-corpus script populates them from repo root.
+```
+
+### Rules for Agents
+
+1. **NEVER add `public/_corpus/` to `.gitignore`**
+2. After running `bun run build` locally, check if corpus files are staged: `git status public/_corpus/`
+3. If you see new corpus files, commit them
+4. The `copy-corpus.ts` script handles copying from repo root - but git handles deployment
+
+### How to Verify
+
+```bash
+# These files MUST be in git:
+git ls-files apps/web/public/_corpus/
+
+# Should show 17+ files. If empty, the site WILL break on deploy.
+```
+
+---
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.

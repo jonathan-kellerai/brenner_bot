@@ -45,5 +45,5 @@ yarn-error.log*
 next-env.d.ts
 .env*.local
 
-# corpus files (copied from repo root during build)
-/public/corpus/
+# Note: public/_corpus/ is NOT gitignored - these files MUST be committed
+# so they deploy to Vercel. The copy-corpus script populates them from repo root.

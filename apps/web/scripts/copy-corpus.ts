@@ -13,7 +13,7 @@ async function fileExists(path: string): Promise<boolean> {
 
 async function main(): Promise<void> {
   const repoRoot = resolve(process.cwd(), "../..");
-  const outputDir = resolve(process.cwd(), "public/corpus");
+  const outputDir = resolve(process.cwd(), "public/_corpus");
 
   await mkdir(outputDir, { recursive: true });
 

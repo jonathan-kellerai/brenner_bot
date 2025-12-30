@@ -66,18 +66,11 @@ export interface UseCorpusSearchOptions
 }
 
 // ============================================================================
-// Query Key Factory
+// Query Key Factory (imported from shared keys file for RSC compatibility)
 // ============================================================================
 
-/**
- * Query key factory for corpus search.
- * Keys include the query and options for proper cache isolation.
- */
-export const corpusSearchKeys = {
-  all: ["corpus", "search"] as const,
-  query: (query: string, options?: SearchOptions) =>
-    ["corpus", "search", query, options ?? {}] as const,
-};
+import { corpusSearchKeys } from "./keys";
+export { corpusSearchKeys };
 
 // ============================================================================
 // Hook
