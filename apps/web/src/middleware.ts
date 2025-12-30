@@ -11,7 +11,21 @@ function isLabModeEnabled(): boolean {
 }
 
 /**
+ * Constant-time string comparison to prevent timing attacks.
+ * Edge runtime doesn't have crypto.timingSafeEqual, so we implement manually.
+ */
+function safeEquals(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
+}
+
+/**
  * Validate lab secret if configured.
+ * Uses constant-time comparison to prevent timing attacks.
  */
 function hasValidLabSecret(request: NextRequest): boolean {
   const configuredSecret = process.env.BRENNER_LAB_SECRET?.trim();
@@ -21,11 +35,11 @@ function hasValidLabSecret(request: NextRequest): boolean {
 
   // Check header
   const headerValue = request.headers.get("x-brenner-lab-secret");
-  if (headerValue === configuredSecret) return true;
+  if (headerValue && safeEquals(headerValue, configuredSecret)) return true;
 
   // Check cookie
   const cookieValue = request.cookies.get("brenner_lab_secret")?.value;
-  if (cookieValue === configuredSecret) return true;
+  if (cookieValue && safeEquals(cookieValue, configuredSecret)) return true;
 
   return false;
 }

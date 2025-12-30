@@ -131,6 +131,7 @@ export const SAMPLE_ARTIFACT_FIXTURE = {
   metadata: {
     session_id: "TEST-001",
     created_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-01-01T00:00:00Z",
     version: 1,
     status: "draft" as const,
     contributors: [
