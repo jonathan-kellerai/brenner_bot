@@ -610,7 +610,11 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   const [searchQuery, setSearchQuery] = useState("");
   const [highlightedSection, setHighlightedSection] = useState<number | null>(null);
   const [searchNavQuery, setSearchNavQuery] = useState<string | null>(null);
+  const [isMobileTocOpen, setIsMobileTocOpen] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Current section for sticky indicator
+  const currentSection = data.sections[activeSection] ?? null;
 
   // Global search context for opening search modal
   const { open: openGlobalSearch } = useGlobalSearch();
@@ -761,25 +765,42 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
             </div>
           </aside>
 
-          {/* Mobile Search + TOC */}
+          {/* Mobile Search + collapsible TOC */}
           <div className="lg:hidden mb-8 space-y-4">
             <TranscriptSearch
               sections={data.sections}
-              onResultClick={scrollToSection}
+              onResultClick={(index) => {
+                scrollToSection(index);
+                setIsMobileTocOpen(false);
+              }}
               onSearchChange={handleSearchChange}
             />
-            <TableOfContents
-              sections={data.sections}
-              activeSection={activeSection}
-              onSectionClick={scrollToSection}
-            />
+            {/* Collapsed TOC - only shows when toggled */}
+            {isMobileTocOpen && (
+              <div className="animate-in slide-in-from-top-2 duration-200">
+                <TableOfContents
+                  sections={data.sections}
+                  activeSection={activeSection}
+                  onSectionClick={(index) => {
+                    scrollToSection(index);
+                    setIsMobileTocOpen(false);
+                  }}
+                />
+              </div>
+            )}
           </div>
 
-          {/* Main content - virtualized scroll container */}
+          {/* Sticky section indicator for mobile - shows current position while reading */}
+          <StickySectionIndicator
+            currentSection={currentSection}
+            totalSections={data.totalSections}
+            onTocClick={() => setIsMobileTocOpen(!isMobileTocOpen)}
+          />
+
+          {/* Main content - uses window scroll on mobile, virtualized container on desktop */}
           <main
             ref={scrollContainerRef}
-            className="h-[calc(100vh-200px)] overflow-y-auto scroll-smooth"
-            style={{ contain: "strict" }}
+            className="lg:h-[calc(100dvh-200px)] lg:overflow-y-auto scroll-smooth"
           >
             {/* Total height spacer */}
             <div

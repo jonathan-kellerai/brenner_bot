@@ -159,12 +159,12 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Exception Quarantine",
     short: "Isolate anomalies so they don't corrupt the main theory (ΔE).",
     long:
-      "The operator ΔE acknowledges that some observations don't fit current theory, but rather than abandoning the theory, you quarantine the exceptions for later investigation.",
+      "The operator ΔE acknowledges that some observations don't fit current theory, but rather than abandoning the theory, you quarantine the exceptions for later investigation. Preserve a high-coherence core model while isolating anomalies—put them in an appendix and resolve them later.",
     analogy:
       "Think of it like a hospital's isolation ward—you don't shut down the whole hospital because of a few unusual cases.",
     why:
-      "Brenner understood that exceptions often reveal deeper truths, but only after the main theory is solid enough to define what counts as exceptional.",
-    related: ["forbidden-pattern", "exclusion-test"],
+      "Brenner understood that exceptions often reveal deeper truths, but only after the main theory is solid enough to define what counts as exceptional. Transcript anchors: §57 ('Don't Worry hypothesis'), §106, §229 (Occam's broom: 'minimize swept-under-the-carpet facts'), §110 ('we didn't conceal them; we put them in an appendix'), §111 ('house of cards... all or nothing theory').",
+    related: ["forbidden-pattern", "exclusion-test", "occams-broom"],
     category: "operators",
   },
   dephase: {

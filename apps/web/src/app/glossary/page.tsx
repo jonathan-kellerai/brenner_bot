@@ -221,9 +221,12 @@ export default function GlossaryPage() {
     const handleHashChange = () => {
       const hash = window.location.hash.slice(1);
       if (hash && jargonDictionary[hash]) {
+        // Clear filters to ensure the term is visible
+        setSearchQuery("");
+        setActiveCategory("all");
         // Expand the term
         setExpandedTerms((prev) => new Set(prev).add(hash));
-        // Scroll to it
+        // Scroll to it (wait for filters to clear and re-render)
         setTimeout(() => {
           const element = document.getElementById(hash);
           if (element) {
