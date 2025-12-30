@@ -8,7 +8,7 @@ import type {
   DistillationSection,
   DistillationContent,
 } from "@/lib/distillation-parser";
-import { getDistillationMeta, getModelFromId } from "@/lib/distillation-parser";
+import { getDistillationMeta } from "@/lib/distillation-parser";
 import { ReferenceCopyButton, CopyButton } from "@/components/ui/copy-button";
 
 // ============================================================================
