@@ -54,6 +54,43 @@ C1, C2, C3, ...     # Critiques
 
 ---
 
+## Provenance & Citation Conventions
+
+Artifacts must clearly separate:
+- **Quote-backed** claims (Brenner said X)
+- **Paraphrase** (Brenner's view summarized)
+- **Inference/interpretation** (our conclusion, not explicitly stated)
+
+### Transcript Anchors (Ground Truth)
+
+- All transcript grounding uses **`§n` anchors** that refer to `complete_brenner_transcript.md`.
+- Prefer anchoring *the exact* supporting section(s), not a vague "somewhere earlier".
+
+### How To Mark Provenance
+
+**Direct quote (verbatim)**:
+- Include the anchor adjacent to the quote: `"..." (§58)`.
+
+**Paraphrase of Brenner**:
+- Include supporting anchors: `Brenner treats exclusion as the highest leverage move (§58, §62).`
+
+**Inference / interpretation**:
+- Label explicitly with `[inference]`.
+- You may still include supporting anchors, but do **not** phrase it as a Brenner quote.
+  - Example: `This suggests [inference] the organism choice is a hidden cost function (§161, §205).`
+
+### Anchors Field Contract
+
+Anywhere the schema includes an `**Anchors**:` line:
+- Use a comma-separated list of `§n` anchors and/or simple ranges (e.g. `§127-§129`).
+- If the item is an inference grounded in transcript evidence, append `[inference]` after the anchors.
+- If no transcript grounding exists, use the literal `inference`.
+
+**Examples**:
+- `**Anchors**: §58, §127`
+- `**Anchors**: §161-§162 [inference]`
+- `**Anchors**: inference`
+
 ## Section Specifications
 
 ### 1. Research Thread (RT)
