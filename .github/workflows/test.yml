@@ -423,3 +423,81 @@ jobs:
           ./brenner.ts toolchain plan --manifest specs/toolchain.manifest.json --platform darwin-arm64 --json >/dev/null
           ./brenner.ts toolchain plan --manifest specs/toolchain.manifest.json --platform darwin-x64 --json >/dev/null
           ./brenner.ts toolchain plan --manifest specs/toolchain.manifest.json --platform win-x64 --json >/dev/null
+
+  ubs-scan:
+    name: UBS Scan (changed JS/TS files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install UBS
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          install_dir="$HOME/.local/bin"
+          mkdir -p "$install_dir"
+          echo "$install_dir" >> "$GITHUB_PATH"
+
+          curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/ultimate_bug_scanner/master/install.sh" \
+            | bash -s -- \
+              --easy-mode \
+              --non-interactive \
+              --skip-hooks \
+              --no-path-modify \
+              --install-dir "$install_dir"
+
+      - name: Prepare UBS workspace (changed files only)
+        id: ubs
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base=""
+          head="${GITHUB_SHA}"
+
+          if [[ "${GITHUB_EVENT_NAME}" == "pull_request" ]]; then
+            base="${{ github.event.pull_request.base.sha }}"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" ]]; then
+            base="${{ github.event.before }}"
+          fi
+
+          if [[ -z "$base" || "$base" == "0000000000000000000000000000000000000000" ]]; then
+            echo "No base SHA available; skipping UBS."
+            echo "file_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          mapfile -t files < <(git diff --name-only "$base" "$head" -- '*.ts' '*.tsx' '*.js' '*.jsx' | sort -u)
+          echo "Found ${#files[@]} changed JS/TS file(s)."
+
+          if [[ "${#files[@]}" -eq 0 ]]; then
+            echo "file_count=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          workdir="$(mktemp -d "${RUNNER_TEMP}/ubs-changed.XXXXXX")"
+
+          copied=0
+          for f in "${files[@]}"; do
+            if [[ ! -f "$f" ]]; then
+              continue
+            fi
+
+            mkdir -p "$workdir/$(dirname "$f")"
+            cp "$f" "$workdir/$f"
+            copied=$((copied + 1))
+          done
+
+          echo "workdir=$workdir" >> "$GITHUB_OUTPUT"
+          echo "file_count=$copied" >> "$GITHUB_OUTPUT"
+          echo "UBS workspace: $workdir (files: $copied)"
+
+      - name: Run UBS (fail on warnings)
+        if: ${{ steps.ubs.outputs.file_count != '0' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          ubs --only=js --ci --fail-on-warning "${{ steps.ubs.outputs.workdir }}"
