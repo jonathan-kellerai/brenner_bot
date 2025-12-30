@@ -1,13 +1,8 @@
 import Link from "next/link";
+import { QueryClient, HydrationBoundary, dehydrate } from "@tanstack/react-query";
 import { readCorpusDoc, CORPUS_DOCS } from "@/lib/corpus";
-import { parseTranscript } from "@/lib/transcript-parser";
-import { parseDistillation } from "@/lib/distillation-parser";
-import { parseQuoteBank } from "@/lib/quotebank-parser";
-import { parseMetaprompt } from "@/lib/metaprompt-parser";
-import { TranscriptViewer } from "@/components/transcript/TranscriptViewer";
-import { DistillationViewer } from "@/components/distillation/DistillationViewer";
-import { QuoteBankViewer } from "@/components/quotebank/QuoteBankViewer";
-import { MetapromptViewer } from "@/components/metaprompt/MetapromptViewer";
+import { corpusDocKeys } from "@/hooks/queries";
+import { DocumentContentClient } from "./DocumentContentClient";
 import type { Metadata } from "next";
 
 export const runtime = "nodejs";
@@ -46,79 +41,11 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
-function getReadTime(id: string): string {
-  const times: Record<string, string> = {
-    transcript: "2+ hours",
-    "quote-bank": "45 min",
-    metaprompt: "10 min",
-    "initial-metaprompt": "5 min",
-    "distillation-gpt-52": "30 min",
-    "distillation-opus-45": "45 min",
-    "distillation-gemini-3": "20 min",
-  };
-  return times[id] || "15 min";
-}
-
-function getWordCount(content: string): string {
-  const words = content.split(/\s+/).filter(Boolean).length;
-  if (words >= 1000) {
-    return `${Math.round(words / 1000)}k`;
-  }
-  return `${words}`;
-}
-
 function getNavLinks(currentId: string) {
   const currentIndex = CORPUS_DOCS.findIndex((d) => d.id === currentId);
   const prev = currentIndex > 0 ? CORPUS_DOCS[currentIndex - 1] : null;
   const next = currentIndex < CORPUS_DOCS.length - 1 ? CORPUS_DOCS[currentIndex + 1] : null;
   return { prev, next };
-}
-
-/**
- * Determine document type from ID
- */
-function getDocType(id: string): "transcript" | "distillation" | "quote-bank" | "metaprompt" {
-  if (id === "transcript") return "transcript";
-  if (id === "quote-bank") return "quote-bank";
-  if (id.startsWith("distillation")) return "distillation";
-  return "metaprompt";
-}
-
-/**
- * Render the appropriate viewer based on document type
- */
-function DocumentContent({ docId, content }: { docId: string; content: string }) {
-  const docType = getDocType(docId);
-  const readTime = getReadTime(docId);
-  const wordCount = getWordCount(content);
-
-  switch (docType) {
-    case "transcript": {
-      const parsed = parseTranscript(content);
-      return (
-        <TranscriptViewer
-          data={parsed}
-          estimatedReadTime={readTime}
-          wordCount={wordCount}
-        />
-      );
-    }
-
-    case "distillation": {
-      const parsed = parseDistillation(content, docId);
-      return <DistillationViewer data={parsed} docId={docId} />;
-    }
-
-    case "quote-bank": {
-      const parsed = parseQuoteBank(content);
-      return <QuoteBankViewer data={parsed} />;
-    }
-
-    case "metaprompt": {
-      const parsed = parseMetaprompt(content);
-      return <MetapromptViewer data={parsed} />;
-    }
-  }
 }
 
 export default async function CorpusDocPage({
@@ -127,7 +54,16 @@ export default async function CorpusDocPage({
   params: Promise<{ doc: string }>;
 }) {
   const { doc: docId } = await params;
-  const { doc, content } = await readCorpusDoc(docId);
+
+  // Prefetch document for client hydration (enables navigation caching)
+  const queryClient = new QueryClient();
+  await queryClient.prefetchQuery({
+    queryKey: corpusDocKeys.detail(docId),
+    queryFn: () => readCorpusDoc(docId),
+  });
+
+  // Get doc metadata for breadcrumb (from static list, not re-fetching)
+  const doc = CORPUS_DOCS.find((d) => d.id === docId);
   const { prev, next } = getNavLinks(docId);
 
   return (
@@ -138,13 +74,15 @@ export default async function CorpusDocPage({
           Corpus
         </Link>
         <ChevronRightIcon />
-        <span className="text-foreground font-medium truncate">{doc.title}</span>
+        <span className="text-foreground font-medium truncate">{doc?.title || "Document"}</span>
       </nav>
 
-      {/* Document Content with Type-Specific Viewer */}
-      <div className="animate-fade-in-up">
-        <DocumentContent docId={docId} content={content} />
-      </div>
+      {/* Document Content - hydrated from server prefetch, cached for navigation */}
+      <HydrationBoundary state={dehydrate(queryClient)}>
+        <div className="animate-fade-in-up">
+          <DocumentContentClient docId={docId} />
+        </div>
+      </HydrationBoundary>
 
       {/* Navigation */}
       <nav className="mt-20 pt-10 border-t border-border animate-fade-in-up">

@@ -42,6 +42,143 @@ const UsersIcon = () => (
   </svg>
 );
 
+const LockClosedIcon = () => (
+  <svg className="size-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>
+);
+
+const ShieldExclamationIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m0-10.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.75c0 5.592 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.57-.598-3.75h-.152c-3.196 0-6.1-1.249-8.25-3.286zm0 13.036h.008v.008H12v-.008z" />
+  </svg>
+);
+
+/**
+ * Locked State Component
+ *
+ * Shown when lab mode is disabled or authentication fails.
+ * Provides clear explanation and unlock instructions for operators.
+ */
+function LockedState({ reason }: { reason: string }) {
+  const isLabModeDisabled = reason.includes("Lab mode is disabled");
+  const isAuthRequired = reason.includes("secret") || reason.includes("Cloudflare");
+
+  return (
+    <div className="max-w-2xl mx-auto space-y-8 animate-fade-in-up">
+      {/* Locked Header */}
+      <div className="text-center space-y-4">
+        <div className="inline-flex items-center justify-center size-20 rounded-2xl bg-warning/10 border border-warning/20 text-warning">
+          <LockClosedIcon />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Lab Mode Locked
+          </h1>
+          <p className="mt-2 text-muted-foreground">
+            Orchestration features are protected to prevent unauthorized access.
+          </p>
+        </div>
+      </div>
+
+      {/* Status Card */}
+      <div className="rounded-xl border border-border bg-card p-6 space-y-4">
+        <div className="flex items-start gap-3">
+          <div className="flex-shrink-0 mt-0.5 text-warning">
+            <ShieldExclamationIcon />
+          </div>
+          <div className="space-y-1">
+            <h2 className="font-semibold text-foreground">Access Denied</h2>
+            <p className="text-sm text-muted-foreground">{reason}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Unlock Instructions */}
+      <div className="rounded-xl border border-border bg-card overflow-hidden">
+        <div className="px-6 py-4 border-b border-border bg-muted/30">
+          <h2 className="font-semibold text-foreground">How to Unlock</h2>
+          <p className="text-sm text-muted-foreground mt-1">
+            Operators can enable lab mode using one of these methods:
+          </p>
+        </div>
+
+        <div className="divide-y divide-border">
+          {/* Method 1: Environment Variable */}
+          <div className="p-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-primary/10 text-primary text-sm font-semibold">
+                1
+              </span>
+              <h3 className="font-medium text-foreground">Enable Lab Mode Environment Variable</h3>
+            </div>
+            <p className="text-sm text-muted-foreground pl-8">
+              Set <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">BRENNER_LAB_MODE=1</code> in your environment.
+            </p>
+            {isLabModeDisabled && (
+              <div className="ml-8 p-3 rounded-lg bg-warning/5 border border-warning/20">
+                <p className="text-sm text-warning font-medium">This is currently disabled</p>
+              </div>
+            )}
+          </div>
+
+          {/* Method 2: Cloudflare Access */}
+          <div className="p-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-primary/10 text-primary text-sm font-semibold">
+                2
+              </span>
+              <h3 className="font-medium text-foreground">Cloudflare Access (Production)</h3>
+            </div>
+            <p className="text-sm text-muted-foreground pl-8">
+              Deploy behind Cloudflare Access. The app will automatically detect
+              <code className="px-1.5 py-0.5 mx-1 rounded bg-muted font-mono text-xs">cf-access-jwt-assertion</code>
+              headers.
+            </p>
+          </div>
+
+          {/* Method 3: Shared Secret */}
+          <div className="p-6 space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="flex items-center justify-center size-6 rounded-full bg-primary/10 text-primary text-sm font-semibold">
+                3
+              </span>
+              <h3 className="font-medium text-foreground">Shared Secret (Local Development)</h3>
+            </div>
+            <p className="text-sm text-muted-foreground pl-8">
+              Set <code className="px-1.5 py-0.5 rounded bg-muted font-mono text-xs">BRENNER_LAB_SECRET=your-secret</code> and include it via:
+            </p>
+            <ul className="ml-8 space-y-1 text-sm text-muted-foreground list-disc list-inside">
+              <li>Header: <code className="px-1 py-0.5 rounded bg-muted font-mono text-xs">x-brenner-lab-secret: your-secret</code></li>
+              <li>Cookie: <code className="px-1 py-0.5 rounded bg-muted font-mono text-xs">brenner_lab_secret=your-secret</code></li>
+            </ul>
+            {isAuthRequired && (
+              <div className="ml-8 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-sm text-primary font-medium">Lab mode is enabled but authentication is required</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Help Link */}
+      <div className="text-center">
+        <p className="text-sm text-muted-foreground">
+          Need help?{" "}
+          <a
+            href="https://github.com/Dicklesworthstone/brenner_bot#lab-mode"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            Read the documentation
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 type AgentDirectory = {
   project?: { slug?: string; human_key?: string };
   agents?: Array<{ name?: string; unread_count?: number }>;
@@ -176,14 +313,19 @@ export default async function NewSessionPage({
 }: {
   searchParams: Promise<{ sent?: string; thread?: string }>;
 }) {
-  if (!isLabModeEnabled()) notFound();
+  // Check lab mode first
+  if (!isLabModeEnabled()) {
+    return <LockedState reason="Lab mode is disabled. Set BRENNER_LAB_MODE=1 to enable orchestration." />;
+  }
 
   // Defense-in-depth: even with BRENNER_LAB_MODE enabled, require Cloudflare Access headers
   // or a valid shared secret before serving any orchestration UI or reading Agent Mail data.
   const reqHeaders = await headers();
   const reqCookies = await cookies();
   const pageAuth = checkOrchestrationAuth(reqHeaders, reqCookies);
-  if (!pageAuth.authorized) notFound();
+  if (!pageAuth.authorized) {
+    return <LockedState reason={pageAuth.reason} />;
+  }
 
   const repoRoot = repoRootFromWebCwd();
   const { sent, thread } = await searchParams;

@@ -15,7 +15,7 @@ import { resolve } from "node:path";
 // Shared modules from web lib (bundled by Bun)
 import { AgentMailClient } from "./apps/web/src/lib/agentMail";
 import type { Json } from "./apps/web/src/lib/json";
-import { composeKickoffMessages, getAgentRole, type KickoffConfig } from "./apps/web/src/lib/session-kickoff";
+import { composeKickoffMessages, type KickoffConfig } from "./apps/web/src/lib/session-kickoff";
 
 function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);

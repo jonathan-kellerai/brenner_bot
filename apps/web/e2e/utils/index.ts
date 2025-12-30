@@ -32,3 +32,16 @@ export {
   type E2ELogLevel,
   type E2ELogEntry,
 } from "./e2e-logging";
+
+// Network logging and performance utilities
+export {
+  setupNetworkLogging,
+  collectPerformanceTiming,
+  getNetworkLogs,
+  getPerformanceTiming,
+  formatNetworkLogsAsText,
+  attachNetworkLogsToTest,
+  clearNetworkContext,
+  type NetworkRequestLog,
+  type PerformanceTimingData,
+} from "./network-logging";

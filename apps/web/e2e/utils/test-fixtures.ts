@@ -13,6 +13,12 @@ import {
   attachLogsToTest,
   type E2ELogEntry,
 } from "./e2e-logging";
+import {
+  setupNetworkLogging,
+  collectPerformanceTiming,
+  attachNetworkLogsToTest,
+  clearNetworkContext,
+} from "./network-logging";
 
 /**
  * Extended test fixtures with logging.
@@ -20,25 +26,38 @@ import {
 export const test = base.extend<{
   logger: ReturnType<typeof createE2ELogger>;
 }>({
-  logger: async ({ page }, use, testInfo) => {
+  logger: async ({ page }, provideLogger, testInfo) => {
     const logger = createE2ELogger(testInfo.title);
     logger.info(`Test started: ${testInfo.title}`);
     logger.debug("Test file", { file: testInfo.file });
 
+    // Setup network logging for this test
+    setupNetworkLogging(page, testInfo.title);
+    logger.debug("Network logging enabled");
+
     // Use the logger
-    await use(logger);
+    await provideLogger(logger);
+
+    // Collect performance timing before cleanup
+    try {
+      await collectPerformanceTiming(page, testInfo.title);
+    } catch {
+      // Performance timing may fail if page is closed
+    }
 
     // After test: attach logs
     logger.info(`Test finished: ${testInfo.status || "unknown"}`);
 
     try {
       await attachLogsToTest(testInfo, testInfo.title);
-    } catch (e) {
+      await attachNetworkLogsToTest(testInfo, testInfo.title);
+    } catch {
       // Ignore attachment errors
     }
 
     // Clean up
     clearTestContext(testInfo.title);
+    clearNetworkContext(testInfo.title);
   },
 });
 

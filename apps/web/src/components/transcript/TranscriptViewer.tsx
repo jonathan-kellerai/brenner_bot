@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ParsedTranscript, TranscriptSection as TSection, TranscriptContent } from "@/lib/transcript-parser";
 import { CopyButton } from "@/components/ui/copy-button";
 
@@ -140,20 +141,29 @@ export function TableOfContents({ sections, activeSection, onSectionClick }: Tab
 // READING PROGRESS
 // ============================================================================
 
-export function ReadingProgress() {
-  const [progress, setProgress] = useState(0);
+interface ReadingProgressProps {
+  /** Progress percentage (0-100), when provided skips internal scroll tracking */
+  progress?: number;
+}
+
+export function ReadingProgress({ progress: externalProgress }: ReadingProgressProps) {
+  const [internalProgress, setInternalProgress] = useState(0);
+  const progress = externalProgress ?? internalProgress;
 
   useEffect(() => {
+    // Skip internal scroll tracking if external progress is provided
+    if (externalProgress !== undefined) return;
+
     const handleScroll = () => {
       const scrollTop = window.scrollY;
       const docHeight = document.documentElement.scrollHeight - window.innerHeight;
       const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      setProgress(Math.min(100, Math.max(0, scrollPercent)));
+      setInternalProgress(Math.min(100, Math.max(0, scrollPercent)));
     };
 
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [externalProgress]);
 
   return (
     <div className="fixed top-0 left-0 right-0 z-50 h-1 bg-border/30">
@@ -383,7 +393,7 @@ export function BackToTop() {
 }
 
 // ============================================================================
-// MAIN VIEWER COMPONENT
+// MAIN VIEWER COMPONENT (VIRTUALIZED)
 // ============================================================================
 
 interface TranscriptViewerProps {
@@ -394,39 +404,85 @@ interface TranscriptViewerProps {
 
 export function TranscriptViewer({ data, estimatedReadTime, wordCount }: TranscriptViewerProps) {
   const [activeSection, setActiveSection] = useState(0);
-  const sectionRefs = useRef<(HTMLElement | null)[]>([]);
+  const [readingProgress, setReadingProgress] = useState(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Intersection observer for active section tracking
+  // Virtualizer for efficient rendering of large section lists
+  const virtualizer = useVirtualizer({
+    count: data.sections.length,
+    getScrollElement: () => scrollContainerRef.current,
+    // Estimate average section height (varies greatly, will be measured)
+    estimateSize: useCallback(() => 400, []),
+    // Render extra items above/below viewport for smoother scrolling
+    overscan: 3,
+  });
+
+  // Track active section based on scroll position
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            const index = parseInt(entry.target.getAttribute("data-index") || "0", 10);
-            setActiveSection(index);
-          }
-        });
-      },
-      { rootMargin: "-20% 0px -60% 0px" }
-    );
+    const container = scrollContainerRef.current;
+    if (!container) return;
 
-    sectionRefs.current.forEach((ref) => {
-      if (ref) observer.observe(ref);
-    });
+    const handleScroll = () => {
+      const scrollTop = container.scrollTop;
+      const scrollHeight = container.scrollHeight - container.clientHeight;
 
-    return () => observer.disconnect();
-  }, [data.sections]);
+      // Update reading progress
+      const progress = scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0;
+      setReadingProgress(Math.min(100, Math.max(0, progress)));
 
-  const scrollToSection = useCallback((index: number) => {
-    const element = document.getElementById(`section-${data.sections[index].number}`);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Find active section based on which virtual item is in view
+      const virtualItems = virtualizer.getVirtualItems();
+      if (virtualItems.length === 0) return;
+
+      // Find the first item whose bottom edge is past the viewport center
+      const viewportCenter = scrollTop + container.clientHeight * 0.3;
+      for (const item of virtualItems) {
+        const itemBottom = item.start + item.size;
+        if (itemBottom > viewportCenter) {
+          setActiveSection(item.index);
+          break;
+        }
+      }
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll(); // Initial call
+
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [virtualizer]);
+
+  // Handle URL hash on mount (e.g., /corpus/transcript#section-42)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const hash = window.location.hash;
+    if (!hash.startsWith("#section-")) return;
+
+    const sectionNum = parseInt(hash.replace("#section-", ""), 10);
+    const sectionIndex = data.sections.findIndex((s) => s.number === sectionNum);
+
+    if (sectionIndex >= 0) {
+      // Delay to ensure virtualizer is initialized
+      setTimeout(() => {
+        virtualizer.scrollToIndex(sectionIndex, { align: "start", behavior: "smooth" });
+      }, 100);
     }
-  }, [data.sections]);
+  }, [data.sections, virtualizer]);
+
+  // Scroll to section from TOC
+  const scrollToSection = useCallback(
+    (index: number) => {
+      virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
+    },
+    [virtualizer]
+  );
+
+  // Memoize virtual items to avoid recalculation
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <>
-      <ReadingProgress />
+      <ReadingProgress progress={readingProgress} />
 
       <TranscriptHero
         title={data.title}
@@ -456,19 +512,44 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
             />
           </div>
 
-          {/* Main content */}
-          <main>
-            {data.sections.map((section, index) => (
-              <div
-                key={section.number}
-                ref={(el) => {
-                  sectionRefs.current[index] = el;
-                }}
-                data-index={index}
-              >
-                <TranscriptSection section={section} isActive={activeSection === index} />
-              </div>
-            ))}
+          {/* Main content - virtualized scroll container */}
+          <main
+            ref={scrollContainerRef}
+            className="h-[calc(100vh-200px)] overflow-y-auto scroll-smooth"
+            style={{ contain: "strict" }}
+          >
+            {/* Total height spacer */}
+            <div
+              style={{
+                height: virtualizer.getTotalSize(),
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {/* Only render visible items */}
+              {virtualItems.map((virtualRow) => {
+                const section = data.sections[virtualRow.index];
+                return (
+                  <div
+                    key={section.number}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <TranscriptSection
+                      section={section}
+                      isActive={activeSection === virtualRow.index}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </main>
         </div>
       ) : data.rawContent ? (
