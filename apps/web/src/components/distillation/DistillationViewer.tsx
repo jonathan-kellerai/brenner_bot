@@ -712,7 +712,7 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
     case "list":
       if (content.ordered) {
         return (
-          <ol className="my-4 space-y-2.5 sm:space-y-3 ml-1 sm:ml-2">
+          <ol className="my-5 space-y-3 ml-1 sm:ml-2">
             {content.items.map((item, i) => (
               <li key={i} className="flex items-start gap-3 text-base lg:text-lg text-foreground/85">
                 <span className={`
@@ -723,18 +723,18 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
                 `}>
                   {i + 1}
                 </span>
-                <span className="leading-relaxed pt-0.5">{item}</span>
+                <span className="leading-[1.7] pt-0.5">{renderFormattedText(item)}</span>
               </li>
             ))}
           </ol>
         );
       }
       return (
-        <ul className="my-4 space-y-2 ml-1 sm:ml-2">
+        <ul className="my-5 space-y-2.5 ml-1 sm:ml-2">
           {content.items.map((item, i) => (
             <li key={i} className="flex items-start gap-3 text-base lg:text-lg text-foreground/85">
               <span className={`flex-shrink-0 size-1.5 rounded-full ${theme.accent} mt-2.5`} />
-              <span className="leading-relaxed">{item}</span>
+              <span className="leading-[1.7]">{renderFormattedText(item)}</span>
             </li>
           ))}
         </ul>
@@ -742,7 +742,7 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
 
     case "code":
       return (
-        <pre className="my-4 p-4 rounded-xl bg-muted/50 border border-border overflow-x-auto">
+        <pre className="my-5 p-4 rounded-xl bg-muted/50 border border-border overflow-x-auto">
           <code className="text-sm font-mono text-foreground/90">{content.text}</code>
         </pre>
       );
