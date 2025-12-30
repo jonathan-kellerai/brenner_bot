@@ -228,7 +228,23 @@ class SearchEngine {
     // Sort positions by start index
     matchPositions.sort((a, b) => a[0] - b[0]);
 
-    return { snippet, matchPositions };
+    // Merge overlapping positions to prevent duplicate text in highlights
+    const mergedPositions: Array<[number, number]> = [];
+    for (const [start, end] of matchPositions) {
+      if (mergedPositions.length === 0) {
+        mergedPositions.push([start, end]);
+      } else {
+        const last = mergedPositions[mergedPositions.length - 1];
+        if (start <= last[1]) {
+          // Overlapping or adjacent - extend the previous range
+          last[1] = Math.max(last[1], end);
+        } else {
+          mergedPositions.push([start, end]);
+        }
+      }
+    }
+
+    return { snippet, matchPositions: mergedPositions };
   }
 
   /**
