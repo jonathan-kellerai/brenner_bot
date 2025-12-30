@@ -817,3 +817,262 @@ export function validateArtifact(artifact: Artifact): MergeWarning[] {
 
   return warnings;
 }
+
+// ============================================================================
+// Canonical Markdown Rendering
+// ============================================================================
+
+function yamlString(value: string): string {
+  return JSON.stringify(value);
+}
+
+function escapeInline(value: unknown): string {
+  if (typeof value !== "string") return "";
+  return value.trim();
+}
+
+function escapeTableCell(value: unknown): string {
+  return escapeInline(value).replaceAll("|", "\\|").replaceAll("\n", "<br/>");
+}
+
+function formatStringList(list: unknown, emptyValue = "inference"): string {
+  if (!Array.isArray(list) || list.length === 0) return emptyValue;
+  const strings = list.filter((v): v is string => typeof v === "string" && v.trim().length > 0);
+  return strings.length > 0 ? strings.join(", ") : emptyValue;
+}
+
+function idNumber(id: string): number | null {
+  const match = id.match(/^[A-Z]+(\d+)$/);
+  if (!match?.[1]) return null;
+  return Number.parseInt(match[1], 10);
+}
+
+function sortById<T extends { id: string }>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const an = idNumber(a.id);
+    const bn = idNumber(b.id);
+    if (an !== null && bn !== null) return an - bn;
+    if (an !== null) return -1;
+    if (bn !== null) return 1;
+    return a.id.localeCompare(b.id);
+  });
+}
+
+function renderYamlFrontMatter(metadata: ArtifactMetadata): string {
+  const lines: string[] = [];
+  lines.push("---");
+  lines.push(`session_id: ${yamlString(metadata.session_id)}`);
+  lines.push(`created_at: ${yamlString(metadata.created_at)}`);
+  lines.push(`updated_at: ${yamlString(metadata.updated_at)}`);
+  lines.push(`version: ${metadata.version}`);
+  lines.push("contributors:");
+  if (metadata.contributors.length === 0) {
+    lines.push("  []");
+  } else {
+    for (const c of metadata.contributors) {
+      lines.push(`  - agent: ${yamlString(c.agent)}`);
+      if (c.program) lines.push(`    program: ${yamlString(c.program)}`);
+      if (c.model) lines.push(`    model: ${yamlString(c.model)}`);
+      if (c.contributed_at) lines.push(`    contributed_at: ${yamlString(c.contributed_at)}`);
+    }
+  }
+  lines.push(`status: ${yamlString(metadata.status)}`);
+  lines.push("---");
+  return lines.join("\n");
+}
+
+function renderKillBlock(item: BaseItem): string[] {
+  if (!isKilled(item)) return [];
+  const lines: string[] = [];
+  lines.push("");
+  lines.push("**Killed**: true");
+  if (item.killed_by) lines.push(`**Killed by**: ${item.killed_by}`);
+  if (item.killed_at) lines.push(`**Killed at**: ${item.killed_at}`);
+  if (item.kill_reason) lines.push(`**Kill reason**: ${item.kill_reason}`);
+  return lines;
+}
+
+function renderResearchThread(rt: ResearchThreadItem | null): string[] {
+  const lines: string[] = [];
+  lines.push("## 1. Research Thread");
+  lines.push("");
+  lines.push(`**RT**: ${rt ? escapeInline(rt.statement) : ""}`);
+  lines.push("");
+  lines.push(`**Context**: ${rt ? escapeInline(rt.context) : ""}`);
+  lines.push("");
+  lines.push(`**Why it matters**: ${rt ? escapeInline(rt.why_it_matters) : ""}`);
+  lines.push("");
+  lines.push(`**Anchors**: ${rt ? formatStringList(rt.anchors) : "inference"}`);
+  if (rt) lines.push(...renderKillBlock(rt));
+  return lines;
+}
+
+function renderHypothesisSlate(items: HypothesisItem[]): string[] {
+  const lines: string[] = [];
+  lines.push("## 2. Hypothesis Slate");
+  lines.push("");
+  for (const h of sortById(items)) {
+    const thirdAlt = h.third_alternative === true;
+    const name = escapeInline(h.name);
+    const title = thirdAlt && !/third\\s+alternative/i.test(name) ? `${name} (Third Alternative)` : name;
+    const heading = isKilled(h) ? `### ~~${h.id}: ${title}~~` : `### ${h.id}: ${title}`;
+    lines.push(heading);
+    lines.push(`**Claim**: ${escapeInline(h.claim)}`);
+    lines.push(`**Mechanism**: ${escapeInline(h.mechanism)}`);
+    lines.push(`**Anchors**: ${formatStringList(h.anchors)}`);
+    if (thirdAlt) lines.push("**Third alternative**: true");
+    lines.push(...renderKillBlock(h));
+    lines.push("");
+  }
+  return lines;
+}
+
+function renderPredictionsTable(items: PredictionItem[], hypothesisIds: string[]): string[] {
+  const lines: string[] = [];
+  lines.push("## 3. Predictions Table");
+  lines.push("");
+
+  const headerCells = ["ID", "Observation/Condition", ...hypothesisIds];
+  lines.push(`| ${headerCells.join(" | ")} |`);
+  lines.push(`| ${headerCells.map(() => "---").join(" | ")} |`);
+
+  for (const p of sortById(items)) {
+    const idCell = isKilled(p) ? `~~${p.id}~~` : p.id;
+    const row: string[] = [idCell, escapeTableCell(p.condition)];
+    for (const hid of hypothesisIds) {
+      const value = (p.predictions ?? {})[hid] ?? (p.predictions ?? {})[hid.toLowerCase()] ?? "—";
+      row.push(escapeTableCell(value));
+    }
+    lines.push(`| ${row.join(" | ")} |`);
+  }
+
+  return lines;
+}
+
+function renderTests(items: TestItem[]): string[] {
+  const lines: string[] = [];
+  lines.push("## 4. Discriminative Tests");
+  lines.push("");
+
+  for (const t of sortById(items)) {
+    const totalScore = calculateTotalScore(t.score);
+    const headingBase = `${t.id}: ${escapeInline(t.name)} (Score: ${totalScore}/12)`;
+    const heading = isKilled(t) ? `### ~~${headingBase}~~` : `### ${headingBase}`;
+
+    lines.push(heading);
+    lines.push(`**Procedure**: ${escapeInline(t.procedure)}`);
+    lines.push(`**Discriminates**: ${escapeInline(t.discriminates)}`);
+    lines.push("**Expected outcomes**:");
+    for (const [key, value] of Object.entries(t.expected_outcomes ?? {})) {
+      lines.push(`- ${key}: ${escapeInline(value)}`);
+    }
+    lines.push(`**Potency check**: ${escapeInline(t.potency_check)}`);
+    if (t.feasibility) lines.push(`**Feasibility**: ${escapeInline(t.feasibility)}`);
+    if (t.score) {
+      const lr = t.score.likelihood_ratio ?? 0;
+      const cost = t.score.cost ?? 0;
+      const speed = t.score.speed ?? 0;
+      const ambiguity = t.score.ambiguity ?? 0;
+      lines.push(`**Evidence-per-week score**: LR=${lr}, Cost=${cost}, Speed=${speed}, Ambiguity=${ambiguity}`);
+    }
+    lines.push(...renderKillBlock(t));
+    lines.push("");
+  }
+
+  return lines;
+}
+
+function renderAssumptions(items: AssumptionItem[]): string[] {
+  const lines: string[] = [];
+  lines.push("## 5. Assumption Ledger");
+  lines.push("");
+
+  for (const a of sortById(items)) {
+    const heading = isKilled(a) ? `### ~~${a.id}: ${escapeInline(a.name)}~~` : `### ${a.id}: ${escapeInline(a.name)}`;
+    lines.push(heading);
+    lines.push(`**Statement**: ${escapeInline(a.statement)}`);
+    lines.push(`**Load**: ${escapeInline(a.load)}`);
+    lines.push(`**Test**: ${escapeInline(a.test)}`);
+    if (a.status) lines.push(`**Status**: ${escapeInline(a.status)}`);
+    if (a.scale_check) lines.push("**Scale check**: true");
+    if (a.calculation) lines.push(`**Calculation**: ${escapeInline(a.calculation)}`);
+    if (a.implication) lines.push(`**Implication**: ${escapeInline(a.implication)}`);
+    lines.push(...renderKillBlock(a));
+    lines.push("");
+  }
+
+  return lines;
+}
+
+function renderAnomalies(items: AnomalyItem[]): string[] {
+  const lines: string[] = [];
+  lines.push("## 6. Anomaly Register");
+  lines.push("");
+
+  const active = items.filter((x) => !isKilled(x));
+  if (active.length === 0) {
+    lines.push("None registered.");
+    lines.push("");
+    return lines;
+  }
+
+  for (const x of sortById(items)) {
+    const heading = isKilled(x) ? `### ~~${x.id}: ${escapeInline(x.name)}~~` : `### ${x.id}: ${escapeInline(x.name)}`;
+    lines.push(heading);
+    lines.push(`**Observation**: ${escapeInline(x.observation)}`);
+    lines.push(`**Conflicts with**: ${formatStringList(x.conflicts_with, "—")}`);
+    if (x.status) lines.push(`**Quarantine status**: ${escapeInline(x.status)}`);
+    if (x.resolution_plan) lines.push(`**Resolution plan**: ${escapeInline(x.resolution_plan)}`);
+    lines.push(...renderKillBlock(x));
+    lines.push("");
+  }
+
+  return lines;
+}
+
+function renderCritiques(items: CritiqueItem[]): string[] {
+  const lines: string[] = [];
+  lines.push("## 7. Adversarial Critique");
+  lines.push("");
+
+  for (const c of sortById(items)) {
+    const heading = isKilled(c) ? `### ~~${c.id}: ${escapeInline(c.name)}~~` : `### ${c.id}: ${escapeInline(c.name)}`;
+    lines.push(heading);
+    lines.push(`**Attack**: ${escapeInline(c.attack)}`);
+    lines.push(`**Evidence**: ${escapeInline(c.evidence)}`);
+    lines.push(`**Current status**: ${escapeInline(c.current_status)}`);
+    if (c.real_third_alternative) lines.push("**Real third alternative**: true");
+    lines.push(...renderKillBlock(c));
+    lines.push("");
+  }
+
+  return lines;
+}
+
+/**
+ * Render a merged artifact into canonical markdown per artifact_schema_v0.1.md.
+ */
+export function renderArtifactMarkdown(artifact: Artifact): string {
+  const lines: string[] = [];
+
+  lines.push(renderYamlFrontMatter(artifact.metadata));
+  lines.push("");
+  lines.push(`# Brenner Protocol Artifact: ${artifact.metadata.session_id}`);
+  lines.push("");
+
+  lines.push(...renderResearchThread(artifact.sections.research_thread));
+  lines.push("");
+
+  lines.push(...renderHypothesisSlate(artifact.sections.hypothesis_slate));
+
+  const hypothesisIds = sortById(artifact.sections.hypothesis_slate).map((h) => h.id);
+  lines.push(...renderPredictionsTable(artifact.sections.predictions_table, hypothesisIds));
+  lines.push("");
+
+  lines.push(...renderTests(artifact.sections.discriminative_tests));
+  lines.push(...renderAssumptions(artifact.sections.assumption_ledger));
+  lines.push(...renderAnomalies(artifact.sections.anomaly_register));
+  lines.push(...renderCritiques(artifact.sections.adversarial_critique));
+
+  return lines.join("\n").trimEnd() + "\n";
+}
