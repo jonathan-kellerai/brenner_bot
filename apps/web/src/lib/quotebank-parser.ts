@@ -22,21 +22,33 @@ export interface ParsedQuoteBank {
  * Parse a single quote section
  */
 function parseQuoteSection(content: string): Omit<Quote, "reference" | "title"> | null {
-  // Extract quote text (blockquote)
-  const quoteMatch = content.match(/>\s*(.+?)(?=\n\n|\nWhy it matters|\nTags:)/s);
-  if (!quoteMatch) return null;
+  // Extract quote text (blockquote) - find all lines starting with >
+  const lines = content.split("\n");
+  const quoteLines: string[] = [];
+  let foundQuote = false;
 
-  const text = quoteMatch[1]
-    .split("\n")
-    .map((line) => line.replace(/^>\s*/, "").trim())
+  for (const line of lines) {
+    if (line.trim().startsWith(">")) {
+      foundQuote = true;
+      quoteLines.push(line.replace(/^>\s*/, "").trim());
+    } else if (foundQuote && !line.trim()) {
+      break; // End of quote block
+    } else if (foundQuote) {
+      break; // Non-quote content
+    }
+  }
+
+  if (quoteLines.length === 0) return null;
+
+  const text = quoteLines
     .filter(Boolean)
     .join(" ")
     .replace(/\*\*([^*]+)\*\*/g, "$1")
     .replace(/\*([^*]+)\*/g, "$1");
 
   // Extract "Why it matters"
-  const whyMatch = content.match(/Why it matters:\s*(.+?)(?=\n\nTags:|\n\n---|$)/s);
-  const whyItMatters = whyMatch?.[1]?.trim() ?? "";
+  const whyMatch = content.match(/Why it matters:\s*([^\n]+(?:\n(?!Tags:)[^\n]+)*)/);
+  const whyItMatters = whyMatch?.[1]?.trim().replace(/\n/g, " ") ?? "";
 
   // Extract tags
   const tagsMatch = content.match(/Tags:\s*`([^`]+)`(?:,\s*`([^`]+)`)*(?:,\s*`([^`]+)`)?/);
@@ -66,7 +78,7 @@ export function parseQuoteBank(markdown: string): ParsedQuoteBank {
   const title = titleMatch?.[1] ?? "Quote Bank";
 
   // Extract description (first paragraph after title)
-  const descMatch = markdown.match(/^#\s+.+\n+([^#\n].+?)(?=\n\n)/s);
+  const descMatch = markdown.match(/^#\s+.+\n+([^#\n][^\n]+)/m);
   const description = descMatch?.[1]?.trim() ?? "";
 
   // Find all quote sections (## §N — Title)
