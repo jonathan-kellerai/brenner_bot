@@ -3054,7 +3054,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
       "Early developmental biologists debated whether differentiation was 'a state' (stable, self-maintaining) or 'a process' (requiring continuous signals). This question shaped thinking about gene regulation and cell fate.",
     why:
       "Brenner attended 'a secret seminar' at Woods Hole where 'they had discussed the question of whether differentiation was a state or a process.' Transcript anchor: §153.",
-    related: ["cell-lineage", "cell-fate", "operon", "woods-hole"],
+    related: ["cell-lineage", "apoptosis", "operon", "woods-hole"],
     category: "biology",
   },
 
