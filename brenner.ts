@@ -1455,7 +1455,8 @@ async function main(): Promise<void> {
         thread_id: threadId,
         ack_required: true,
       });
-      console.log(JSON.stringify({ memory: memoryAudit, send: result }, null, 2));
+      const payload = isRecord(result) ? { ...result, memory: memoryAudit } : { memory: memoryAudit, send: result };
+      console.log(JSON.stringify(payload, null, 2));
     } else {
       // Role-specific mode: each agent gets their role prompt
       const messages = composeKickoffMessages(kickoffConfig);
