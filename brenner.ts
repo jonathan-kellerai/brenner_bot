@@ -12,9 +12,10 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-// Shared AgentMailClient from web lib (bundled by Bun)
+// Shared modules from web lib (bundled by Bun)
 import { AgentMailClient } from "./apps/web/src/lib/agentMail";
 import type { Json } from "./apps/web/src/lib/json";
+import { composeKickoffMessages, getAgentRole, type KickoffConfig } from "./apps/web/src/lib/session-kickoff";
 
 function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -117,8 +118,17 @@ Commands:
 
   prompt compose --template <path> --excerpt-file <path> [--theme <s>] [--domain <s>] [--question <s>]
 
-  session start --project-key <abs-path> --sender <AgentName> --to <A,B> --thread-id <id> --excerpt-file <path>
-               [--template <path>] [--theme <s>] [--domain <s>] [--question <s>] [--subject <s>] [--ack-required]
+  session start --project-key <abs-path> --sender <AgentName> --to <A,B> --thread-id <id>
+               --excerpt-file <path> --question <s> [--context <s>]
+               [--hypotheses <s>] [--constraints <s>] [--outputs <s>]
+               [--unified] [--template <path>] [--theme <s>] [--domain <s>]
+
+    By default, sends role-specific prompts to each recipient:
+      - Codex/GPT → Hypothesis Generator
+      - Opus/Claude → Test Designer
+      - Gemini → Adversarial Critic
+
+    Use --unified to send the same prompt to all recipients (legacy mode).
 
 Aliases:
   orchestrate start  (alias for: session start)
@@ -280,39 +290,78 @@ async function main(): Promise<void> {
     if (!excerptFile) throw new Error("Missing --excerpt-file.");
     const excerpt = readTextFile(resolve(excerptFile));
 
-    const templatePath = resolve(asStringFlag(flags, "template") ?? "metaprompt_by_gpt_52.md");
-    const subject = asStringFlag(flags, "subject") ?? `[${threadId}] Brenner Loop kickoff`;
-    const ackRequired = asBoolFlag(flags, "ack-required");
+    const question = asStringFlag(flags, "question");
+    if (!question) throw new Error("Missing --question (research question).");
 
-    const body = composePrompt({
-      templatePath,
-      excerpt,
-      theme: asStringFlag(flags, "theme"),
-      domain: asStringFlag(flags, "domain"),
-      question: asStringFlag(flags, "question"),
-    });
+    const context = asStringFlag(flags, "context") ?? "See excerpt for background.";
+    const unified = asBoolFlag(flags, "unified");
 
-    // Ensure project + sender identity exist, then send the kickoff prompt.
+    // Ensure project + sender identity exist
     await client.toolsCall("ensure_project", { human_key: projectKey });
     await client.toolsCall("register_agent", {
       project_key: projectKey,
       name: sender,
-      program: "codex-cli",
-      model: "gpt-5.2",
-      task_description: `Brenner Bot orchestration: ${threadId}`,
+      program: "brenner-cli",
+      model: "orchestrator",
+      task_description: `Brenner Protocol session: ${threadId}`,
     });
 
-    const result = await client.toolsCall("send_message", {
-      project_key: projectKey,
-      sender_name: sender,
-      to,
-      subject,
-      body_md: body,
-      thread_id: threadId,
-      ack_required: ackRequired,
-    });
+    // Compose kickoff configuration
+    const kickoffConfig: KickoffConfig = {
+      threadId,
+      researchQuestion: question,
+      context,
+      excerpt,
+      recipients: to,
+      initialHypotheses: asStringFlag(flags, "hypotheses"),
+      constraints: asStringFlag(flags, "constraints"),
+      requestedOutputs: asStringFlag(flags, "outputs"),
+    };
 
-    console.log(JSON.stringify(result, null, 2));
+    if (unified) {
+      // Legacy mode: send same message to all recipients
+      const templatePath = resolve(asStringFlag(flags, "template") ?? "metaprompt_by_gpt_52.md");
+      const body = composePrompt({
+        templatePath,
+        excerpt,
+        theme: asStringFlag(flags, "theme"),
+        domain: asStringFlag(flags, "domain"),
+        question,
+      });
+      const subject = asStringFlag(flags, "subject") ?? `KICKOFF: [${threadId}] ${question.slice(0, 50)}...`;
+
+      const result = await client.toolsCall("send_message", {
+        project_key: projectKey,
+        sender_name: sender,
+        to,
+        subject,
+        body_md: body,
+        thread_id: threadId,
+        ack_required: true,
+      });
+      console.log(JSON.stringify(result, null, 2));
+    } else {
+      // Role-specific mode: each agent gets their role prompt
+      const messages = composeKickoffMessages(kickoffConfig);
+      const results: Json[] = [];
+
+      for (const msg of messages) {
+        console.error(`Sending kickoff to ${msg.to} as ${msg.role.displayName}...`);
+        const result = await client.toolsCall("send_message", {
+          project_key: projectKey,
+          sender_name: sender,
+          to: [msg.to],
+          subject: msg.subject,
+          body_md: msg.body,
+          thread_id: threadId,
+          ack_required: msg.ackRequired,
+        });
+        results.push(result);
+      }
+
+      console.log(JSON.stringify({ sent: results.length, messages: results }, null, 2));
+    }
+
     process.exit(0);
   }
 
