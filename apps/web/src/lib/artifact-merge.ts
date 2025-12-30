@@ -223,6 +223,8 @@ function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj)) as T;
 }
 
+const SYSTEM_ITEM_FIELDS = new Set(["id", "killed", "killed_by", "killed_at", "kill_reason"]);
+
 function getItemsForSection(artifact: Artifact, section: DeltaSection): BaseItem[] {
   if (section === "research_thread") {
     return artifact.sections.research_thread ? [artifact.sections.research_thread] : [];
@@ -347,9 +349,15 @@ function applyAdd(
     return false;
   }
 
+  const sanitizedPayload: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload)) {
+    if (SYSTEM_ITEM_FIELDS.has(key)) continue;
+    sanitizedPayload[key] = value;
+  }
+
   const newItem: BaseItem = {
+    ...sanitizedPayload,
     id: newId,
-    ...payload,
   };
 
   // Add to section
@@ -383,12 +391,19 @@ function applyEdit(
         });
         return false;
       }
+
+      const sanitizedPayload: Record<string, unknown> = {};
+      for (const [key, value] of Object.entries(payload)) {
+        if (SYSTEM_ITEM_FIELDS.has(key)) continue;
+        sanitizedPayload[key] = value;
+      }
+
       artifact.sections.research_thread = {
-        id: "RT",
         statement: "",
         context: "",
         why_it_matters: "",
-        ...payload,
+        ...sanitizedPayload,
+        id: "RT",
       } as ResearchThreadItem;
       return true;
     }
@@ -398,6 +413,7 @@ function applyEdit(
       const rt = artifact.sections.research_thread;
       const rtRecord = rt as unknown as Record<string, unknown>;
       for (const [key, value] of Object.entries(payload)) {
+        if (SYSTEM_ITEM_FIELDS.has(key)) continue;
         if (key === "anchors" && !(payload as Record<string, unknown>).replace) {
           rtRecord[key] = mergeArrayField(rtRecord[key], value);
         } else if (key !== "replace") {
@@ -443,6 +459,7 @@ function applyEdit(
     const itemRecord = item as unknown as Record<string, unknown>;
     for (const [key, value] of Object.entries(payload)) {
       if (key === "replace") continue;
+      if (SYSTEM_ITEM_FIELDS.has(key)) continue;
 
       // Array fields: merge by default, replace if explicitly requested
       if (

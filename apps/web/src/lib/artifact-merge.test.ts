@@ -101,6 +101,32 @@ describe("ADD operations", () => {
     expect(result.artifact.sections.hypothesis_slate[0].name).toBe("Test Hypothesis");
   });
 
+  test("ignores system-owned fields in ADD payload", () => {
+    const artifact = createEmptyArtifact("TEST-001");
+    const delta = makeValidDelta("ADD", "hypothesis_slate", null, {
+      id: "H999",
+      killed: true,
+      killed_by: "EvilAgent",
+      killed_at: "2025-01-01T00:00:00Z",
+      kill_reason: "override",
+      name: "Test Hypothesis",
+      claim: "Something is true",
+      mechanism: "Via some process",
+    });
+
+    const result = mergeArtifact(artifact, [delta], "TestAgent", "2025-01-01T00:00:00Z");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const h1 = result.artifact.sections.hypothesis_slate[0];
+    expect(h1.id).toBe("H1");
+    expect(h1.killed).not.toBe(true);
+    expect(h1.killed_by).toBeUndefined();
+    expect(h1.killed_at).toBeUndefined();
+    expect(h1.kill_reason).toBeUndefined();
+  });
+
   test("assigns sequential IDs for multiple ADDs", () => {
     const artifact = createEmptyArtifact("TEST-001");
     const deltas = [
@@ -193,9 +219,45 @@ describe("EDIT operations", () => {
     expect(result.artifact.sections.hypothesis_slate[0].mechanism).toBe("Original mechanism");
   });
 
+  test("ignores system-owned fields in EDIT payload", () => {
+    const artifact = createEmptyArtifact("TEST-001");
+    const addDelta = makeValidDelta("ADD", "hypothesis_slate", null, {
+      name: "Original",
+      claim: "Original claim",
+      mechanism: "Original mechanism",
+    });
+
+    const afterAdd = mergeArtifact(artifact, [addDelta], "Agent1", "2025-01-01T00:00:00Z");
+    expect(afterAdd.ok).toBe(true);
+    if (!afterAdd.ok) return;
+
+    const editDelta = makeValidDelta("EDIT", "hypothesis_slate", "H1", {
+      id: "H999",
+      killed: true,
+      killed_by: "EvilAgent",
+      killed_at: "2025-01-01T00:01:00Z",
+      kill_reason: "override",
+      claim: "Updated claim",
+    });
+
+    const result = mergeArtifact(afterAdd.artifact, [editDelta], "Agent2", "2025-01-01T00:01:00Z");
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    const h1 = result.artifact.sections.hypothesis_slate[0];
+    expect(h1.id).toBe("H1");
+    expect(h1.killed).not.toBe(true);
+    expect(h1.killed_by).toBeUndefined();
+    expect(h1.killed_at).toBeUndefined();
+    expect(h1.kill_reason).toBeUndefined();
+    expect(h1.claim).toBe("Updated claim");
+  });
+
   test("creates research_thread on first EDIT", () => {
     const artifact = createEmptyArtifact("TEST-001");
     const delta = makeValidDelta("EDIT", "research_thread", null, {
+      id: "RT999",
       statement: "What is X?",
       context: "Background",
       why_it_matters: "Important",
@@ -207,6 +269,7 @@ describe("EDIT operations", () => {
     if (!result.ok) return;
 
     expect(result.artifact.sections.research_thread).not.toBeNull();
+    expect(result.artifact.sections.research_thread?.id).toBe("RT");
     expect(result.artifact.sections.research_thread?.statement).toBe("What is X?");
   });
 
