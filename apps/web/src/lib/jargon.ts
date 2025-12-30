@@ -335,6 +335,42 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["exclusion-test", "potency", "theory-kill"],
     category: "brenner",
   },
+  "representation-change": {
+    term: "Representation Change",
+    short: "Restate the problem in a domain where constraints are clearer.",
+    long:
+      "A representation change transforms a problem from one language or framework to another where the solution becomes more tractable. What's hard in chemistry might be obvious in information theory; what's confusing in 3D might be simple in 1D.",
+    analogy:
+      "Think of it like rotating a 3D object to see its shadow—some angles reveal the structure, others hide it.",
+    why:
+      "Brenner's shift from thinking about the genetic code as chemistry to thinking about it as information was a pivotal representation change.",
+    related: ["recode", "level-split", "brenner-move"],
+    category: "brenner",
+  },
+  "assumption-ledger": {
+    term: "Assumption Ledger",
+    short: "Explicit list of load-bearing assumptions and what would break them.",
+    long:
+      "An assumption ledger makes hidden premises visible. Every theory rests on assumptions—some explicit, most implicit. Listing them and identifying tests that would break each one turns vague theories into falsifiable claims.",
+    analogy:
+      "Think of it like an engineering stress test—you don't just hope the bridge holds, you know exactly which joints are load-bearing and at what weight they fail.",
+    why:
+      "Brenner insisted on surfacing assumptions that are usually hidden inside theoretical frameworks.",
+    related: ["forbidden-pattern", "theory-kill", "potency"],
+    category: "brenner",
+  },
+  "third-alternative": {
+    term: "Third Alternative",
+    short: "The 'both models are wrong' escape from false dichotomies.",
+    long:
+      "The third alternative reminds us that when two theories compete, we shouldn't assume one must be right. Often both are wrong, or the question itself is malformed. The real answer may require reframing the problem entirely.",
+    analogy:
+      "Think of it like being asked 'Is light a wave or a particle?' The third alternative is 'The question assumes classical categories that don't apply.'",
+    why:
+      "Brenner repeatedly warned against false dichotomies and premature theory commitment.",
+    related: ["decision-experiment", "representation-change", "productive-ignorance"],
+    category: "brenner",
+  },
 
   // -------------------------------------------------------------------------
   // Biology Terms
