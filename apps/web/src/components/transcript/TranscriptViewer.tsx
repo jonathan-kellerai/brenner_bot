@@ -559,38 +559,6 @@ function Paragraph({ text, highlights }: { text: string; highlights?: string[] }
 }
 
 // ============================================================================
-// BACK TO TOP
-// ============================================================================
-
-export function BackToTop() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setVisible(window.scrollY > 500);
-    };
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
-
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
-  if (!visible) return null;
-
-  return (
-    <button
-      onClick={scrollToTop}
-      className="fixed bottom-6 right-6 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 flex items-center justify-center hover:scale-110 active:scale-95 transition-transform"
-      aria-label="Back to top"
-    >
-      <ArrowUpIcon />
-    </button>
-  );
-}
-
-// ============================================================================
 // MAIN VIEWER COMPONENT (VIRTUALIZED)
 // ============================================================================
 
@@ -637,7 +605,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
     count: data.sections.length,
     getScrollElement: () => scrollContainerRef.current,
     // Estimate average section height (varies greatly, will be measured)
-    estimateSize: useCallback(() => 400, []),
+    estimateSize: () => 400,
     // Render extra items above/below viewport for smoother scrolling
     overscan: 3,
   });
@@ -959,8 +927,6 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         </div>
       ) : null}
 
-      <BackToTop />
-
       {/* Back to Search - floating button when coming from search */}
       {searchNavQuery && (
         <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 animate-fade-in-up">
@@ -1020,14 +986,6 @@ function ChevronIcon({ className = "" }: { className?: string }) {
   return (
     <svg className={`size-5 ${className}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-    </svg>
-  );
-}
-
-function ArrowUpIcon() {
-  return (
-    <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
     </svg>
   );
 }
