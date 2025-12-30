@@ -11,6 +11,7 @@ import {
   type JargonTerm,
   type JargonCategory,
 } from "@/lib/jargon";
+import { Jargon } from "@/components/jargon";
 
 // ============================================================================
 // TYPES
@@ -333,7 +334,7 @@ export default function GlossaryPage() {
           </div>
         </div>
         <p className="text-sm text-muted-foreground max-w-2xl">
-          Many dotted-underline terms throughout the site link here. Browse by category or search for specific concepts.
+          Many dotted-underline terms throughout the site link here. Browse by category—from <Jargon term="operators">Brenner operators</Jargon> to <Jargon term="bayesian-update">Bayesian reasoning</Jargon>—or search for specific concepts.
         </p>
       </header>
 

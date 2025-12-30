@@ -5,6 +5,7 @@ import { RefreshControls } from "@/components/sessions";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
 import { computeThreadStatus, type SessionPhase } from "@/lib/threadStatus";
+import { Jargon } from "@/components/jargon";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {

@@ -232,8 +232,18 @@ export function ExcerptBasket({
     <div className={cn("rounded-lg border border-border bg-card", className)}>
       {/* Header */}
       <div
-        className="flex items-center justify-between px-4 py-3 border-b border-border/50 cursor-pointer touch-manipulation active:bg-muted/30 transition-colors"
+        role="button"
+        tabIndex={0}
+        className="flex items-center justify-between px-4 py-3 border-b border-border/50 cursor-pointer touch-manipulation active:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         onClick={() => setIsExpanded(!isExpanded)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setIsExpanded(!isExpanded);
+          }
+        }}
+        aria-expanded={isExpanded}
+        aria-label="Toggle excerpt basket"
       >
         <div className="flex items-center gap-2">
           <h3 className="font-medium text-foreground">Excerpt Basket</h3>

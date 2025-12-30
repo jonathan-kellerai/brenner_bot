@@ -5,6 +5,7 @@ import { readCorpusDoc, CORPUS_DOCS } from "@/lib/corpus";
 import { corpusDocKeys } from "@/hooks/queries/keys";
 import { DocumentContentClient } from "./DocumentContentClient";
 import { DocumentSwipeNavClient } from "./DocumentSwipeNavClient";
+import { Jargon } from "@/components/jargon";
 import type { Metadata } from "next";
 
 export const runtime = "nodejs";
@@ -142,7 +143,7 @@ export default async function CorpusDocPage({
           )}
         </div>
 
-        <div className="mt-10 text-center">
+        <div className="mt-10 text-center space-y-3">
           <Link
             href="/corpus"
             className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all"
@@ -150,6 +151,9 @@ export default async function CorpusDocPage({
             <ArrowLeftIcon />
             Back to Corpus
           </Link>
+          <p className="text-xs text-muted-foreground max-w-md mx-auto">
+            Browse more documents exploring the <Jargon term="brenner-method">Brenner method</Jargon> and <Jargon term="operators">operator algebra</Jargon>.
+          </p>
         </div>
       </nav>
     </div>

@@ -523,14 +523,15 @@ interface SectionProps {
 
 function Section({ section, docId, sectionId }: SectionProps) {
   const [copied, setCopied] = useState(false);
-  const HeadingTag = `h${section.level + 1}` as "h2" | "h3" | "h4";
+  const HeadingTag = `h${Math.min(section.level + 1, 6)}` as "h2" | "h3" | "h4" | "h5" | "h6";
   // Refined typography: tighter, more elegant heading hierarchy
-  const headingClasses = {
+  const headingClasses: Record<number, string> = {
     1: "text-lg sm:text-xl font-semibold mb-4 mt-8 first:mt-0 tracking-tight",
     2: "text-base sm:text-lg font-semibold mb-3 mt-6 tracking-tight",
     3: "text-base font-medium mb-2 mt-5 tracking-tight",
     4: "text-sm font-medium mb-2 mt-4 uppercase tracking-wide text-foreground/80",
   };
+  const headingClass = headingClasses[section.level] ?? headingClasses[4];
 
   const handleCopyLink = () => {
     const url = `${window.location.origin}${window.location.pathname}#${sectionId}`;
@@ -542,7 +543,7 @@ function Section({ section, docId, sectionId }: SectionProps) {
   return (
     <section id={sectionId} className="scroll-mt-24 group/section">
       <div className="flex items-start gap-2">
-        <HeadingTag className={`text-foreground tracking-tight ${headingClasses[section.level]} flex-1`}>
+        <HeadingTag className={`text-foreground tracking-tight ${headingClass} flex-1`}>
           {section.title}
         </HeadingTag>
         <button
@@ -745,9 +746,9 @@ function RawContentFallback({ content }: { content: string }) {
   const paragraphs = content.split(/\n\n+/).filter(Boolean);
 
   return (
-    <div className="prose prose-lg dark:prose-invert max-w-none">
+    <div className="max-w-none">
       {paragraphs.map((para, i) => (
-        <p key={i} className="text-base lg:text-lg leading-relaxed text-foreground/85 mb-4">
+        <p key={i} className="text-[15px] sm:text-base leading-[1.7] text-foreground/90 mb-3">
           {para}
         </p>
       ))}
