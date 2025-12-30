@@ -203,7 +203,7 @@ async function fetchFromPublicUrl(filename: string): Promise<string> {
   const protocol = headersList.get("x-forwarded-proto") || "https";
   const baseUrl = `${protocol}://${host}`;
 
-  const url = `${baseUrl}/corpus/${filename}`;
+  const url = `${baseUrl}/_corpus/${filename}`;
   const response = await fetch(url);
 
   if (!response.ok) {
