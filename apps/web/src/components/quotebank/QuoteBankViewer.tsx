@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
 import { filterQuotesByTag, searchQuotes } from "@/lib/quotebank-parser";
 import { ReferenceCopyButton, CopyButton } from "@/components/ui/copy-button";
@@ -167,10 +168,9 @@ function Search({ value, onChange }: SearchProps) {
 
 interface QuoteCardProps {
   quote: Quote;
-  index: number;
 }
 
-function QuoteCard({ quote, index }: QuoteCardProps) {
+function QuoteCard({ quote }: QuoteCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
@@ -178,9 +178,8 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
       className={`
         group relative rounded-2xl border border-border bg-card overflow-hidden
         hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5
-        active:scale-[0.995] transition-all duration-300 animate-fade-in-up
+        active:scale-[0.995] transition-all duration-300
       `}
-      style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
     >
       {/* Reference badge - clickable to copy */}
       <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
@@ -277,6 +276,7 @@ interface QuoteBankViewerProps {
 export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Debounce search query for better performance
   const [debouncedQuery] = useDebounce(searchQuery, 200);
@@ -303,6 +303,19 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
     }
     return result;
   }, [data.quotes, selectedTag, debouncedQuery]);
+
+  // Virtualizer for efficient rendering of quote cards
+  const virtualizer = useVirtualizer({
+    count: filteredQuotes.length,
+    getScrollElement: () => scrollContainerRef.current,
+    // Estimate average quote card height (will be measured dynamically)
+    estimateSize: useCallback(() => 280, []),
+    // Render extra items above/below viewport for smoother scrolling
+    overscan: 3,
+  });
+
+  // Get virtual items
+  const virtualItems = virtualizer.getVirtualItems();
 
   return (
     <>
@@ -333,14 +346,47 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
           )}
         </div>
 
-        {/* Quote grid */}
-        <div className="space-y-6">
-          {filteredQuotes.map((quote, index) => (
-            <QuoteCard key={quote.reference} quote={quote} index={index} />
-          ))}
-        </div>
-
-        {filteredQuotes.length === 0 && (
+        {/* Virtualized quote list */}
+        {filteredQuotes.length > 0 ? (
+          <div
+            ref={scrollContainerRef}
+            className="h-[calc(100vh-400px)] min-h-[400px] overflow-y-auto scroll-smooth"
+            style={{ contain: "strict" }}
+          >
+            {/* Total height spacer for scroll */}
+            <div
+              style={{
+                height: virtualizer.getTotalSize(),
+                width: "100%",
+                position: "relative",
+              }}
+            >
+              {/* Only render visible quote cards */}
+              {virtualItems.map((virtualRow) => {
+                const quote = filteredQuotes[virtualRow.index];
+                return (
+                  <div
+                    key={quote.reference}
+                    data-index={virtualRow.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    {/* Add spacing between cards */}
+                    <div className="pb-6">
+                      <QuoteCard quote={quote} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
           <div className="text-center py-16">
             <div className="text-4xl mb-4">🔍</div>
             <h3 className="text-lg font-medium text-foreground mb-2">No quotes found</h3>
