@@ -304,245 +304,245 @@ Tags: `hypothesis-expansion`, `frameshift`, `mutations`, `pattern-breaking`
 
 ---
 
-## §108 — The “Humpty Dumpty model” (phase/parsing as an algorithm)
+## §108 — The Humpty Dumpty model
 
 > I called **the Humpty Dumpty model**, which was: how do you get the phase of a message? You start at the beginning and read on in threes till you come to the end.
 
-Takeaway: Make the implied parsing algorithm explicit; it suggests clean “phase-shift” tests and topological reasoning about messages.
+Takeaway: Reading frame (phase) is set at the start of the message and never resets. Add or delete a base, and everything downstream is garbled. The name captures the irreversibility: once broken, you can't put it back together.
 
-Tags: `phase-problem`, `parsing`, `topology/algebra`
+Tags: `reading-frame`, `parsing`, `frameshift`, `code`
 
 ---
 
-## §109 — “Topology level” inference (triplet code from +/− patterns)
+## §109 — Proving the triplet code with plus and minus signs
 
 > Now, this I think is the kind of apotheosis of a genetic analysis, because you have to consider what you're doing here. You're taking these viruses and you are just mixing them together and you're simply recording plus, minus. And from this pattern it seems mad that you could deduce the actual triplet nature of the genetic code. But that's just simply the logic of how the information is transferred, that it is a non-overlapping code of these, and of course awoke us, well at least awoke me, to the idea that **topology could, you could do these things at the kind of topological level**.
 >
 > And **formally what we showed that the code is a multiple of three. It's 3n bases, where n is likely to be 1**.
 
-Takeaway: You can infer structure from invariants/topology without seeing molecular details; design tests that yield discrete outputs (+/−) with high leverage.
+Takeaway: Brenner's team proved the code was triplets without any chemistry. Just genetics: cross mutants, record if progeny grow (+) or don't (−). Pure logic deduced molecular structure. Three plusses cancel three minuses; therefore the reading unit is three.
 
-Tags: `topology/algebra`, `invariants`, `digital-handle`, `decision-experiment`, `invariant-extract`
+Tags: `triplet-code`, `logic`, `genetics-as-instrument`, `proof`
 
 ---
 
-## §110 — Exceptions in an appendix (quarantine anomalies; keep the core)
+## §110 — Exceptions go in an appendix
 
 > And so when you get something like this, it tells you that **all the exceptions, each of which cannot be explained by the coherent theory... that the coherent theory remains, then. And it is... was wise to take all of these exceptions which showed no relationship amongst each other and put them on one... we didn't conceal them; we put them in an appendix**.
 
-Takeaway: Don’t let scattered anomalies collapse a coherent model; quarantine and document them, assume mechanisms exist (“Don’t Worry”), then return later.
+Takeaway: Scattered anomalies that share no pattern aren't evidence against a theory. Quarantine them in an appendix, don't hide them. If they're unrelated, they're probably noise or special cases. Return to them later once you have more tools.
 
-Tags: `exception-quarantine`, `dont-worry`, `epistemic-hygiene`
+Tags: `exceptions`, `appendix`, `anomalies`, `honesty`
 
 ---
 
-## §114 — Tooling economics: material monopolies gate progress
+## §114 — Material monopolies gate progress
 
 > Kornberg had a monopoly, well, you know, I don't want to put it like that, but really he had a monopoly of DNA replication because he was the only person who had radioactive triphosphates.
 
-Takeaway: Progress is constrained by access to materials/instrumentation; “build the kit” is often the decisive move.
+Takeaway: Kornberg could study DNA replication because only his lab had radioactive triphosphates. The bottleneck wasn't ideas; it was reagents. When one lab controls the materials, they control the field. Make your own tools.
 
-Tags: `tooling`, `infrastructure`, `diy`
+Tags: `materials`, `monopoly`, `reagents`, `infrastructure`
 
 ---
 
-## §117 — “Open the box” (anti input/output)
+## §117 — Open the box
 
 > **you have to open the box. It is not an input/output system**, because what's in the box can actually determine your theory of how this can work.
 
-Takeaway: Mechanistic transparency matters; I/O behavior alone can’t determine the generative grammar.
+Takeaway: Behaviorists said you only need inputs and outputs. Brenner said that's insufficient for biology. The internal mechanism constrains possible explanations. If you don't know what's inside, you're just curve-fitting.
 
-Tags: `open-the-box`, `mechanism`, `generative-grammar`, `materialize`
+Tags: `mechanism`, `behaviorism`, `internal-structure`, `explanation`
 
 ---
 
-## §117 — The “grammar of the system”
+## §117 — The grammar of the system
 
 > So we have to have what I call **the grammar of the system**.
 
-Takeaway: Explanations must include the intermediate construction rules, not just endpoints.
+Takeaway: Knowing the parts isn't enough. You need the rules for combining them. Genes are vocabulary; development is grammar. The same words in different orders make different sentences.
 
-Tags: `grammar`, `construction`, `machine-language`
+Tags: `grammar`, `construction`, `rules`, `development`
 
 ---
 
-## §117 — Tacit knowledge is concentrated in builders
+## §117 — Talk to the person who did the work
 
 > **the only person that really understands the structure of anything is the person who did that structure**.
 
-Takeaway: Beware “paper understanding”; talk to (or become) the builder of the measurement/structure/tool.
+Takeaway: Reading a paper isn't the same as doing the work. Max Perutz understood hemoglobin because he solved the structure. If you want real understanding, talk to the person who built the thing. Or become that person.
 
-Tags: `tacit-knowledge`, `builders`, `tooling`, `materialize`
+Tags: `tacit-knowledge`, `expertise`, `builders`, `understanding`
 
 ---
 
-## §120 — Initiation vs continuation (control points differ)
+## §120 — Initiation vs continuation
 
 > You could only stop its initiation. And of course we did the experiments, they were very simple to do and they worked immediately.
 
-Takeaway: Find the controllable transition (initiation) rather than attacking the stable regime (continuation).
+Takeaway: Many processes are easier to block at startup than mid-flow. RNA synthesis can be stopped at initiation, not during elongation. Find the control point where intervention is possible.
 
-Tags: `control-points`, `initiation`, `decision-experiment`, `exclusion-test`
+Tags: `control-points`, `initiation`, `regulation`, `intervention`
 
 ---
 
-## §123 — Conditional lethals enable “genetic dissection”
+## §123 — Conditional lethals
 
 > But that whole concept of **conditional lethals** opened up genetics in a most remarkable way. And in fact became the basis for a considerable amount of genetics since that time, and gave rise I think to the concept, which became important later, that Seymour used to call **genetic dissection**.
 
-Takeaway: Engineer conditional switches so you can turn essential processes on/off and localize function.
+Takeaway: If you knock out an essential gene, the organism dies and you learn nothing. But temperature-sensitive mutants work at one temperature and fail at another. This lets you study essential genes by turning them on and off at will.
 
-Tags: `genetic-dissection`, `conditional`, `digital-handle`
+Tags: `conditional-mutants`, `genetic-dissection`, `temperature-sensitive`, `tools`
 
 ---
 
-## §124 — Hierarchical self‑assembly (“kit” thinking)
+## §124 — Hierarchical self-assembly
 
 > It opened up the whole of the concept of how you make elaborate cell structures, and by this **hierarchical self-assembly mode**.
 
-Takeaway: Treat complex structure as staged assembly; then test by reconstitution and sub‑assembly perturbations.
+Takeaway: Complex structures build themselves in stages. First subunits form, then they assemble into larger units, then those combine further. Phage heads, ribosomes, viruses all work this way. You can test the model by reconstitution: mix purified parts and see if they reassemble.
 
-Tags: `self-assembly`, `reconstitution`, `mechanism`
+Tags: `self-assembly`, `reconstitution`, `hierarchy`, `mechanism`
 
 ---
 
-## §127 — Choose “special cases” as experimental exemplars
+## §127 — Find the special case
 
 > **you can always find a special case that aids you with your experiments**.
 
-Takeaway: Pick organisms/systems where the desired variable is exaggerated, isolated, or directly measurable.
+Takeaway: General questions can be answered in specific systems. Want to study neurons? Find an organism with big ones. Want to study meiosis? Find one where it's slow. The special case makes the experiment possible.
 
-Tags: `organism-selection`, `special-exemplar`, `object-choice`, `object-transpose`
+Tags: `model-organism`, `experimental-design`, `special-case`, `strategy`
 
 ---
 
-## §132 — Construction vs function (separate the questions)
+## §132 — Construction vs function
 
 > And that you then separate the construction issue, the developmental issue, the building issue, from that of function, and the two are then interlocked, because clearly what organisms do is an output from the machines they have to do things with.
 
-Takeaway: Don’t try to jump from genes → behavior without an explicit construction paradigm in between.
+Takeaway: How you build a nervous system is different from how it works once built. Genes specify construction, not behavior directly. The machine's function depends on its structure, which depends on how it developed. Keep these questions separate.
 
-Tags: `level-split`, `construction-vs-function`, `generative-grammar`
+Tags: `development`, `function`, `construction`, `levels`
 
 ---
 
-## §161 — Lineage vs neighbors (two computations)
+## §161 — European plan vs American plan
 
 > I used to call the European plan versus the American plan.
 
-Takeaway: Choose the right computational frame for development: lineage (history) vs neighborhood (spatial context).
+Takeaway: The "European plan": who your ancestors are matters (lineage). The "American plan": who your neighbors are matters (position). C. elegans uses mostly lineage. Vertebrates use mostly position. Different organisms, different developmental logics.
 
-Tags: `representation-change`, `lineage`, `spatial-computation`, `recode`
+Tags: `lineage`, `position`, `development`, `computation`
 
 ---
 
-## §162 — “Genes make proteins… what are they doing?”
+## §162 — What are proteins actually doing?
 
 > **genes make proteins and proteins have to do something, so what is it they are doing?**
 
-Takeaway: Force the explanatory chain to cash out in molecular work, not metaphor.
+Takeaway: It's not enough to say a gene "controls" development. Genes make proteins. Proteins do things. What specific molecular activity produces the phenotype? Demand mechanism, not metaphor.
 
-Tags: `mechanism`, `machine-language`, `anti-handwave`
+Tags: `mechanism`, `proteins`, `specificity`, `rigor`
 
 ---
 
-## §163 — “Beilstein paradox” (combinatorics beats lookup)
+## §163 — The Beilstein paradox
 
 > So how does the antibody first of all know what's been published in Beilstein and secondly, a more, a deeper question: how's it going... how does it know what is not yet published in Beilstein but will be in the future?
 
-Takeaway: When the space of possible targets is astronomically large, the mechanism must be generative/combinatorial (not enumerative).
+Takeaway: Beilstein catalogs all known chemicals. The immune system makes antibodies to chemicals not yet synthesized. How? It can't be a lookup table. The antibody repertoire must be generated combinatorially, not encoded directly. One-to-one specificity is impossible at that scale.
 
-Tags: `combinatorics`, `constraints-first`, `representation-change`, `paradox-hunt`
+Tags: `combinatorics`, `immune-system`, `generation`, `recognition`
 
 ---
 
-## §163 — Selection‑learning rule (“total ignorance”)
+## §163 — Learning by total ignorance
 
 > **if it works do it, if it doesn't work forget about it**.
 
-Takeaway: Selection can implement “learning” without an internal model; distinguish selection vs acquisition.
+Takeaway: The immune system doesn't understand pathogens. It generates random antibodies, keeps what binds, discards what doesn't. This is "learning" without knowledge. Selection, not instruction. Cheaper and more robust than trying to model the problem.
 
-Tags: `selection`, `learning`, `cheap-loop`
+Tags: `selection`, `learning`, `ignorance`, `evolution`
 
 ---
 
-## §164 — Logical ≠ biological (plausibility filter)
+## §164 — Logical doesn't mean biological
 
 > **Many theories are correct in a logical sense but they're untrue because they don't refer to the natural thing we're all interested in.**
 
-Takeaway: Filter explanations by biological plausibility, not just mathematical consistency.
+Takeaway: A theory can be internally consistent yet have no contact with reality. Mathematically coherent models of development might violate physics or chemistry. Logical validity isn't enough; you need biological plausibility.
 
-Tags: `plausibility`, `scale-check`, `anti-cartoon`
+Tags: `plausibility`, `theory-vs-reality`, `biology`, `grounding`
 
 ---
 
-## §165 — Beware easy analogies (conscious mind is small)
+## §165 — Beware easy analogies
 
 > **we should suspect these easy analogies because they are likely to be wrong, because these analogies operate in our conscious minds which are very restricted**.
 
-Takeaway: Prefer mechanistic constraints and decision experiments over story‑analogies imported from human institutions.
+Takeaway: "The brain is like a computer." "The genome is like a blueprint." These analogies come from conscious human experience, which represents a tiny slice of reality. Cells and nervous systems operate on principles we don't intuit. Suspect any analogy that feels too comfortable.
 
-Tags: `anti-analogy`, `epistemic-hygiene`, `mechanism`
+Tags: `analogies`, `intuition`, `bias`, `mechanism`
 
 ---
 
-## §168 — Freedom from short‑term justification
+## §168 — Freedom from short-term justification
 
 > **Being able to work without this endless justification that is common today**... which I feel is completely stifling to creative work in science... I think made that subject.
 
-Takeaway: Some programs require long maturation; environment design is part of the method.
+Takeaway: The C. elegans project took 25 years. It couldn't have survived modern grant review cycles demanding quarterly milestones. Some work needs time to mature without constant justification. Research environments that allow this produce breakthroughs.
 
-Tags: `environment`, `long-horizon`, `infrastructure`
+Tags: `freedom`, `long-term`, `research-environment`, `patience`
 
 ---
 
-## §205 — Gene → behaviour goes through the nervous system
+## §205 — Genes to behavior goes through nervous systems
 
 > The connection between genes and behaviour must go through the construction and performance of a nervous system.
 
-Takeaway: Don’t jump from genes to behaviour; force an explicit construction paradigm (build the nervous system, then study its computation).
+Takeaway: You can't skip from DNA to behavior. Genes build cells. Cells wire into circuits. Circuits compute behavior. Each level has its own logic. Shortcuts are illusions.
 
-Tags: `construction-vs-function`, `level-split`, `open-the-box`
+Tags: `levels`, `nervous-system`, `development`, `construction`
 
 ---
 
-## §205 — Gradients vs lineage (analogue vs digital development)
+## §205 — Gradients vs lineage
 
 > Gradients would be the analogue way of doing it, and lineage would be the digital way of doing it, so to speak.
 
-Takeaway: Choose the right computational frame for development (continuous field variables vs discrete lineage/state).
+Takeaway: Cells can know their identity two ways. Gradients: read a concentration and respond (analogue). Lineage: inherit a state from your parent cell (digital). Vertebrates rely heavily on gradients; C. elegans relies heavily on lineage.
 
-Tags: `representation-change`, `lineage`, `digital-handle`, `recode`
+Tags: `gradients`, `lineage`, `analogue-vs-digital`, `development`
 
 ---
 
-## §206 — Compute the organism (reconstruction as explanation)
+## §206 — Understanding means building
 
 > We would understand the algorithm of how the mouse is built, because we could build it.
 
-Takeaway: Explanation cashes out as an explicit constructive algorithm (not anecdotes or correlations).
+Takeaway: The test of understanding is construction. Can you compute a mouse from its DNA? If not, you don't really understand development. Correlations aren't explanations. The ability to rebuild is.
 
-Tags: `gedanken-organism`, `reconstruction`, `machine-language`
+Tags: `computation`, `understanding`, `construction`, `simulation`
 
 ---
 
-## §210 — Routine work generates the next hard problems
+## §210 — Routine work generates new problems
 
 > Routine work itself generates its important problems which you don't see.
 
-Takeaway: “Mopping up” isn’t just boring; it creates new paradoxes—so don’t confuse “outline solved” with “finished.”
+Takeaway: Filling in details isn't just cleanup. The "boring" work of characterizing exceptions and edge cases produces the next generation of fundamental problems. Don't mistake "conceptually solved" for "fully understood."
 
-Tags: `heroic-vs-classical`, `out-of-phase`, `problem-choice`, `dephase`
+Tags: `routine-work`, `problems`, `classical-phase`, `discovery`
 
 ---
 
-## §215 — Mutation-first epistemology (“genetic surgery”)
+## §215 — Genetic surgery
 
 > You are doing surgery at the genetic level.
 
-Takeaway: In genetics, function is proven by loss/perturbation; mutants are the instrument that makes the invisible gene legible.
+Takeaway: Genes are invisible. You prove function by removing something and seeing what breaks. Mutants make the invisible visible. Loss-of-function is the fundamental assay.
 
-Tags: `digital-handle`, `genetic-dissection`, `exclusion`, `exclusion-test`
+Tags: `genetics`, `mutants`, `function`, `loss-of-function`
 
 ---
 
