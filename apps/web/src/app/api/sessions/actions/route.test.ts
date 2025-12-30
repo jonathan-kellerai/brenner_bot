@@ -97,7 +97,8 @@ describe("POST /api/sessions/actions", () => {
       threadId: "TEST-1",
       version: 1,
     });
-    expect(String((json as any).artifactMarkdown)).toContain("# Brenner Protocol Artifact: TEST-1");
+    const artifactMarkdown = (json as { artifactMarkdown?: unknown }).artifactMarkdown;
+    expect(String(artifactMarkdown)).toContain("# Brenner Protocol Artifact: TEST-1");
   });
 
   it("publishes a COMPILED message with the compiled artifact body", async () => {

@@ -547,13 +547,7 @@ export function OperatorsClient({ operators }: { operators: BrennerOperatorPalet
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
   const [selectedOperator, setSelectedOperator] = useState<BrennerOperatorPaletteEntry | null>(null);
-  const [canUsePortal, setCanUsePortal] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
-
-  // Enable portal after mount
-  useEffect(() => {
-    setCanUsePortal(true);
-  }, []);
 
   const totalQuotes = useMemo(
     () => operators.reduce((sum, op) => sum + op.supportingQuotes.length, 0),
@@ -785,7 +779,7 @@ export function OperatorsClient({ operators }: { operators: BrennerOperatorPalet
       )}
 
       {/* Detail Sheet */}
-      {canUsePortal && selectedOperator && (
+      {selectedOperator && (
         <OperatorDetailSheet
           operator={selectedOperator}
           onClose={handleCloseSheet}

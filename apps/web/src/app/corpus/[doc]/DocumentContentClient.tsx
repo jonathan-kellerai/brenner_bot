@@ -18,6 +18,7 @@ import { TranscriptViewer } from "@/components/transcript/TranscriptViewer";
 import { DistillationViewer } from "@/components/distillation/DistillationViewer";
 import { QuoteBankViewer } from "@/components/quotebank/QuoteBankViewer";
 import { MetapromptViewer } from "@/components/metaprompt/MetapromptViewer";
+import { RawResponseViewer, parseRawResponse } from "@/components/raw-response/RawResponseViewer";
 import { Skeleton } from "@/components/ui/skeleton";
 
 // ============================================================================
@@ -32,10 +33,11 @@ interface DocumentContentClientProps {
 // HELPERS
 // ============================================================================
 
-function getDocType(id: string): "transcript" | "distillation" | "quote-bank" | "metaprompt" {
+function getDocType(id: string): "transcript" | "distillation" | "quote-bank" | "raw-response" | "metaprompt" {
   if (id === "transcript") return "transcript";
   if (id === "quote-bank") return "quote-bank";
   if (id.startsWith("distillation")) return "distillation";
+  if (id.startsWith("raw-")) return "raw-response";
   return "metaprompt";
 }
 
@@ -137,6 +139,11 @@ export const DocumentContentClient = memo(function DocumentContentClient({ docId
     return parseMetaprompt(content);
   }, [content, docType, hasData]);
 
+  const parsedRawResponse = useMemo(() => {
+    if (!hasData || docType !== "raw-response") return null;
+    return parseRawResponse(content, docId);
+  }, [content, docId, docType, hasData]);
+
   // Loading state - show skeleton
   if (isLoading) {
     return <DocumentSkeleton />;
@@ -173,6 +180,10 @@ export const DocumentContentClient = memo(function DocumentContentClient({ docId
 
     case "metaprompt": {
       return <MetapromptViewer data={parsedMetaprompt!} />;
+    }
+
+    case "raw-response": {
+      return <RawResponseViewer data={parsedRawResponse!} docId={docId} />;
     }
   }
 });

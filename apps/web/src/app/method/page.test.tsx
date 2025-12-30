@@ -194,9 +194,10 @@ describe("MethodPage", () => {
       expect(
         screen.getByText(/theory follows experiment.*not the other way/i)
       ).toBeInTheDocument();
-      expect(
-        screen.getByText(/hold all hypotheses loosely/i)
-      ).toBeInTheDocument();
+      const humilityHeading = screen.getByRole("heading", { name: "Epistemic Humility" });
+      const humilityCard = humilityHeading.parentElement;
+      expect(humilityCard).not.toBeNull();
+      expect(humilityCard).toHaveTextContent(/hold all hypotheses loosely/i);
       expect(
         screen.getByText(/choosing the right problem is more important/i)
       ).toBeInTheDocument();
