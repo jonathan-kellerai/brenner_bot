@@ -2,6 +2,14 @@
 
 import * as React from "react";
 import Link from "next/link";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper,
+  type SortingState,
+} from "@tanstack/react-table";
 import { cn } from "@/lib/utils";
 
 // ============================================================================
@@ -285,6 +293,58 @@ function MobileCard({ row }: MobileCardProps) {
 }
 
 // ============================================================================
+// COLUMN HELPER & DEFINITIONS
+// ============================================================================
+
+const columnHelper = createColumnHelper<CrosswalkRow>();
+
+// ============================================================================
+// SORT INDICATOR COMPONENT
+// ============================================================================
+
+function SortIndicator({ direction }: { direction: false | "asc" | "desc" }) {
+  if (!direction) {
+    return (
+      <span className="ml-1 text-muted-foreground/40 text-xs">⇅</span>
+    );
+  }
+  return (
+    <span className="ml-1 text-foreground text-xs">
+      {direction === "asc" ? "↑" : "↓"}
+    </span>
+  );
+}
+
+// ============================================================================
+// MODEL HEADER COMPONENT
+// ============================================================================
+
+interface ModelHeaderProps {
+  model: keyof typeof MODEL_CONFIGS;
+  sortDirection: false | "asc" | "desc";
+}
+
+function ModelHeader({ model, sortDirection }: ModelHeaderProps) {
+  const config = MODEL_CONFIGS[model];
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        className={cn(
+          "size-6 rounded-md flex items-center justify-center text-white text-xs font-bold",
+          `bg-gradient-to-br ${config.color}`
+        )}
+      >
+        {config.name[0]}
+      </div>
+      <span className={cn("font-semibold text-sm", config.textColor)}>
+        {config.name}
+      </span>
+      <SortIndicator direction={sortDirection} />
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN COMPONENT
 // ============================================================================
 
@@ -293,72 +353,160 @@ interface CrosswalkTableProps {
 }
 
 export function CrosswalkTable({ className }: CrosswalkTableProps) {
-  const [hoveredRow, setHoveredRow] = React.useState<number | null>(null);
+  const [hoveredRowId, setHoveredRowId] = React.useState<string | null>(null);
+  const [sorting, setSorting] = React.useState<SortingState>([]);
+
+  // Define columns using column helper
+  const columns = React.useMemo(
+    () => [
+      columnHelper.accessor("concept", {
+        header: ({ column }) => (
+          <div className="flex items-center gap-1 cursor-pointer select-none">
+            <span>Concept</span>
+            <SortIndicator direction={column.getIsSorted()} />
+          </div>
+        ),
+        cell: (info) => (
+          <span className="font-medium text-foreground">{info.getValue() as string}</span>
+        ),
+      }),
+      columnHelper.accessor("opus", {
+        header: ({ column }) => (
+          <ModelHeader model="opus" sortDirection={column.getIsSorted()} />
+        ),
+        cell: (info) => (
+          <TableCellContent cell={info.getValue() as CrosswalkCell} model="opus" />
+        ),
+        sortingFn: (rowA, rowB) =>
+          (rowA.original.opus.label).localeCompare(rowB.original.opus.label),
+      }),
+      columnHelper.accessor("gpt", {
+        header: ({ column }) => (
+          <ModelHeader model="gpt" sortDirection={column.getIsSorted()} />
+        ),
+        cell: (info) => (
+          <TableCellContent cell={info.getValue() as CrosswalkCell} model="gpt" />
+        ),
+        sortingFn: (rowA, rowB) =>
+          (rowA.original.gpt.label).localeCompare(rowB.original.gpt.label),
+      }),
+      columnHelper.accessor("gemini", {
+        header: ({ column }) => (
+          <ModelHeader model="gemini" sortDirection={column.getIsSorted()} />
+        ),
+        cell: (info) => (
+          <TableCellContent cell={info.getValue() as CrosswalkCell} model="gemini" />
+        ),
+        sortingFn: (rowA, rowB) =>
+          (rowA.original.gemini.label).localeCompare(rowB.original.gemini.label),
+      }),
+    ],
+    []
+  );
+
+  // Create table instance
+  const table = useReactTable({
+    data: CROSSWALK_DATA,
+    columns,
+    state: { sorting },
+    onSortingChange: setSorting,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+  });
 
   return (
     <div className={className}>
       {/* Desktop Table */}
       <div className="hidden lg:block overflow-x-auto rounded-xl border border-border">
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse" role="grid">
           <thead>
-            <tr className="bg-muted/50">
-              <th className="sticky left-0 z-10 bg-muted/50 px-4 py-3 text-left text-sm font-semibold text-muted-foreground uppercase tracking-wider border-r border-border w-32">
-                Concept
-              </th>
-              {(["opus", "gpt", "gemini"] as const).map((model) => {
-                const config = MODEL_CONFIGS[model];
-                return (
-                  <th
-                    key={model}
-                    className={cn(
-                      "px-4 py-3 text-left border-r border-border last:border-r-0",
-                      config.bgColor
-                    )}
-                  >
-                    <div className="flex items-center gap-2">
-                      <div
-                        className={cn(
-                          "size-6 rounded-md flex items-center justify-center text-white text-xs font-bold",
-                          `bg-gradient-to-br ${config.color}`
-                        )}
-                      >
-                        {config.name[0]}
-                      </div>
-                      <span className={cn("font-semibold text-sm", config.textColor)}>
-                        {config.name}
-                      </span>
-                    </div>
-                  </th>
-                );
-              })}
-            </tr>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id} className="bg-muted/50">
+                {headerGroup.headers.map((header, headerIndex) => {
+                  const isConceptColumn = header.id === "concept";
+                  const modelKey = header.id as keyof typeof MODEL_CONFIGS;
+                  const config = !isConceptColumn ? MODEL_CONFIGS[modelKey] : null;
+
+                  return (
+                    <th
+                      key={header.id}
+                      onClick={header.column.getToggleSortingHandler()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          header.column.getToggleSortingHandler()?.(e);
+                        }
+                      }}
+                      tabIndex={0}
+                      role="columnheader"
+                      aria-sort={
+                        header.column.getIsSorted()
+                          ? header.column.getIsSorted() === "asc"
+                            ? "ascending"
+                            : "descending"
+                          : "none"
+                      }
+                      className={cn(
+                        "px-4 py-3 text-left border-r border-border last:border-r-0 cursor-pointer select-none",
+                        "focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-inset",
+                        "hover:bg-muted/70 transition-colors",
+                        isConceptColumn
+                          ? "sticky left-0 z-10 bg-muted/50 text-sm font-semibold text-muted-foreground uppercase tracking-wider w-32"
+                          : config?.bgColor
+                      )}
+                    >
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
           <tbody>
-            {CROSSWALK_DATA.map((row, index) => (
+            {table.getRowModel().rows.map((row, rowIndex) => (
               <tr
-                key={row.concept}
+                key={row.id}
                 className={cn(
                   "border-t border-border transition-colors",
-                  hoveredRow === index ? "bg-muted/30" : index % 2 === 0 ? "bg-card" : "bg-muted/10"
+                  hoveredRowId === row.id
+                    ? "bg-muted/30"
+                    : rowIndex % 2 === 0
+                    ? "bg-card"
+                    : "bg-muted/10"
                 )}
-                onMouseEnter={() => setHoveredRow(index)}
-                onMouseLeave={() => setHoveredRow(null)}
+                onMouseEnter={() => setHoveredRowId(row.id)}
+                onMouseLeave={() => setHoveredRowId(null)}
               >
-                <td className="sticky left-0 z-10 bg-inherit px-4 py-3 font-medium text-foreground border-r border-border">
-                  {row.concept}
-                </td>
-                {(["opus", "gpt", "gemini"] as const).map((model) => (
-                  <td key={model} className="p-0 border-r border-border last:border-r-0">
-                    <TableCellContent cell={row[model]} model={model} />
-                  </td>
-                ))}
+                {row.getVisibleCells().map((cell) => {
+                  const isConceptColumn = cell.column.id === "concept";
+
+                  return (
+                    <td
+                      key={cell.id}
+                      role="gridcell"
+                      className={cn(
+                        "border-r border-border last:border-r-0",
+                        isConceptColumn
+                          ? "sticky left-0 z-10 bg-inherit px-4 py-3"
+                          : "p-0"
+                      )}
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
 
-      {/* Mobile Card View */}
+      {/* Mobile Card View (unchanged - no sorting on mobile) */}
       <div className="lg:hidden space-y-4">
         {CROSSWALK_DATA.map((row) => (
           <MobileCard key={row.concept} row={row} />
