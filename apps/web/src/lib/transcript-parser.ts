@@ -167,7 +167,7 @@ export function parseTranscript(markdown: string): ParsedTranscript {
     const sectionTitle = match[2];
 
     // Find the start and end positions for this section's content
-    const startIndex = match.index! + match[0].length;
+    const startIndex = (match.index ?? 0) + match[0].length;
     const endIndex = sectionMatches[i + 1]?.index ?? markdown.length;
 
     // Extract the content between this header and the next

@@ -49,7 +49,7 @@ describe("Jargon", () => {
     it("displays term name from dictionary by default", () => {
       const term = getJargon("c-elegans");
       render(<Jargon term="c-elegans" />);
-      expect(screen.getByRole("button")).toHaveTextContent(term!.term);
+      expect(screen.getByRole("button")).toHaveTextContent(term?.term ?? "");
     });
 
     it("renders unknown term without jargon styling", () => {
@@ -105,7 +105,7 @@ describe("Jargon", () => {
 
     it("displays analogy section when present", async () => {
       const term = getJargon("level-split");
-      expect(term!.analogy).toBeTruthy();
+      expect(term?.analogy).toBeTruthy();
 
       render(<Jargon term="level-split" />);
 
@@ -127,7 +127,7 @@ describe("Jargon", () => {
       });
 
       await waitFor(() => {
-        expect(screen.getByText(term!.short)).toBeInTheDocument();
+        expect(screen.getByText(term?.short ?? "")).toBeInTheDocument();
       });
     });
 
@@ -192,7 +192,7 @@ describe("Jargon", () => {
 
       await waitFor(() => {
         // Term appears in both button and sheet title - check for heading
-        const heading = screen.getByRole("heading", { name: term!.term });
+        const heading = screen.getByRole("heading", { name: term?.term ?? "" });
         expect(heading).toBeInTheDocument();
       });
     });
@@ -205,7 +205,7 @@ describe("Jargon", () => {
       await user.click(screen.getByRole("button"));
 
       await waitFor(() => {
-        expect(screen.getByText(term!.long)).toBeInTheDocument();
+        expect(screen.getByText(term?.long ?? "")).toBeInTheDocument();
       });
     });
 
@@ -236,7 +236,7 @@ describe("Jargon", () => {
       await user.click(screen.getByRole("button"));
 
       // Term should have an analogy, check for its content
-      expect(term!.analogy).toBeTruthy();
+      expect(term?.analogy).toBeTruthy();
       await waitFor(() => {
         // The section heading is "Think of it like..."
         expect(screen.getByText("Think of it like...")).toBeInTheDocument();
@@ -251,7 +251,7 @@ describe("Jargon", () => {
       await user.click(screen.getByRole("button"));
 
       // Term should have a why field
-      expect(term!.why).toBeTruthy();
+      expect(term?.why).toBeTruthy();
       await waitFor(() => {
         expect(screen.getByText(/why it matters/i)).toBeInTheDocument();
       });
@@ -264,7 +264,7 @@ describe("Jargon", () => {
 
       await user.click(screen.getByRole("button"));
 
-      if (term!.related && term!.related.length > 0) {
+      if (term?.related && term.related.length > 0) {
         await waitFor(() => {
           expect(screen.getByText(/related terms/i)).toBeInTheDocument();
         });
@@ -299,7 +299,7 @@ describe("Jargon", () => {
       const dialog = await screen.findByRole("dialog");
       const labelledBy = dialog.getAttribute("aria-labelledby");
       expect(labelledBy).toMatch(/^jargon-sheet-title-/);
-      expect(document.getElementById(labelledBy!)).toBeTruthy();
+      expect(document.getElementById(labelledBy ?? "")).toBeTruthy();
     });
 
     it("has proper focus ring styles", () => {

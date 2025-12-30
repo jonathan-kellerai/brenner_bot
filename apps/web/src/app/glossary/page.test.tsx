@@ -8,7 +8,7 @@
  * @see @/app/glossary/page.tsx
  */
 
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import GlossaryPage from "./page";
@@ -301,7 +301,7 @@ describe("GlossaryPage", () => {
       await waitFor(() => {
         // Should show full explanation
         const term = jargonDictionary["level-split"];
-        expect(screen.getByText(term!.long)).toBeInTheDocument();
+        expect(screen.getByText(term?.long ?? "")).toBeInTheDocument();
       });
     });
 
@@ -317,7 +317,7 @@ describe("GlossaryPage", () => {
 
       await waitFor(() => {
         const term = jargonDictionary["level-split"];
-        expect(screen.getByText(term!.long)).toBeInTheDocument();
+        expect(screen.getByText(term?.long ?? "")).toBeInTheDocument();
       });
 
       // Collapse
@@ -325,7 +325,7 @@ describe("GlossaryPage", () => {
 
       await waitFor(() => {
         const term = jargonDictionary["level-split"];
-        expect(screen.queryByText(term!.long)).not.toBeInTheDocument();
+        expect(screen.queryByText(term?.long ?? "")).not.toBeInTheDocument();
       });
     });
 
@@ -365,7 +365,7 @@ describe("GlossaryPage", () => {
       await waitFor(
         () => {
           // Check that the long explanation is visible (proves expansion worked)
-          expect(screen.getByText(term!.long)).toBeInTheDocument();
+          expect(screen.getByText(term?.long ?? "")).toBeInTheDocument();
         },
         { timeout: 1000 }
       );
@@ -411,7 +411,7 @@ describe("GlossaryPage", () => {
       await user.click(button);
 
       await waitFor(() => {
-        const firstRelatedKey = term.related![0]!;
+        const firstRelatedKey = term.related?.[0] ?? "";
         const relatedTerm = jargonDictionary[firstRelatedKey];
         if (relatedTerm) {
           const link = screen.getByRole("link", {
@@ -434,7 +434,7 @@ describe("GlossaryPage", () => {
         () => {
           const term = jargonDictionary["level-split"];
           // Should auto-expand the term
-          expect(screen.getByText(term!.long)).toBeInTheDocument();
+          expect(screen.getByText(term?.long ?? "")).toBeInTheDocument();
         },
         { timeout: 500 }
       );
@@ -445,8 +445,10 @@ describe("GlossaryPage", () => {
       render(<GlossaryPage />);
 
       // Simulate navigation with hash
-      window.location.hash = "level-split";
-      window.dispatchEvent(new HashChangeEvent("hashchange"));
+      act(() => {
+        window.location.hash = "level-split";
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      });
 
       await waitFor(
         () => {

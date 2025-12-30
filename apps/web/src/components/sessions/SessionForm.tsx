@@ -399,7 +399,7 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
 
         <form.Field name="ackRequired">
           {(field) => (
-            <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
+            <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 active:bg-muted/70 active:scale-[0.99] cursor-pointer transition-all touch-manipulation">
               <input
                 type="checkbox"
                 checked={field.state.value}

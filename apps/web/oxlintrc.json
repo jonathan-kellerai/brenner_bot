@@ -21,6 +21,7 @@
   },
   "rules": {
     "no-console": "off",
+    "no-constant-binary-expression": "off",
     "eqeqeq": ["error", "smart"],
 
     "typescript/no-explicit-any": "error",
@@ -28,8 +29,12 @@
     "typescript/no-non-null-assertion": "warn",
 
     "react/react-in-jsx-scope": "off",
+    "react/no-array-index-key": "off",
+
+    "no-await-in-loop": "off",
 
     "import/no-unassigned-import": "off",
+    "import/no-named-as-default": "off",
 
     "nextjs/no-html-link-for-pages": "off",
 
@@ -38,7 +43,10 @@
     "unicorn/no-instanceof-builtins": "off",
 
     "jest/no-disabled-tests": "warn",
-    "jest/require-to-throw-message": "off"
+    "jest/require-to-throw-message": "off",
+    "jest/no-conditional-expect": "off",
+    "jest/valid-expect": "off",
+    "jest/no-standalone-expect": "off"
   },
   "ignorePatterns": [
     ".next/**",

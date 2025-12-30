@@ -125,14 +125,10 @@ function TermCard({ termKey, term, isExpanded, onToggle, searchQuery }: TermCard
     <motion.div
       id={termKey}
       layout
-      className={`rounded-xl border bg-card overflow-hidden ${
+      className={`rounded-xl border bg-card overflow-hidden transition-colors duration-200 ${
         isExpanded ? "border-primary/30 shadow-lg" : "border-border hover:border-border/80 hover:shadow-sm"
       }`}
       initial={false}
-      animate={{
-        borderColor: isExpanded ? "oklch(0.58 0.19 195 / 0.3)" : "var(--border)",
-      }}
-      transition={{ duration: 0.2 }}
     >
       {/* Header - always visible */}
       <motion.button

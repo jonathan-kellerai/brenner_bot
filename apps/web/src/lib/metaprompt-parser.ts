@@ -43,7 +43,7 @@ export function parseMetaprompt(markdown: string): ParsedMetaprompt {
     const level = match[1].length - 1; // h2 = 1, h3 = 2, h4 = 3
     const sectionTitle = match[2];
 
-    const startIndex = match.index! + match[0].length;
+    const startIndex = (match.index ?? 0) + match[0].length;
     const endIndex = sectionMatches[i + 1]?.index ?? markdown.length;
     const content = markdown.slice(startIndex, endIndex).trim();
 

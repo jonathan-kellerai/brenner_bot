@@ -260,10 +260,10 @@ export function TranscriptSearch({ sections, onResultClick, onSearchChange }: Tr
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs font-mono text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                      §{section!.number}
+                      §{section?.number}
                     </span>
                     <span className="text-sm font-medium text-foreground line-clamp-1">
-                      {section!.title}
+                      {section?.title}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground line-clamp-2">

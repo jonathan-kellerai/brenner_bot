@@ -281,7 +281,7 @@ export function parseDistillation(markdown: string, docId: string): ParsedDistil
       const level = match[1].length as 2 | 3 | 4;
       const sectionTitle = match[2];
 
-      const startIndex = match.index! + match[0].length;
+      const startIndex = (match.index ?? 0) + match[0].length;
       const endIndex = sectionMatches[i + 1]?.index ?? markdown.length;
       const sectionContent = markdown.slice(startIndex, endIndex);
 
@@ -307,7 +307,7 @@ export function parseDistillation(markdown: string, docId: string): ParsedDistil
       const partNum = romanToNumber[match[1]] || i + 1;
       const partTitle = match[2];
 
-      const startIndex = match.index! + match[0].length;
+      const startIndex = (match.index ?? 0) + match[0].length;
       const endIndex = partMatches[i + 1]?.index ?? markdown.length;
       const partContent = markdown.slice(startIndex, endIndex);
 
@@ -325,7 +325,7 @@ export function parseDistillation(markdown: string, docId: string): ParsedDistil
         // Skip if it's another PART header
         if (sectionTitle.startsWith("PART ")) continue;
 
-        const secStart = secMatch.index! + secMatch[0].length;
+        const secStart = (secMatch.index ?? 0) + secMatch[0].length;
         const secEnd = sectionMatches[j + 1]?.index ?? partContent.length;
         const sectionContent = partContent.slice(secStart, secEnd);
 

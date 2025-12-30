@@ -255,7 +255,7 @@ function parseDocumentSections(content: string, doc: CorpusDoc): IndexedChunk[] 
     for (let i = 0; i < matches.length; i++) {
       const match = matches[i];
       const title = match[1].trim();
-      const startIndex = match.index! + match[0].length;
+      const startIndex = (match.index ?? 0) + match[0].length;
       const endIndex = matches[i + 1]?.index ?? content.length;
       const sectionContent = content.slice(startIndex, endIndex).trim();
 

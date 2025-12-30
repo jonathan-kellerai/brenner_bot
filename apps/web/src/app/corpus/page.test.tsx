@@ -263,7 +263,9 @@ describe("CorpusIndexPage", () => {
 
       // Find and click the X button (inside the search bar)
       const searchContainer = searchInput.closest("div");
-      const clearButton = within(searchContainer!.parentElement!).getByRole("button");
+      const parentElement = searchContainer?.parentElement;
+      if (!parentElement) throw new Error("Expected parent element");
+      const clearButton = within(parentElement).getByRole("button");
       await user.click(clearButton);
 
       await waitFor(() => {
@@ -281,7 +283,7 @@ describe("CorpusIndexPage", () => {
       const primaryButtons = screen.getAllByRole("button", {
         name: /primary sources/i,
       });
-      await user.click(primaryButtons[0]!);
+      await user.click(primaryButtons[0] ?? document.body);
 
       await waitFor(() => {
         // Primary sources should be visible
@@ -302,7 +304,7 @@ describe("CorpusIndexPage", () => {
       const distButtons = screen.getAllByRole("button", {
         name: /model distillations/i,
       });
-      await user.click(distButtons[0]!);
+      await user.click(distButtons[0] ?? document.body);
 
       await waitFor(() => {
         // Distillations should be visible
@@ -324,7 +326,7 @@ describe("CorpusIndexPage", () => {
       const promptsButtons = screen.getAllByRole("button", {
         name: /metaprompts/i,
       });
-      await user.click(promptsButtons[0]!);
+      await user.click(promptsButtons[0] ?? document.body);
 
       await waitFor(() => {
         expect(screen.getByText("Metaprompt Template")).toBeInTheDocument();
@@ -341,11 +343,11 @@ describe("CorpusIndexPage", () => {
       const distButtons = screen.getAllByRole("button", {
         name: /model distillations/i,
       });
-      await user.click(distButtons[0]!);
+      await user.click(distButtons[0] ?? document.body);
 
       // Then click All
       const allButtons = screen.getAllByRole("button", { name: /all/i });
-      await user.click(allButtons[0]!);
+      await user.click(allButtons[0] ?? document.body);
 
       await waitFor(() => {
         expect(screen.getByText("Complete Brenner Transcript")).toBeInTheDocument();
@@ -362,7 +364,7 @@ describe("CorpusIndexPage", () => {
       const distButtons = screen.getAllByRole("button", {
         name: /model distillations/i,
       });
-      await user.click(distButtons[0]!);
+      await user.click(distButtons[0] ?? document.body);
 
       // Then search within
       const searchInput = screen.getByPlaceholderText(/filter by title/i);
@@ -423,7 +425,7 @@ describe("CorpusIndexPage", () => {
       const distButtons = screen.getAllByRole("button", {
         name: /model distillations/i,
       });
-      await user.click(distButtons[0]!);
+      await user.click(distButtons[0] ?? document.body);
 
       await waitFor(() => {
         expect(screen.queryByText("Reading Tips")).not.toBeInTheDocument();

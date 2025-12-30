@@ -192,7 +192,7 @@ export function BottomSheetActions({
           }}
           className={cn(
             "w-full flex items-center gap-3 px-4 py-3 rounded-lg text-left",
-            "hover:bg-muted transition-colors",
+            "hover:bg-muted active:bg-muted/70 active:scale-[0.98] transition-all touch-manipulation",
             action.destructive && "text-destructive hover:bg-destructive/10"
           )}
         >

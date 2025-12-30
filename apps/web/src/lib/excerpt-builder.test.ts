@@ -150,12 +150,12 @@ describe("parseExcerpt", () => {
     const sections = parseExcerpt(markdown);
 
     expect(sections).toHaveLength(2);
-    expect(sections![0]).toEqual({
+    expect(sections?.[0]).toEqual({
       anchor: "§42",
       quote: "First quote here.",
       title: "Section Title One",
     });
-    expect(sections![1]).toEqual({
+    expect(sections?.[1]).toEqual({
       anchor: "§45",
       quote: "Second quote here.",
       title: "Section Title Two",
@@ -174,8 +174,8 @@ describe("parseExcerpt", () => {
     const sections = parseExcerpt(markdown);
 
     expect(sections).toHaveLength(2);
-    expect(sections![0].title).toBeUndefined();
-    expect(sections![1].title).toBeUndefined();
+    expect(sections?.[0]?.title).toBeUndefined();
+    expect(sections?.[1]?.title).toBeUndefined();
   });
 
   it("returns null for invalid format", () => {
@@ -239,12 +239,12 @@ describe("round-trip", () => {
     const parsed = parseExcerpt(composed.markdown);
 
     expect(parsed).toHaveLength(2);
-    expect(parsed![0].anchor).toBe(original[0].anchor);
-    expect(parsed![0].quote).toBe(original[0].quote);
-    expect(parsed![0].title).toBe(original[0].title);
-    expect(parsed![1].anchor).toBe(original[1].anchor);
-    expect(parsed![1].quote).toBe(original[1].quote);
-    expect(parsed![1].title).toBe(original[1].title);
+    expect(parsed?.[0]?.anchor).toBe(original[0]?.anchor);
+    expect(parsed?.[0]?.quote).toBe(original[0]?.quote);
+    expect(parsed?.[0]?.title).toBe(original[0]?.title);
+    expect(parsed?.[1]?.anchor).toBe(original[1]?.anchor);
+    expect(parsed?.[1]?.quote).toBe(original[1]?.quote);
+    expect(parsed?.[1]?.title).toBe(original[1]?.title);
   });
 });
 

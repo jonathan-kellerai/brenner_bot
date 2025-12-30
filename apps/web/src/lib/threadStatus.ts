@@ -378,12 +378,12 @@ export function computeThreadStatus(
     const compiledTime = new Date(latestCompiled.created_ts).getTime();
     const contributors = sortedMessages
       .filter(
-        (m) =>
+        (m): m is typeof m & { from: string } =>
           parseSubjectType(m.subject).type === "delta" &&
           new Date(m.created_ts).getTime() < compiledTime &&
-          m.from
+          !!m.from
       )
-      .map((m) => m.from!)
+      .map((m) => m.from)
       .filter((v, i, a) => a.indexOf(v) === i); // unique
 
     latestArtifact = {

@@ -161,9 +161,10 @@ export const DocumentContentClient = memo(function DocumentContentClient({ docId
 
   switch (docType) {
     case "transcript": {
+      if (!parsedTranscript) return <DocumentSkeleton />;
       return (
         <TranscriptViewer
-          data={parsedTranscript!}
+          data={parsedTranscript}
           estimatedReadTime={readTime}
           wordCount={wordCount}
         />
@@ -171,19 +172,23 @@ export const DocumentContentClient = memo(function DocumentContentClient({ docId
     }
 
     case "distillation": {
-      return <DistillationViewer data={parsedDistillation!} docId={docId} />;
+      if (!parsedDistillation) return <DocumentSkeleton />;
+      return <DistillationViewer data={parsedDistillation} docId={docId} />;
     }
 
     case "quote-bank": {
-      return <QuoteBankViewer data={parsedQuoteBank!} />;
+      if (!parsedQuoteBank) return <DocumentSkeleton />;
+      return <QuoteBankViewer data={parsedQuoteBank} />;
     }
 
     case "metaprompt": {
-      return <MetapromptViewer data={parsedMetaprompt!} />;
+      if (!parsedMetaprompt) return <DocumentSkeleton />;
+      return <MetapromptViewer data={parsedMetaprompt} />;
     }
 
     case "raw-response": {
-      return <RawResponseViewer data={parsedRawResponse!} />;
+      if (!parsedRawResponse) return <DocumentSkeleton />;
+      return <RawResponseViewer data={parsedRawResponse} />;
     }
   }
 });

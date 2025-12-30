@@ -581,7 +581,7 @@ function MobileTOC({ sections, isOpen, onToggle }: MobileTOCProps) {
     <div className="lg:hidden mb-6">
       <button
         onClick={onToggle}
-        className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-muted/50 border border-border/50 text-sm font-medium text-foreground"
+        className="w-full flex items-center justify-between gap-2 px-4 py-3 rounded-xl bg-muted/50 border border-border/50 text-sm font-medium text-foreground touch-manipulation active:scale-[0.98] active:bg-muted/70 transition-all"
       >
         <span className="flex items-center gap-2">
           <ListIcon className="size-4" />
@@ -662,7 +662,7 @@ function BackToTop() {
   return (
     <button
       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-      className="fixed bottom-6 right-6 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 flex items-center justify-center hover:bg-primary/90 transition-all hover:scale-105 active:scale-95"
+      className="fixed bottom-6 right-6 z-40 size-12 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/20 flex items-center justify-center hover:bg-primary/90 transition-all hover:scale-105 active:scale-95 touch-manipulation"
       aria-label="Back to top"
     >
       <ChevronUpIcon className="size-5" />

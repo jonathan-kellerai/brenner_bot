@@ -332,7 +332,7 @@ export function CommandPalette() {
                         {item.shortcut.map((key, i) => (
                           <React.Fragment key={i}>
                             <kbd className="command-palette-kbd">{key}</kbd>
-                            {i < item.shortcut!.length - 1 && (
+                            {i < (item.shortcut?.length ?? 0) - 1 && (
                               <span className="text-muted-foreground">+</span>
                             )}
                           </React.Fragment>

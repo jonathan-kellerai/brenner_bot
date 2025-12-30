@@ -115,62 +115,52 @@ export function DistillationHero({
       <div className={`absolute -top-16 -right-16 sm:-top-24 sm:-right-24 size-48 sm:size-80 rounded-full ${theme.accent} opacity-15 blur-[80px]`} />
       <div className={`absolute -bottom-12 -left-12 sm:-bottom-20 sm:-left-20 size-36 sm:size-60 rounded-full ${theme.accent} opacity-10 blur-[60px]`} />
 
-      <div className="relative px-5 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16">
+      <div className="relative px-5 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {/* Top row: Model identity + Date */}
-        <div className="flex flex-wrap items-start justify-between gap-4 sm:gap-6 mb-8 sm:mb-10">
+        <div className="flex flex-wrap items-start justify-between gap-3 sm:gap-4 mb-5 sm:mb-6">
           {/* Model identity */}
-          <div className="flex items-center gap-3 sm:gap-4">
-            {/* Model icon with glow */}
-            <div className="relative">
-              <div className={`absolute inset-0 ${theme.accent} rounded-xl sm:rounded-2xl blur-xl opacity-40`} />
-              <div className={`relative size-12 sm:size-16 rounded-xl sm:rounded-2xl ${theme.accent} flex items-center justify-center ${theme.textOnAccent} text-xl sm:text-3xl font-bold shadow-2xl ${theme.shadowAccent}`}>
-                {meta.icon}
-              </div>
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            {/* Model icon */}
+            <div className={`size-10 sm:size-12 rounded-lg sm:rounded-xl ${theme.accent} flex items-center justify-center ${theme.textOnAccent} text-lg sm:text-xl font-bold shadow-lg ${theme.shadowAccent}`}>
+              {meta.icon}
             </div>
 
-            <div className="space-y-0.5">
-              {/* Model type label */}
-              <div className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold uppercase tracking-wider ${theme.bgSubtle} ${theme.borderAccent} border`}>
-                <span className={`size-1.5 rounded-full ${theme.accent} animate-pulse`} />
-                Model Distillation
-              </div>
-
-              {/* Model name - high contrast */}
-              <h2 className="text-lg sm:text-2xl font-bold text-foreground tracking-tight">
+            <div className="space-y-0">
+              {/* Model name */}
+              <h2 className="text-base sm:text-lg font-semibold text-foreground tracking-tight">
                 {meta.name}
               </h2>
 
-              {/* Tagline - visible in both modes */}
-              <p className="text-sm sm:text-base font-medium text-foreground/70">
+              {/* Tagline */}
+              <p className="text-xs sm:text-sm text-foreground/60">
                 {meta.tagline}
               </p>
             </div>
           </div>
 
           {/* Date badge */}
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-foreground/5 border border-border/50">
-            <CalendarIcon className="size-3.5 text-muted-foreground" />
-            <span className="text-xs sm:text-sm text-muted-foreground font-medium">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-md bg-foreground/[0.03] border border-border/40">
+            <CalendarIcon className="size-3 text-muted-foreground/60" />
+            <span className="text-[10px] sm:text-xs text-muted-foreground font-medium">
               {meta.date}
             </span>
           </div>
         </div>
 
         {/* Document title */}
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl font-bold tracking-tight text-foreground mb-5 sm:mb-6 max-w-4xl leading-[1.15]">
+        <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-foreground mb-4 sm:mb-5 max-w-3xl leading-[1.2]">
           {title}
         </h1>
 
         {/* Approach description */}
-        <p className="text-base sm:text-lg lg:text-xl leading-relaxed text-foreground/75 max-w-3xl mb-8 sm:mb-10">
+        <p className="text-sm sm:text-base lg:text-[17px] leading-relaxed text-foreground/70 max-w-2xl mb-6 sm:mb-8">
           {meta.approach}
         </p>
 
-        {/* Key Strengths - Premium cards */}
-        <div className="mb-8 sm:mb-10">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircleIcon className={`size-4 ${theme.accent.replace('bg-', 'text-')}`} />
-            <span className="text-xs sm:text-sm font-semibold text-foreground/80 uppercase tracking-wider">
+        {/* Key Strengths */}
+        <div className="mb-6 sm:mb-8">
+          <div className="flex items-center gap-1.5 mb-3">
+            <span className="text-[10px] sm:text-xs font-semibold text-foreground/50 uppercase tracking-wider">
               Key Strengths
             </span>
           </div>
@@ -192,11 +182,11 @@ export function DistillationHero({
           </div>
         </div>
 
-        {/* Stats row - refined design */}
-        <div className="flex flex-wrap items-center gap-3 sm:gap-4 pt-6 border-t border-border/40">
-          <StatChip icon={<ClockIcon />} value={`${readTime} min`} label="read time" />
+        {/* Stats row */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 pt-4 sm:pt-5 border-t border-border/30">
+          <StatChip icon={<ClockIcon />} value={`${readTime} min`} label="read" />
           <StatChip icon={<DocumentIcon />} value={formatNumber(wordCount)} label="words" />
-          <StatChip icon={<SparklesIcon />} value="Frontier" label="model class" accent />
+          <StatChip icon={<SparklesIcon />} value="Frontier" label="model" accent />
         </div>
       </div>
     </div>
@@ -217,32 +207,21 @@ function StrengthPill({ strength, theme, index }: StrengthPillProps) {
   return (
     <div
       className={`
-        group flex-shrink-0 snap-start
-        flex items-start gap-2.5 sm:gap-3
-        px-4 py-3 sm:px-5 sm:py-3.5
-        rounded-xl sm:rounded-2xl
-        bg-card/80 backdrop-blur-sm
-        border border-border/60
-        shadow-sm hover:shadow-md
-        hover:border-border
-        transition-all duration-200
-        max-w-[280px] sm:max-w-none
+        flex-shrink-0 snap-start
+        flex items-center gap-2
+        px-3 py-2 sm:px-3.5 sm:py-2
+        rounded-lg
+        ${theme.bgSubtle} border ${theme.borderAccent}
+        transition-colors duration-150
+        max-w-[260px] sm:max-w-none
       `}
-      style={{ animationDelay: `${index * 50}ms` }}
+      style={{ animationDelay: `${index * 30}ms` }}
     >
-      {/* Checkmark with accent background */}
-      <div className={`
-        flex-shrink-0 size-5 sm:size-6 rounded-lg
-        ${theme.accent} ${theme.textOnAccent}
-        flex items-center justify-center
-        shadow-sm ${theme.shadowAccent}
-        group-hover:scale-110 transition-transform
-      `}>
-        <CheckIcon className="size-3 sm:size-3.5" />
-      </div>
+      {/* Minimal checkmark */}
+      <CheckIcon className={`size-3.5 flex-shrink-0 ${theme.accent.replace('bg-', 'text-')}`} />
 
-      {/* Strength text */}
-      <span className="text-sm sm:text-[15px] text-foreground/90 leading-snug font-medium">
+      {/* Strength text - tighter */}
+      <span className="text-xs sm:text-[13px] text-foreground/80 leading-snug">
         {strength}
       </span>
     </div>
@@ -263,24 +242,24 @@ interface StatChipProps {
 function StatChip({ icon, value, label, accent }: StatChipProps) {
   return (
     <div className={`
-      inline-flex items-center gap-2 sm:gap-2.5
-      px-3 sm:px-4 py-2 sm:py-2.5
-      rounded-xl
+      inline-flex items-center gap-1.5 sm:gap-2
+      px-2.5 sm:px-3 py-1.5 sm:py-2
+      rounded-md
       ${accent
-        ? "bg-primary/10 border-primary/20"
-        : "bg-foreground/5 border-border/50"
+        ? "bg-primary/8 border-primary/15"
+        : "bg-foreground/[0.03] border-border/40"
       }
       border
       transition-colors
     `}>
-      <span className={accent ? "text-primary" : "text-muted-foreground"}>
+      <span className={`size-3.5 ${accent ? "text-primary/70" : "text-muted-foreground/60"}`}>
         {icon}
       </span>
-      <div className="flex items-baseline gap-1.5">
-        <span className="font-semibold text-foreground text-sm sm:text-base">
+      <div className="flex items-baseline gap-1">
+        <span className="font-medium text-foreground/90 text-xs sm:text-sm">
           {value}
         </span>
-        <span className="text-muted-foreground text-xs sm:text-sm">
+        <span className="text-muted-foreground/70 text-[10px] sm:text-xs">
           {label}
         </span>
       </div>
@@ -428,7 +407,7 @@ function CheckIcon({ className }: { className?: string }) {
   );
 }
 
-function CheckCircleIcon({ className }: { className?: string }) {
+function _CheckCircleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -497,20 +476,20 @@ function PartHeader({ part, docId }: PartHeaderProps) {
   const theme = getModelTheme(docId);
 
   return (
-    <div className="relative my-12 sm:my-16 py-8 sm:py-12">
+    <div className="relative my-8 sm:my-10 py-6 sm:py-8">
       {/* Decorative line */}
-      <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+      <div className="absolute inset-x-0 top-1/2 h-px bg-gradient-to-r from-transparent via-border/60 to-transparent" />
 
       {/* Part badge */}
-      <div className="relative flex flex-col items-center gap-3 sm:gap-4">
+      <div className="relative flex flex-col items-center gap-2 sm:gap-3">
         <div className={`
-          relative inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-6 py-2.5 sm:py-3 rounded-xl sm:rounded-2xl
-          ${theme.accent} ${theme.textOnAccent} shadow-xl ${theme.shadowAccent}
+          relative inline-flex items-center gap-2 px-4 py-2 rounded-lg
+          ${theme.bgSubtle} border ${theme.borderAccent}
         `}>
-          <span className="text-xs sm:text-sm font-medium opacity-80">Part</span>
-          <span className="text-xl sm:text-2xl font-bold">{toRoman(part.number)}</span>
+          <span className="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-foreground/60">Part</span>
+          <span className="text-base sm:text-lg font-bold text-foreground">{toRoman(part.number)}</span>
         </div>
-        <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center text-foreground tracking-tight px-4">
+        <h2 className="text-lg sm:text-xl font-semibold text-center text-foreground tracking-tight px-4">
           {part.title}
         </h2>
       </div>
@@ -545,11 +524,12 @@ interface SectionProps {
 function Section({ section, docId, sectionId }: SectionProps) {
   const [copied, setCopied] = useState(false);
   const HeadingTag = `h${section.level + 1}` as "h2" | "h3" | "h4";
+  // Refined typography: tighter, more elegant heading hierarchy
   const headingClasses = {
-    1: "text-2xl lg:text-3xl font-bold mb-6 mt-12 first:mt-0",
-    2: "text-xl lg:text-2xl font-semibold mb-4 mt-10",
-    3: "text-lg lg:text-xl font-semibold mb-3 mt-8",
-    4: "text-base lg:text-lg font-semibold mb-2 mt-6",
+    1: "text-lg sm:text-xl font-semibold mb-4 mt-8 first:mt-0 tracking-tight",
+    2: "text-base sm:text-lg font-semibold mb-3 mt-6 tracking-tight",
+    3: "text-base font-medium mb-2 mt-5 tracking-tight",
+    4: "text-sm font-medium mb-2 mt-4 uppercase tracking-wide text-foreground/80",
   };
 
   const handleCopyLink = () => {
@@ -578,7 +558,7 @@ function Section({ section, docId, sectionId }: SectionProps) {
         </button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-3">
         {section.content.map((content, i) => (
           <ContentRenderer key={i} content={content} docId={docId} />
         ))}
@@ -680,19 +660,15 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
   switch (content.type) {
     case "paragraph":
       return (
-        <p className="text-base lg:text-lg leading-[1.75] text-foreground/85">
+        <p className="text-[15px] sm:text-base leading-[1.7] text-foreground/90">
           {renderFormattedText(content.text)}
         </p>
       );
 
     case "quote":
       return (
-        <figure className="my-6 group">
-          <blockquote className="relative pl-5 sm:pl-6 pr-4 py-4 rounded-xl border-l-4 border-primary bg-primary/5">
-            {/* Quote mark */}
-            <div className="absolute -left-2 -top-2 text-3xl sm:text-4xl text-primary/30 font-serif select-none">
-              &ldquo;
-            </div>
+        <figure className="my-4 group">
+          <blockquote className="relative pl-4 sm:pl-5 pr-3 py-3 rounded-lg border-l-3 border-primary/60 bg-primary/[0.04]">
             {/* Copy button - appears on hover */}
             <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <CopyButton
@@ -703,7 +679,7 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
                 showPreview={true}
               />
             </div>
-            <p className="text-base lg:text-lg leading-[1.75] text-foreground/90 italic font-serif pr-8">
+            <p className="text-[15px] sm:text-base leading-[1.65] text-foreground/85 italic pr-8">
               {renderFormattedText(content.text)}
             </p>
           </blockquote>
@@ -722,29 +698,28 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
     case "list":
       if (content.ordered) {
         return (
-          <ol className="my-5 space-y-3 ml-1 sm:ml-2">
+          <ol className="my-3 space-y-2 ml-1">
             {content.items.map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-base lg:text-lg text-foreground/85">
+              <li key={i} className="flex items-start gap-2.5 text-[15px] sm:text-base text-foreground/90">
                 <span className={`
-                  flex-shrink-0 size-6 rounded-lg
-                  ${theme.accent} ${theme.textOnAccent}
-                  flex items-center justify-center text-xs font-bold
-                  shadow-sm ${theme.shadowAccent}
+                  flex-shrink-0 size-5 rounded-md
+                  ${theme.bgSubtle} text-foreground/70
+                  flex items-center justify-center text-xs font-medium
                 `}>
                   {i + 1}
                 </span>
-                <span className="leading-[1.7] pt-0.5">{renderFormattedText(item)}</span>
+                <span className="leading-[1.65] pt-px">{renderFormattedText(item)}</span>
               </li>
             ))}
           </ol>
         );
       }
       return (
-        <ul className="my-5 space-y-2.5 ml-1 sm:ml-2">
+        <ul className="my-3 space-y-1.5 ml-1">
           {content.items.map((item, i) => (
-            <li key={i} className="flex items-start gap-3 text-base lg:text-lg text-foreground/85">
-              <span className={`flex-shrink-0 size-1.5 rounded-full ${theme.accent} mt-2.5`} />
-              <span className="leading-[1.7]">{renderFormattedText(item)}</span>
+            <li key={i} className="flex items-start gap-2.5 text-[15px] sm:text-base text-foreground/90">
+              <span className={`flex-shrink-0 size-1 rounded-full ${theme.accent} mt-[0.6em]`} />
+              <span className="leading-[1.65]">{renderFormattedText(item)}</span>
             </li>
           ))}
         </ul>

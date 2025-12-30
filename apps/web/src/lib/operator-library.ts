@@ -143,7 +143,7 @@ export function parseOperatorLibrary(markdown: string): OperatorDefinition[] {
     const headerLine = match[1]?.trim();
     if (!headerLine) continue;
 
-    const startIndex = match.index! + match[0].length;
+    const startIndex = (match.index ?? 0) + match[0].length;
     const endIndex = headerMatches[i + 1]?.index ?? coreSection.length;
     const block = coreSection.slice(startIndex, endIndex);
 

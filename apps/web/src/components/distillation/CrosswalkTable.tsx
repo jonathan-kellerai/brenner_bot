@@ -265,7 +265,7 @@ function MobileCard({ row }: MobileCardProps) {
             <Link
               key={model}
               href={href}
-              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 transition-colors"
+              className="flex items-center gap-3 px-4 py-3 hover:bg-muted/30 active:bg-muted/50 active:scale-[0.99] transition-all touch-manipulation"
             >
               <div
                 className={cn(
@@ -361,7 +361,7 @@ export function CrosswalkTable({ className }: CrosswalkTableProps) {
     () => [
       columnHelper.accessor("concept", {
         header: ({ column }) => (
-          <div className="flex items-center gap-1 cursor-pointer select-none">
+          <div className="flex items-center gap-1 cursor-pointer select-none touch-manipulation active:scale-[0.98] transition-transform">
             <span>Concept</span>
             <SortIndicator direction={column.getIsSorted()} />
           </div>

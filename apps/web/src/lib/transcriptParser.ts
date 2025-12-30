@@ -178,9 +178,26 @@ function finalizeSection(
   lineEnd: number,
   charEnd: number
 ): Section {
-  const sectionNumber = partial.sectionNumber!;
+  const sectionNumber = partial.sectionNumber;
+  const title = partial.title;
+  const sourceId = partial.sourceId;
+  const sourceTitle = partial.sourceTitle;
+  const lineStart = partial.lineStart;
+  const charStart = partial.charStart;
+
+  if (
+    sectionNumber === undefined ||
+    title === undefined ||
+    sourceId === undefined ||
+    sourceTitle === undefined ||
+    lineStart === undefined ||
+    charStart === undefined
+  ) {
+    throw new Error("TranscriptParser: missing required section metadata while finalizing section");
+  }
+
   const anchor = `§${sectionNumber}`;
-  const id = `${partial.sourceId}:${anchor}`;
+  const id = `${sourceId}:${anchor}`;
   const plainText = stripMarkdown(body);
   const wordCount = countWords(plainText);
 
@@ -188,14 +205,14 @@ function finalizeSection(
     id,
     sectionNumber,
     anchor,
-    title: partial.title!,
+    title,
     body,
     plainText,
-    sourceId: partial.sourceId!,
-    sourceTitle: partial.sourceTitle!,
-    lineStart: partial.lineStart!,
+    sourceId,
+    sourceTitle,
+    lineStart,
     lineEnd,
-    charStart: partial.charStart!,
+    charStart,
     charEnd,
     wordCount,
   };

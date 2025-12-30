@@ -485,12 +485,13 @@ function SearchResultItem({
       {/* Actions */}
       {canAddToExcerpt && (
         <div className="flex-shrink-0 self-center">
-          <span
+          <button
+            type="button"
             className={cn(
               "inline-flex items-center justify-center size-8 rounded-lg",
-              "text-muted-foreground hover:text-primary hover:bg-primary/10 transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-              "cursor-pointer"
+              "text-muted-foreground hover:text-primary hover:bg-primary/10 active:bg-primary/20 active:scale-95",
+              "transition-all touch-manipulation",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             )}
             onClick={(e) => {
               e.preventDefault();
@@ -501,7 +502,7 @@ function SearchResultItem({
             title="Add to excerpt basket"
           >
             <Plus className="size-4" />
-          </span>
+          </button>
         </div>
       )}
 

@@ -244,8 +244,16 @@ export function generateInstallPlan(
     };
 
     if (spec.install_strategy === "release_binary") {
-      const binaryUrl = substituteUrl(spec.release_url_template!, spec.version, os, arch, false);
-      const checksumUrl = substituteUrl(spec.checksum_url_template!, spec.version, os, arch, true);
+      const releaseUrlTemplate = spec.release_url_template;
+      const checksumUrlTemplate = spec.checksum_url_template;
+      if (!releaseUrlTemplate || !checksumUrlTemplate) {
+        throw new Error(
+          `Toolchain manifest: ${toolName} uses release_binary but missing release_url_template/checksum_url_template`
+        );
+      }
+
+      const binaryUrl = substituteUrl(releaseUrlTemplate, spec.version, os, arch, false);
+      const checksumUrl = substituteUrl(checksumUrlTemplate, spec.version, os, arch, true);
       targets.push({
         ...base,
         strategy: "release_binary",
@@ -254,10 +262,14 @@ export function generateInstallPlan(
         artifactName: getArtifactName(toolName, os, arch),
       });
     } else {
+      const installerUrl = spec.install_url;
+      if (!installerUrl) {
+        throw new Error(`Toolchain manifest: ${toolName} uses upstream_installer but missing install_url`);
+      }
       targets.push({
         ...base,
         strategy: "upstream_installer",
-        installerUrl: spec.install_url!,
+        installerUrl,
         installerArgs: spec.install_args ?? "",
       });
     }
