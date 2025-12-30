@@ -393,3 +393,23 @@ cm playbook add "Rule: Thread ID is the global join key; keep it stable across k
 cm playbook add "Rule: Any non-§-grounded claim in artifacts must be labeled [inference]." --category "protocol-kernel"
 cm playbook add "Rule: Prefer discriminative tests with potency controls (chastity vs impotence) and extreme likelihood ratios." --category "evidence-per-week"
 ```
+
+### Recording outcomes (feedback) with `cm mark`
+
+At the end of a session (or after a pull request), mark whether a memory rule was helpful or harmful so `cm context` improves over time.
+
+Guidance:
+- Mark **helpful** when it saved time, prevented a bug, or improved decision quality.
+- Mark **harmful** when it contradicted requirements, pushed the wrong pattern, or caused wasted time.
+- Always include a short reason and (when available) the associated session path.
+
+Concrete example:
+
+```bash
+# Mark a rule as helpful (use the real bullet ID from `cm context --json`)
+cm mark b-8f3a2c --helpful --reason other --session /path/to/session.jsonl --json
+
+# If you mis-marked something, inspect / undo:
+cm why b-8f3a2c
+cm undo b-8f3a2c
+```
