@@ -3103,6 +3103,249 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["genetic-code", "codon", "diamond-code", "commaless-code"],
     category: "biology",
   },
+
+  // ============================================================================
+  // Seventh Batch: Additional Terms from Transcript (December 2025)
+  // ============================================================================
+
+  // --- Genetics Methods ---
+
+  "genetic-dissection": {
+    term: "Genetic Dissection",
+    short: "Breaking down a phenotype by finding all the genes that can break it.",
+    long:
+      "A concept championed by Seymour Benzer: take a phenotype, find all the ways to break it with mutations, and thereby identify all the genes specifying that function. Each mutant class represents a gene required for the phenotype.",
+    why:
+      "Brenner explained that Benzer 'had this view of genetic dissection which is take the phenotype, find out how many ways there are of breaking it, and now you have all the genes specifying this.' Transcript anchor: §131.",
+    analogy:
+      "Reverse-engineering a machine by breaking one part at a time to see what stops working.",
+    related: ["conditional-lethal", "behavioral-screen", "forward-genetics"],
+    category: "method",
+  },
+  "temperature-sensitive": {
+    term: "Temperature-Sensitive Mutant",
+    short: "A mutant that functions at one temperature but fails at another.",
+    long:
+      "Temperature-sensitive (ts) mutants typically encode proteins that fold correctly at permissive temperatures but misfold at restrictive temperatures. This allows essential genes to be studied by growing organisms at permissive temperature and shifting to restrictive temperature to observe phenotype.",
+    why:
+      "Brenner started 'a rather large project together with François to look for temperature-sensitive mutants of E. coli' and later sought nematodes from the equator hoping to find organisms with higher temperature tolerance. Transcript anchor: §122.",
+    related: ["conditional-lethal", "genetic-dissection", "forward-genetics"],
+    category: "method",
+  },
+  "analysis-of-epistasis": {
+    term: "Analysis of Epistasis",
+    short: "Ordering genes in a pathway by combining mutations.",
+    long:
+      "When you put two mutations together and the double mutant looks like one single mutant, the other gene must act 'downstream' in the pathway. This allows you to order genes into genetic pathways without knowing their molecular identities.",
+    why:
+      "Brenner described how 'we could analyse these mutants by putting them in combinations, the so-called analysis of epistasis. Namely if you put two mutations together and the phenotype was like A, then it meant that B had no extra effect and therefore acted after A.' Transcript anchor: §172.",
+    analogy:
+      "If breaking Step 3 of a recipe produces the same result whether Step 5 is broken or not, Step 5 must come after Step 3.",
+    related: ["genetic-pathway", "genetic-dissection", "suppressor-mutation"],
+    category: "method",
+  },
+  "genetic-pathway": {
+    term: "Genetic Pathway",
+    short: "An ordered sequence of genes required for a biological process.",
+    long:
+      "Through epistasis analysis, genes can be ordered into pathways showing the sequence of events in a biological process. Pathway analysis became central to developmental genetics and cell biology.",
+    why:
+      "Brenner described how epistasis analysis allowed them to 'analyse what came to be called genetic pathways.' This organized genes into functional relationships. Transcript anchor: §172.",
+    related: ["analysis-of-epistasis", "operon", "genetic-dissection"],
+    category: "biology",
+  },
+
+  // --- Nonsense Mutations ---
+
+  "amber-mutant": {
+    term: "Amber Mutant",
+    short: "A mutation creating a UAG stop codon, named after Bernstein (German for 'amber').",
+    long:
+      "Amber mutants create premature UAG stop codons, terminating translation early. Named because the first student to find one was Hilliard Bernstein, and 'Bernstein' is German for 'amber.' These became crucial tools for studying the genetic code.",
+    why:
+      "Brenner explained: 'the first student to find the mutant was a man called Hilliard Bernstein. All right, now you couldn't call them Bernstein mutants, but amber, Bernstein is the German for amber.' Transcript anchor: §133.",
+    related: ["ochre", "nonsense-suppressor", "chain-termination", "genetic-code"],
+    category: "biology",
+  },
+  ochre: {
+    term: "Ochre Mutant",
+    short: "A mutation creating a UAA stop codon.",
+    long:
+      "Ochre mutants create premature UAA stop codons. Named to continue the color theme from amber mutants. Together with amber and opal (UGA), these three nonsense codons were crucial for understanding the genetic code.",
+    why:
+      "Brenner 'was able to prove, knowing that ambers and ochres and UGAs were connected, I was able to say that the nonsense mutants had a U, that one of them had a U and two As [UAA].' Transcript anchor: §135.",
+    related: ["amber-mutant", "nonsense-suppressor", "chain-termination"],
+    category: "biology",
+  },
+  "nonsense-suppressor": {
+    term: "Nonsense Suppressor",
+    short: "A mutation that allows read-through of stop codons.",
+    long:
+      "Nonsense suppressors are typically mutant tRNAs that recognize stop codons and insert an amino acid instead of terminating translation. They allow continued protein synthesis past what would otherwise be a premature stop.",
+    why:
+      "Brenner reasoned that 'if this is the case, then when you suppress it, then we think you just carry on the chain.' These suppressors became essential tools for genetic analysis. Transcript anchor: §134.",
+    related: ["amber-mutant", "ochre", "chain-termination", "trna"],
+    category: "biology",
+  },
+
+  // --- Brenner Philosophy ---
+
+  "being-a-rebel": {
+    term: "Being a Rebel",
+    short: "Brenner's preference for working against conventional wisdom.",
+    long:
+      "Brenner consciously positioned himself against mainstream scientific fashion, believing that the 'standard parts of any activity are already petrified at the core.' Rebellion wasn't contrarianism but a strategy for finding unexplored territory.",
+    why:
+      "Brenner stated: 'Being a rebel has always appealed to me, largely because I'm convinced that the standard parts of any activity are already petrified at the core.' Transcript anchor: §233.",
+    related: ["out-of-phase", "power-of-ignorance", "spreading-ignorance"],
+    category: "brenner",
+  },
+  "out-of-phase": {
+    term: "Out of Phase",
+    short: "Brenner's strategy of working either ahead of or behind scientific fashion.",
+    long:
+      "Brenner advocated working 'out of phase' with mainstream science: 'either half a wavelength ahead or half a wavelength behind. It doesn't matter. But if you're out of phase with the fashion you can do new things.'",
+    why:
+      "Brenner said 'the best thing in science is to work out of phase' to avoid the 'scientific/industrial complex' where topics get 'industrialised, exploited to the hilt, and remarkably, they vanish.' Transcript anchor: §143.",
+    analogy:
+      "Arriving at a party either before the crowd arrives (set the agenda) or after it leaves (pick up what was missed).",
+    related: ["being-a-rebel", "project-research", "power-of-ignorance"],
+    category: "brenner",
+  },
+  "project-research": {
+    term: "Project Research",
+    short: "Industrial-style science where a 'general' directs troops.",
+    long:
+      "Brenner used this term dismissively for research where 'a general could plan a campaign and then just get the cavalry to do this and the artillery to do that.' He felt this approach missed what science should be about.",
+    why:
+      "Brenner said 'that was a kind of project research' and 'that didn't seem to me to be what one wants to do in science.' He preferred exploratory, curiosity-driven work. Transcript anchor: §178.",
+    related: ["out-of-phase", "hal-biology", "conversational-science"],
+    category: "brenner",
+  },
+  "hal-biology": {
+    term: "HAL Biology",
+    short: "Have A Look biology: Brenner's term for observation-first science.",
+    long:
+      "H-A-L stood for 'Have A Look.' Brenner emphasized direct observation over blind experimentation: 'what's the use of doing a lot of biochemistry when you can just see what happened?' This approach informed the entire C. elegans program.",
+    why:
+      "Brenner 'had invented something called HAL biology. HAL, that's H-A-L, it stood for Have A Look biology.' This observational approach was central to nematode development studies. Transcript anchor: §198.",
+    analogy:
+      "A mechanic who opens the hood and looks before running diagnostic tests.",
+    related: ["cell-lineage", "serial-sectioning", "electron-microscopy"],
+    category: "brenner",
+  },
+  "computable-organism": {
+    term: "Computable Organism",
+    short: "Brenner's claim that organisms can be computed from their DNA.",
+    long:
+      "Brenner's 'most outrageous statement': 'one day people will be able to compute a mouse from the DNA sequences alone.' The test of understanding is the ability to compute the outcome from the inputs. DNA sequences plus initial conditions should suffice.",
+    why:
+      "Brenner used this as his 'criterion' for understanding biology: 'the total or final explanation of everything is to be able to compute animals from DNA sequences alone. If you can get that, then we have an explanation of everything.' Transcript anchor: §206.",
+    analogy:
+      "Understanding a program means being able to predict its output from its source code and inputs.",
+    related: ["initial-conditions", "general-appendage-equation", "biological-plausibility"],
+    category: "brenner",
+  },
+  "initial-conditions": {
+    term: "Initial Conditions",
+    short: "The starting state required alongside DNA to compute an organism.",
+    long:
+      "Brenner clarified that computing an organism requires 'DNA sequences plus some initial conditions which good physicists would always include.' The egg's cytoplasm, maternal RNAs, and spatial organization are essential starting data.",
+    why:
+      "Brenner added this caveat: 'I should have added into that description: that is, DNA sequences plus some initial conditions which good physicists would always include. And of course it's in the definition of the initial conditions, that's the important thing.' Transcript anchor: §124.",
+    related: ["computable-organism", "cell-lineage", "program-builds-machine"],
+    category: "brenner",
+  },
+  "general-appendage-equation": {
+    term: "General Appendage Equation",
+    short: "Brenner's hypothetical equations governing limb development.",
+    long:
+      "Brenner imagined that a physicist would want equations where variables determine appendage type: 'You could get wings with feathers, you could get feet with scales, and you could get legs with hair.' The equations would have 'eigenvalues and forbidden areas' explaining why we don't have 'wings with hair' or 'feet with feathers.'",
+    why:
+      "Brenner described how 'if you were a physicist, what you would want to do is to have a set of equations. These equations would be called almost certainly the general appendage equation.' Transcript anchor: §206.",
+    related: ["computable-organism", "biological-plausibility", "turing-machine"],
+    category: "brenner",
+  },
+  "biological-plausibility": {
+    term: "Biological Plausibility",
+    short: "The requirement that theories must be biochemically realistic.",
+    long:
+      "Brenner insisted that theories must be biologically plausible, not just logically valid. He criticized theories that assumed 'prime numbers existed in nature' or required more specificity than DNA could encode. 'Many theories are correct in a logical sense but they're untrue because they don't refer to the natural thing we're all interested in.'",
+    why:
+      "Brenner stated that 'it is so important in trying to make theories, is that they should always contain some biological plausibility estimate.' Transcript anchor: §165.",
+    related: ["vacuous-theory", "computable-organism", "chemoaffinity"],
+    category: "brenner",
+  },
+
+  // --- Techniques and Methods ---
+
+  "serial-sectioning": {
+    term: "Serial Sectioning",
+    short: "Cutting tissue into sequential thin slices for 3D reconstruction.",
+    long:
+      "Serial sectioning involves cutting tissue into hundreds or thousands of sequential thin slices, imaging each, then computationally reconstructing the 3D structure. This was how Brenner's team mapped the entire C. elegans nervous system.",
+    why:
+      "Brenner 'started to master the techniques of serial sectioning' and earlier had done 'three-dimensional reconstruction of embryos from serial sections' in medical school. Transcript anchor: §153.",
+    related: ["wiring-diagram", "electron-microscopy", "hal-biology"],
+    category: "method",
+  },
+  "negative-staining": {
+    term: "Negative Staining",
+    short: "A technique that made electron microscopy accessible to non-specialists.",
+    long:
+      "Negative staining uses a heavy metal stain that surrounds but doesn't penetrate the specimen, creating contrast by darkening the background. It requires minimal sample preparation compared to traditional EM methods.",
+    why:
+      "Brenner noted the 'invention of negative staining' was 'very remarkable technology because what it did was it took electron microscopy out of the hands of the elite and gave it to the people.' Transcript anchor: §86.",
+    analogy:
+      "Outlining a shape with a marker rather than coloring it in: the outline shows the shape without penetrating it.",
+    related: ["electron-microscopy", "serial-sectioning", "biochemistry-without-license"],
+    category: "method",
+  },
+  "computers-as-servants": {
+    term: "Computers as Servants",
+    short: "Brenner's philosophy that computers should serve scientists, not dominate them.",
+    long:
+      "In an era when computing meant batch processing at centralized facilities, Brenner insisted that 'computers should be servants and not masters.' He advocated for dedicated machines that scientists controlled directly.",
+    why:
+      "Brenner recalled that 'we tried to tell them that we don't want to do computing this way, computers should be servants and not masters.' He also coined 'ad hoc' for his style, meaning 'hands-on computing.' Transcript anchor: §158.",
+    related: ["hal-biology", "wiring-diagram"],
+    category: "brenner",
+  },
+
+  // --- Development and Cell Biology ---
+
+  "cell-lineage": {
+    term: "Cell Lineage",
+    short: "The complete history of cell divisions from egg to adult.",
+    long:
+      "Cell lineage traces every cell division from the fertilized egg, showing exactly which cells give rise to which others. In C. elegans, the lineage is invariant: the same cell divisions always produce the same cells in every worm.",
+    why:
+      "Brenner felt that 'lineage would be very important. Perhaps there was some mechanism here in which when cells divided they actually computed their future fate.' Lineage became central to C. elegans biology. Transcript anchor: §201.",
+    analogy:
+      "A family tree showing who begat whom, except for every cell in the body.",
+    related: ["apoptosis", "digital-vs-analogue", "invariant-cell-number"],
+    category: "biology",
+  },
+  "digital-vs-analogue": {
+    term: "Digital vs Analogue Development",
+    short: "Cell fate determined by lineage (digital) versus gradients (analogue).",
+    long:
+      "Brenner framed developmental mechanisms as either digital (cell fate determined by division history/lineage) or analogue (fate determined by position in morphogen gradients). C. elegans development proved largely digital.",
+    why:
+      "Brenner noted that 'gradients would be the analogue way of doing it, and lineage would be the digital way of doing it.' Both mechanisms exist but in different proportions across organisms. Transcript anchor: §201.",
+    related: ["cell-lineage", "density-gradient", "chemoaffinity"],
+    category: "biology",
+  },
+  "descriptive-level": {
+    term: "Descriptive Level",
+    short: "Pure description of phenotypes without mechanistic understanding.",
+    long:
+      "The descriptive level means cataloging what happens without understanding how or why. Early genetics could find mutants and describe their effects but couldn't 'get any deeper.' Moving beyond description requires connecting phenotypes to molecular mechanisms.",
+    why:
+      "Brenner noted that 'it was extremely difficult to get any deeper than just finding a mutant and finding out what it does. That is the purely descriptive level.' The fusion of genetics and biochemistry broke this barrier. Transcript anchor: §62.",
+    related: ["computable-organism", "brenner-method", "hal-biology"],
+    category: "method",
+  },
 };
 
 // ============================================================================
