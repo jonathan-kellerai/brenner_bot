@@ -79,7 +79,6 @@ interface SectionReferenceProps {
 export function SectionReference({ sectionNumber, title, preview, className }: SectionReferenceProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const [tooltipLayout, setTooltipLayout] = useState<{
     position: "top" | "bottom";
     style: CSSProperties;
@@ -91,10 +90,7 @@ export function SectionReference({ sectionNumber, title, preview, className }: S
   const transcriptUrl = `/corpus/transcript#section-${sectionNumber}`;
   const displayText = `§${sectionNumber}`;
 
-  // Track mount state for portal rendering
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
+  const portalContainer = typeof document === "undefined" ? null : document.body;
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -241,7 +237,7 @@ export function SectionReference({ sectionNumber, title, preview, className }: S
       </button>
 
       {/* Desktop Tooltip */}
-      {isMounted && createPortal(
+      {portalContainer && createPortal(
         <AnimatePresence>
           {isOpen && !isMobile && (
             <motion.div
@@ -269,11 +265,11 @@ export function SectionReference({ sectionNumber, title, preview, className }: S
             </motion.div>
           )}
         </AnimatePresence>,
-        document.body
+        portalContainer
       )}
 
       {/* Mobile Bottom Sheet */}
-      {isMounted && createPortal(
+      {portalContainer && createPortal(
         <AnimatePresence>
           {isOpen && isMobile && (
             <motion.div
@@ -335,7 +331,7 @@ export function SectionReference({ sectionNumber, title, preview, className }: S
             </motion.div>
           )}
         </AnimatePresence>,
-        document.body
+        portalContainer
       )}
     </>
   );
@@ -462,6 +458,7 @@ export const SECTION_REF_REGEX = /§(\d+(?:-\d+)?)/g;
  * Returns array of section numbers (e.g., [42, 106])
  */
 export function parseSectionReferences(text: string): number[] {
+  SECTION_REF_REGEX.lastIndex = 0;
   const matches = text.matchAll(SECTION_REF_REGEX);
   const numbers: number[] = [];
 
@@ -478,6 +475,7 @@ export function parseSectionReferences(text: string): number[] {
     }
   }
 
+  SECTION_REF_REGEX.lastIndex = 0;
   return numbers;
 }
 
@@ -485,7 +483,10 @@ export function parseSectionReferences(text: string): number[] {
  * Check if a string contains section references
  */
 export function hasSectionReferences(text: string): boolean {
-  return SECTION_REF_REGEX.test(text);
+  SECTION_REF_REGEX.lastIndex = 0;
+  const hasRef = SECTION_REF_REGEX.test(text);
+  SECTION_REF_REGEX.lastIndex = 0;
+  return hasRef;
 }
 
 // ============================================================================

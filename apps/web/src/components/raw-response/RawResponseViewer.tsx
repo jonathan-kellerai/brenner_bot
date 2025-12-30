@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef, type ReactNode } from "react";
+import { SectionReference } from "@/components/section-reference";
 
 // ============================================================================
 // TYPES
@@ -214,8 +215,21 @@ function renderInlineMarkdown(text: string): ReactNode {
       continue;
     }
 
+    // Section reference: §42
+    const sectionRefMatch = remaining.match(/^§(\d+)/);
+    if (sectionRefMatch) {
+      parts.push(
+        <SectionReference
+          key={key++}
+          sectionNumber={parseInt(sectionRefMatch[1], 10)}
+        />
+      );
+      remaining = remaining.slice(sectionRefMatch[0].length);
+      continue;
+    }
+
     // Find next special character or end
-    const nextSpecial = remaining.search(/[*`[]/);
+    const nextSpecial = remaining.search(/[*`[§]/);
     if (nextSpecial === -1) {
       parts.push(remaining);
       break;

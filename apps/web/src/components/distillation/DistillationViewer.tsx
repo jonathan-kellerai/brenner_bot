@@ -11,6 +11,7 @@ import type {
 import { getDistillationMeta } from "@/lib/distillation-parser";
 import { makeDistillationSectionDomId } from "@/lib/anchors";
 import { ReferenceCopyButton, CopyButton } from "@/components/ui/copy-button";
+import { SectionReference } from "@/components/section-reference";
 
 // ============================================================================
 // MODEL THEME SYSTEM - Stripe-level color consistency
@@ -587,16 +588,17 @@ function Section({ section, docId, sectionId }: SectionProps) {
 }
 
 // ============================================================================
-// INLINE FORMATTING - Renders bold, italic, code as styled JSX
+// INLINE FORMATTING - Renders bold, italic, code, section refs as styled JSX
 // ============================================================================
 
 function renderFormattedText(text: string): ReactNode {
   if (!text) return null;
 
-  // Tokenize: find all formatting markers
-  const tokens: Array<{ type: "text" | "bold" | "italic" | "code"; content: string }> = [];
+  // Tokenize: find all formatting markers and section references
+  const tokens: Array<{ type: "text" | "bold" | "italic" | "code" | "section-ref"; content: string }> = [];
   // Order matters: check bold (**) before italic (*) since bold uses double asterisks
-  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/g;
+  // Also capture section references like §42, §106
+  const regex = /(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`|§\d+)/g;
 
   let lastIndex = 0;
   let match;
@@ -612,6 +614,8 @@ function renderFormattedText(text: string): ReactNode {
       tokens.push({ type: "bold", content: matched.slice(2, -2) });
     } else if (matched.startsWith("`") && matched.endsWith("`")) {
       tokens.push({ type: "code", content: matched.slice(1, -1) });
+    } else if (matched.startsWith("§")) {
+      tokens.push({ type: "section-ref", content: matched.slice(1) }); // Store just the number
     } else if (matched.startsWith("*") && matched.endsWith("*")) {
       tokens.push({ type: "italic", content: matched.slice(1, -1) });
     }
@@ -647,6 +651,13 @@ function renderFormattedText(text: string): ReactNode {
           <code key={i} className="px-1.5 py-0.5 mx-0.5 rounded-md bg-muted/70 font-mono text-[0.9em] text-foreground/90">
             {token.content}
           </code>
+        );
+      case "section-ref":
+        return (
+          <SectionReference
+            key={i}
+            sectionNumber={parseInt(token.content, 10)}
+          />
         );
       default:
         return <span key={i}>{token.content}</span>;
