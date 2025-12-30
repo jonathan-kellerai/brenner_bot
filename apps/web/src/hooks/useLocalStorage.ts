@@ -1,5 +1,24 @@
 "use client";
 
+/**
+ * useLocalStorage - Generic localStorage persistence hook
+ *
+ * WHEN TO USE THIS HOOK:
+ * - Simple boolean flags (e.g., "user dismissed welcome banner")
+ * - One-off primitive values that don't need global state
+ * - Values that aren't shared between components
+ *
+ * WHEN TO USE TANSTACK STORE INSTEAD:
+ * - Complex state objects (reading positions, user preferences)
+ * - State shared across multiple components
+ * - State that needs actions/reducers pattern
+ *
+ * EXISTING STORES (use these instead of this hook):
+ * - readingStore: Document reading positions (@/stores/readingStore)
+ *
+ * @see @/hooks/useReadingPosition for the TanStack Store-based pattern
+ */
+
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from "react";
 
 /**
@@ -127,34 +146,4 @@ export function useLocalStorage<T>(
   }, [key]);
 
   return [storedValue, setValue, removeValue];
-}
-
-/**
- * Simple hook for reading position storage (updates frequently).
- * Uses sessionStorage for less aggressive persistence.
- */
-export function useReadingPosition(
-  docId: string
-): [number, (position: number) => void] {
-  const key = `brenner_reading_pos_${docId}`;
-
-  const [position, setPosition] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    const stored = window.sessionStorage.getItem(key);
-    return stored ? parseFloat(stored) : 0;
-  });
-
-  const updatePosition = useCallback(
-    (newPosition: number) => {
-      setPosition(newPosition);
-      try {
-        window.sessionStorage.setItem(key, newPosition.toString());
-      } catch {
-        // Ignore storage errors
-      }
-    },
-    [key]
-  );
-
-  return [position, updatePosition];
 }
