@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ParsedTranscript, TranscriptSection as TSection, TranscriptContent } from "@/lib/transcript-parser";
 import { CopyButton } from "@/components/ui/copy-button";
+import { useReadingPosition } from "@/hooks/useReadingPosition";
 
 // ============================================================================
 // TRANSCRIPT HERO
@@ -407,6 +408,11 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   const [readingProgress, setReadingProgress] = useState(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Reading position persistence
+  const { position, save: savePosition, shouldRestore } = useReadingPosition("transcript", {
+    maxSection: data.sections.length - 1,
+  });
+
   // Virtualizer for efficient rendering of large section lists
   const virtualizer = useVirtualizer({
     count: data.sections.length,
@@ -440,6 +446,8 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         const itemBottom = item.start + item.size;
         if (itemBottom > viewportCenter) {
           setActiveSection(item.index);
+          // Save position for persistence (debounced in hook)
+          savePosition(scrollTop, item.index);
           break;
         }
       }
@@ -449,25 +457,35 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
     handleScroll(); // Initial call
 
     return () => container.removeEventListener("scroll", handleScroll);
-  }, [virtualizer]);
+  }, [virtualizer, savePosition]);
 
-  // Handle URL hash on mount (e.g., /corpus/transcript#section-42)
+  // Handle URL hash OR restore saved position on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash;
-    if (!hash.startsWith("#section-")) return;
 
-    const sectionNum = parseInt(hash.replace("#section-", ""), 10);
-    const sectionIndex = data.sections.findIndex((s) => s.number === sectionNum);
+    // URL hash takes priority over saved position
+    if (hash.startsWith("#section-")) {
+      const sectionNum = parseInt(hash.replace("#section-", ""), 10);
+      const sectionIndex = data.sections.findIndex((s) => s.number === sectionNum);
 
-    if (sectionIndex >= 0) {
-      // Delay to ensure virtualizer is initialized
+      if (sectionIndex >= 0) {
+        // Delay to ensure virtualizer is initialized
+        setTimeout(() => {
+          virtualizer.scrollToIndex(sectionIndex, { align: "start", behavior: "smooth" });
+        }, 100);
+        return;
+      }
+    }
+
+    // Restore saved position if no hash and we have a saved position
+    if (shouldRestore && position) {
       setTimeout(() => {
-        virtualizer.scrollToIndex(sectionIndex, { align: "start", behavior: "smooth" });
+        virtualizer.scrollToIndex(position.activeSection, { align: "start" });
       }, 100);
     }
-  }, [data.sections, virtualizer]);
+  }, [data.sections, virtualizer, shouldRestore, position]);
 
   // Scroll to section from TOC
   const scrollToSection = useCallback(
