@@ -37,6 +37,13 @@ import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
 // Types
 // ============================================================================
 
+/** Operator selection per agent role */
+export interface OperatorSelection {
+  hypothesis_generator: string[];
+  test_designer: string[];
+  adversarial_critic: string[];
+}
+
 export interface SessionKickoffInput {
   /** Agent Mail project key (defaults to repo root) */
   projectKey?: string;
@@ -58,6 +65,8 @@ export interface SessionKickoffInput {
   question?: string;
   /** Whether to require acknowledgment */
   ackRequired?: boolean;
+  /** Custom operator selection per role (from prompt builder UI) */
+  operatorSelection?: OperatorSelection;
 }
 
 export interface SessionKickoffResult {

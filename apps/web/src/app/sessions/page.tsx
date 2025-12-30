@@ -143,7 +143,7 @@ function LockedState({ reason }: { reason: string }) {
       </div>
 
       <div className="text-center">
-        <Link href="/sessions/new" className="text-primary hover:underline active:text-primary/80 transition-colors touch-manipulation">
+        <Link href="/sessions/new" className="text-primary hover:underline active:text-primary/80 transition-colors touch-manipulation rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background">
           Go to New Session
         </Link>
       </div>
@@ -164,7 +164,7 @@ function EmptyState() {
         </p>
         <Link
           href="/sessions/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <PlusIcon className="size-4" />
           New Session
@@ -181,7 +181,7 @@ function ThreadCard({ thread, index }: { thread: ThreadSummary; index: number })
   return (
     <Link
       href={`/sessions/${thread.threadId}`}
-      className={`group block rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 touch-manipulation animate-fade-in-up ${staggerClass}`}
+      className={`group block rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 touch-manipulation animate-fade-in-up focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${staggerClass}`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0 flex-1">
@@ -312,7 +312,7 @@ export default async function SessionsListPage() {
           <RefreshControls />
           <Link
             href="/sessions/new"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           >
             <PlusIcon className="size-4" />
             New Session

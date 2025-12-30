@@ -142,6 +142,7 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
           domain: parsed.data.domain || undefined,
           question: parsed.data.question || undefined,
           ackRequired: parsed.data.ackRequired,
+          operatorSelection,
         },
         {
           onSuccess: (result) => {
