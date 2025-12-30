@@ -88,7 +88,7 @@ export function TableOfContents({ sections, activeSection, onSectionClick }: Tab
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="sticky top-24 z-30">
+    <div>
       {/* Mobile toggle */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
