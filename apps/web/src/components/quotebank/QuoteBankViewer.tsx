@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState, useMemo, useRef } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
 import { filterQuotesByTag, searchQuotes } from "@/lib/quotebank-parser";
 import { quoteBankDomIdFromSectionId, quoteBankSectionIdFromDomId } from "@/lib/anchors";
@@ -66,7 +65,7 @@ function QuoteBankHero({ title, description, quoteCount, tagCount }: QuoteBankHe
 }
 
 // ============================================================================
-// TAG CLOUD
+// TAG CLOUD - Compact, sorted by popularity, filtered for usefulness
 // ============================================================================
 
 interface TagCloudProps {
@@ -76,55 +75,141 @@ interface TagCloudProps {
   quoteCounts: Record<string, number>;
 }
 
+// Only show tags with at least this many quotes (singletons are useless for filtering)
+const MIN_QUOTES_FOR_TAG = 2;
+// Show this many popular tags by default
+const INITIAL_VISIBLE = 12;
+
 function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  // Filter out useless singleton tags, then sort by popularity (most quotes first)
+  const meaningfulTags = useMemo(() => {
+    return tags
+      .filter((tag) => (quoteCounts[tag] || 0) >= MIN_QUOTES_FOR_TAG)
+      .sort((a, b) => (quoteCounts[b] || 0) - (quoteCounts[a] || 0));
+  }, [tags, quoteCounts]);
+
+  // Total quotes (for "All" button)
+  const totalQuotes = useMemo(() => {
+    // Count unique quotes, not tag occurrences
+    return tags.reduce((max, t) => Math.max(max, quoteCounts[t] || 0), 0) > 0
+      ? Object.values(quoteCounts).reduce((sum, count) => sum + count, 0) / 2 // rough estimate
+      : 0;
+  }, [tags, quoteCounts]);
+
+  // Determine visible tags
+  const visibleTags = isExpanded ? meaningfulTags : meaningfulTags.slice(0, INITIAL_VISIBLE);
+  const hiddenCount = meaningfulTags.length - INITIAL_VISIBLE;
+  const showExpandButton = hiddenCount > 0;
+
+  // If selected tag is not in visible tags (but is meaningful), always show it
+  const selectedTagInHidden = selectedTag &&
+    !visibleTags.includes(selectedTag) &&
+    meaningfulTags.includes(selectedTag);
+
   return (
-    <div className="mb-8">
-      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
-        Filter by Category
-      </h3>
-      {/* Horizontal scroll on mobile, wrap on desktop */}
-      <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide snap-x snap-mandatory">
+    <div className="mb-6">
+      <div className="flex flex-wrap items-center gap-2">
+        {/* All button */}
+        <button
+          onClick={() => onTagSelect(null)}
+          className={`
+            inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+            transition-all duration-150 touch-manipulation active:scale-95
+            focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1
+            ${
+              selectedTag === null
+                ? "bg-primary text-primary-foreground shadow-sm"
+                : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
+            }
+          `}
+        >
+          All
+        </button>
+
+        {/* If selected tag is hidden, show it first */}
+        {selectedTagInHidden && (
           <button
             onClick={() => onTagSelect(null)}
-            className={`
-              flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
-              ${
-                selectedTag === null
-                  ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-              }
-            `}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+              bg-primary text-primary-foreground shadow-sm
+              transition-all duration-150 touch-manipulation active:scale-95
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
           >
-            All
+            {selectedTag.replace(/-/g, " ")}
+            <span className="text-xs opacity-70">{quoteCounts[selectedTag] || 0}</span>
           </button>
-          {tags.map((tag) => (
+        )}
+
+        {/* Visible tags */}
+        {visibleTags.map((tag) => {
+          // Skip if this is the selected tag shown above
+          if (selectedTagInHidden && tag === selectedTag) return null;
+
+          return (
             <button
               key={tag}
               onClick={() => onTagSelect(tag === selectedTag ? null : tag)}
               className={`
-                group flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
+                transition-all duration-150 touch-manipulation active:scale-95
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1
                 ${
                   selectedTag === tag
-                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground"
                 }
               `}
             >
               {tag.replace(/-/g, " ")}
-              <span className={`
-                ml-1.5 text-xs
-                ${selectedTag === tag ? "opacity-80" : "opacity-50 group-hover:opacity-70"}
-              `}>
+              <span className={`text-xs ${selectedTag === tag ? "opacity-70" : "opacity-50"}`}>
                 {quoteCounts[tag] || 0}
               </span>
             </button>
-          ))}
-        </div>
-        {/* Fade hint for horizontal scroll on mobile */}
-        <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
+          );
+        })}
+
+        {/* Expand/collapse button */}
+        {showExpandButton && (
+          <button
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
+              bg-transparent text-primary hover:bg-primary/10
+              transition-all duration-150 touch-manipulation active:scale-95
+              focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUpIcon className="size-3.5" />
+                Less
+              </>
+            ) : (
+              <>
+                +{hiddenCount}
+                <ChevronDownIcon className="size-3.5" />
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
+  );
+}
+
+function ChevronUpIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+    </svg>
+  );
+}
+
+function ChevronDownIcon({ className = "size-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
   );
 }
 
@@ -319,18 +404,6 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
     return result;
   }, [data.quotes, selectedTag, debouncedQuery, forceUnfiltered]);
 
-  // Virtualizer for efficient rendering of quote cards
-  const virtualizer = useVirtualizer({
-    count: filteredQuotes.length,
-    getScrollElement: () => scrollContainerRef.current,
-    // Estimate average quote card height (will be measured dynamically)
-    estimateSize: () => 280,
-    // Render extra items above/below viewport for smoother scrolling
-    overscan: 3,
-  });
-
-  // Get virtual items
-  const virtualItems = virtualizer.getVirtualItems();
 
   const scheduleScrollToSectionId = useCallback((sectionId: string) => {
     pendingScrollSectionIdRef.current = sectionId;
@@ -393,9 +466,12 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
     setForceUnfiltered(false);
 
     requestAnimationFrame(() => {
-      virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
       try {
         const domId = quoteBankDomIdFromSectionId(targetSectionId);
+        const element = document.getElementById(domId);
+        if (element) {
+          element.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
         window.history.replaceState(null, "", `#${domId}`);
       } catch {
         // ignore
@@ -403,7 +479,7 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
       setHighlightedSectionId(targetSectionId);
       window.setTimeout(() => setHighlightedSectionId(null), 3000);
     });
-  }, [filteredQuotes, virtualizer, forceUnfiltered]);
+  }, [filteredQuotes, forceUnfiltered]);
 
   return (
     <>
@@ -434,49 +510,21 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
           )}
         </div>
 
-        {/* Virtualized quote list */}
+        {/* Quote list - simple rendering with CSS containment for performance */}
         {filteredQuotes.length > 0 ? (
-          <div
-            ref={scrollContainerRef}
-            className="min-h-[400px] overflow-y-auto scroll-smooth overscroll-contain quotebank-scroll"
-            style={{
-              contain: "layout style",
-            }}
-          >
-            {/* Total height spacer for scroll */}
-            <div
-              style={{
-                height: virtualizer.getTotalSize(),
-                width: "100%",
-                position: "relative",
-              }}
-            >
-              {/* Only render visible quote cards */}
-              {virtualItems.map((virtualRow) => {
-                const quote = filteredQuotes[virtualRow.index];
-                const domId = quoteBankDomIdFromSectionId(quote.sectionId);
-                return (
-                  <div
-                    key={quote.sectionId}
-                    id={domId}
-                    data-index={virtualRow.index}
-                    ref={virtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    {/* Add spacing between cards */}
-                    <div className="pb-6">
-                      <QuoteCard quote={quote} isHighlighted={highlightedSectionId === quote.sectionId} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div ref={scrollContainerRef} className="space-y-6">
+            {filteredQuotes.map((quote) => {
+              const domId = quoteBankDomIdFromSectionId(quote.sectionId);
+              return (
+                <div
+                  key={quote.sectionId}
+                  id={domId}
+                  style={{ contain: "layout style" }}
+                >
+                  <QuoteCard quote={quote} isHighlighted={highlightedSectionId === quote.sectionId} />
+                </div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-16">
