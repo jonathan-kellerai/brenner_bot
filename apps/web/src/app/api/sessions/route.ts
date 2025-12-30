@@ -94,6 +94,16 @@ function extractMessageId(result: unknown): number | undefined {
   return undefined;
 }
 
+function normalizeKickoffSubject(threadId: string, rawSubject?: string): string {
+  const subject = rawSubject?.trim();
+
+  if (!subject) {
+    return `KICKOFF: [${threadId}] Brenner Loop kickoff`;
+  }
+
+  return /^KICKOFF:/i.test(subject) ? subject : `KICKOFF: ${subject}`;
+}
+
 // ============================================================================
 // POST Handler
 // ============================================================================
@@ -139,6 +149,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
     );
   }
 
+  const cleanThreadId = threadId.trim();
+
   if (!Array.isArray(recipients) || recipients.length === 0) {
     return NextResponse.json(
       { success: false, error: "Missing recipients", code: "VALIDATION_ERROR" },
@@ -157,7 +169,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
   try {
     const projectKey = body.projectKey || repoRootFromWebCwd();
     const client = new AgentMailClient();
-    const subject = body.subject?.trim() || `[${threadId}] Brenner Loop kickoff`;
+    const subject = normalizeKickoffSubject(cleanThreadId, body.subject);
 
     const composedBody = await composePrompt({
       templatePathFromRepoRoot: "metaprompt_by_gpt_52.md",
@@ -187,7 +199,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
       name: sender.trim(),
       program: "brenner-web",
       model: "nextjs",
-      task_description: `Brenner Bot session: ${threadId}`,
+      task_description: `Brenner Bot session: ${cleanThreadId}`,
     });
 
     // Send message
@@ -197,7 +209,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
       to: recipients.map((r) => r.trim()),
       subject,
       body_md: composedBody,
-      thread_id: threadId.trim(),
+      thread_id: cleanThreadId,
       ack_required: Boolean(body.ackRequired),
     });
 
@@ -205,7 +217,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
 
     return NextResponse.json({
       success: true,
-      threadId: threadId.trim(),
+      threadId: cleanThreadId,
       messageId,
     });
   } catch (err) {

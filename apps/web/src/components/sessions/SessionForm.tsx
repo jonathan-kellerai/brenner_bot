@@ -258,8 +258,8 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
                 onChange={(e) => field.handleChange(e.target.value)}
                 onBlur={field.handleBlur}
                 label="Subject"
-                placeholder="[FEAT-123] Brenner Loop kickoff"
-                hint="Optional - will auto-generate from thread ID if left blank"
+                placeholder="KICKOFF: [FEAT-123] Brenner Loop kickoff"
+                hint="Optional - auto-generated from thread ID; will be prefixed with KICKOFF:"
                 disabled={mutation.isPending}
               />
               <FieldError errors={field.state.meta.errors.map(String)} />

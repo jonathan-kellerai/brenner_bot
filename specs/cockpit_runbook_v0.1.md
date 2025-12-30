@@ -142,6 +142,35 @@ Compose the kickoff prompt:
   > kickoff.md
 ```
 
+#### (Optional) Inject procedural memory (`cm context`)
+
+If you want the kickoff to benefit from prior work, run `cm context` before sending the kickoff and paste a *small* subset into the prompt under a dedicated section.
+
+Recommended defaults:
+- Use `--no-history` for faster, cleaner context.
+- Keep `--limit` small (e.g. `6–10`) to avoid over-conditioning.
+
+```bash
+cm context "Brenner Loop: <your question / task>" --json --no-history --limit 8
+```
+
+Copy/paste this block into `kickoff.md` (near the end), and fill it from the JSON output:
+
+~~~markdown
+## MEMORY CONTEXT (cm; procedural)
+Source: `cm context "<query>" --json --no-history --limit 8`
+
+### Relevant rules (use IDs if provided)
+- [cm:<rule-id>] ...
+
+### Anti-patterns / warnings
+- ...
+
+### Notes
+- Treat these as **workflow heuristics**, not evidence.
+- If a memory bullet motivates a claim about Brenner, still ground that claim with transcript anchors (`§n`) or label it `[inference]`.
+~~~
+
 ### 3.3 Send the kickoff via Agent Mail
 
 ```bash
