@@ -294,13 +294,9 @@ bun run type-check   # type-check (if configured)
 
 ---
 
-## Corpus Files and Vercel Deployment (CRITICAL - READ THIS)
+## Corpus Files and Vercel Deployment (CRITICAL)
 
-**🚨 THIS SECTION EXISTS BECAUSE THE ENTIRE SITE WAS BROKEN FOR HOURS 🚨**
-
-### The Catastrophic Failure (2024-12-30)
-
-Two bugs combined to completely break brennerbot.org:
+Two bugs combined to break brennerbot.org on 2024-12-30:
 
 **Bug 1: Corpus files were gitignored**
 - Someone added `/public/_corpus/` to `.gitignore`
@@ -314,13 +310,7 @@ Two bugs combined to completely break brennerbot.org:
 - The URL was `/corpus/filename` but files are served from `/_corpus/filename`
 - Even if files existed, the fetch would 404
 
-**Symptoms:**
-- Every Vercel deployment showed "Error" with 0-2 second build times
-- All dynamic pages returned "Application error: a server-side exception has occurred"
-- Static pages worked, dynamic pages (like `/corpus/transcript`) did not
-- Local development worked fine (had the files), only Vercel was broken
-
-### The Rules (NEVER VIOLATE)
+### Rules
 
 1. **`apps/web/public/_corpus/` MUST be committed to git** - NEVER add it to `.gitignore`
 2. **The directory is `_corpus` (with underscore)** - This avoids conflict with the `/corpus` route
