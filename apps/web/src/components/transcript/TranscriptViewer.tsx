@@ -294,11 +294,7 @@ function StickySectionIndicator({ currentSection, totalSections, onTocClick }: S
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Only show on mobile
-  if (typeof window !== "undefined" && window.innerWidth >= 1024) {
-    return null;
-  }
-
+  // CSS lg:hidden handles desktop hiding; render on server for hydration safety
   if (!visible || !currentSection) return null;
 
   return (
