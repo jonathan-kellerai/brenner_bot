@@ -353,6 +353,44 @@ jobs:
           path: ${{ runner.temp }}/installer.log
           retention-days: 7
 
+  installer-lint-bash:
+    name: Installer Lint (install.sh)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: bash -n
+        run: bash -n install.sh
+
+      - name: Install shellcheck
+        run: sudo apt-get update && sudo apt-get install -y shellcheck
+
+      - name: shellcheck
+        run: shellcheck install.sh
+
+  installer-lint-pwsh:
+    name: Installer Lint (install.ps1)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $ProgressPreference = "SilentlyContinue"
+          Install-Module -Name PSScriptAnalyzer -Scope CurrentUser -Force -AllowClobber
+
+      - name: PSScriptAnalyzer (Error severity)
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $results = Invoke-ScriptAnalyzer -Path ./install.ps1 -Severity Error
+          if ($results) {
+            $results | Format-Table -AutoSize | Out-String | Write-Host
+            throw "PSScriptAnalyzer found $($results.Count) error(s)."
+          }
+
   toolchain-manifest-check:
     name: Toolchain Manifest Check
     runs-on: ubuntu-latest
