@@ -181,14 +181,22 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-          bun build --compile --minify --target=bun-linux-x64-baseline --outfile dist/brenner ./brenner.ts
+          BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          BRENNER_VERSION="0.0.0-ci" \
+            BRENNER_GIT_SHA="${GITHUB_SHA}" \
+            BRENNER_BUILD_DATE="${BUILD_DATE}" \
+            BRENNER_TARGET="linux-x64" \
+            bun build --compile --minify --env=BRENNER_* \
+              --target=bun-linux-x64-baseline --outfile dist/brenner ./brenner.ts
 
       - name: Run brenner smoke commands
         shell: bash
         run: |
           set -euo pipefail
+          ./dist/brenner --version | grep -q "brenner 0.0.0-ci"
           ./dist/brenner help >/dev/null
           ./dist/brenner doctor --json --skip-ntm --skip-cass --skip-cm >/dev/null
+          ./dist/brenner corpus search "Brenner" --docs transcript --limit 1 >/dev/null
 
   installer-smoke-unix:
     name: Installer Smoke (bash)

@@ -290,6 +290,21 @@ The CLI is the terminal equivalent of the web “lab” flow. It is **Bun-only**
 - `./brenner.ts ...` (script)
 - `bun build --compile --outfile brenner ./brenner.ts` (single executable)
 
+To embed build metadata (so `brenner --version` works outside the git repo), set `BRENNER_*` at build time and pass `--env=BRENNER_*`:
+
+```bash
+mkdir -p dist
+BRENNER_VERSION="0.0.0-dev" \
+  BRENNER_GIT_SHA="$(git rev-parse HEAD)" \
+  BRENNER_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+  BRENNER_TARGET="linux-x64" \
+  bun build --compile --minify --env=BRENNER_* \
+    --target=bun-linux-x64-baseline --outfile dist/brenner ./brenner.ts
+
+./dist/brenner --version
+./dist/brenner doctor --json --skip-ntm --skip-cass --skip-cm
+```
+
 #### Quick install (recommended)
 
 ```bash
