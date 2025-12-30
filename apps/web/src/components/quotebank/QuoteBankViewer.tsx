@@ -105,6 +105,7 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
       <div className="flex flex-wrap items-center gap-2">
         {/* All button */}
         <button
+          type="button"
           onClick={() => onTagSelect(null)}
           className={`
             inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
@@ -123,6 +124,7 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
         {/* If selected tag is hidden, show it first */}
         {selectedTagInHidden && (
           <button
+            type="button"
             onClick={() => onTagSelect(null)}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium
               bg-primary text-primary-foreground shadow-sm
@@ -141,6 +143,7 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
 
           return (
             <button
+              type="button"
               key={tag}
               onClick={() => onTagSelect(tag === selectedTag ? null : tag)}
               className={`
@@ -165,6 +168,7 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
         {/* Expand/collapse button */}
         {showExpandButton && (
           <button
+            type="button"
             onClick={() => setIsExpanded(!isExpanded)}
             className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium
               bg-transparent text-primary hover:bg-primary/10
@@ -230,11 +234,12 @@ function Search({ value, onChange }: SearchProps) {
       />
       {value && (
         <button
+          type="button"
           onClick={() => onChange("")}
           className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-foreground active:scale-90 transition-all touch-manipulation rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Clear search"
         >
-          <XIcon />
+          <XIcon className="size-4" />
         </button>
       )}
     </div>
@@ -301,6 +306,7 @@ function QuoteCard({ quote, isHighlighted }: QuoteCardProps) {
           </div>
           {quote.quote.length >= 300 && (
             <button
+              type="button"
               onClick={() => setIsExpanded(!isExpanded)}
               className="mt-3 px-3 py-1.5 -ml-1 text-sm text-primary hover:underline active:scale-95 active:text-primary/80 transition-all touch-manipulation rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
@@ -551,9 +557,9 @@ function SearchIcon({ className = "" }: { className?: string }) {
   );
 }
 
-function XIcon() {
+function XIcon({ className = "size-4" }: { className?: string }) {
   return (
-    <svg className="size-full" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
     </svg>
   );
