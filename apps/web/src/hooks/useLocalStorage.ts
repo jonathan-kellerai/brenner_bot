@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Hook for persisting state to localStorage with SSR safety.
@@ -33,16 +33,17 @@ export function useLocalStorage<T>(
     }
   });
 
-  // Hydration safety - sync with localStorage on mount
   useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item) as T);
+    queueMicrotask(() => {
+      try {
+        const item = window.localStorage.getItem(key);
+        if (item) {
+          setStoredValue(JSON.parse(item) as T);
+        }
+      } catch (error) {
+        console.warn(`Error reading localStorage key "${key}" on hydration:`, error);
       }
-    } catch (error) {
-      console.warn(`Error reading localStorage key "${key}" on hydration:`, error);
-    }
+    });
   }, [key]);
 
   // Setter with debounced persistence
@@ -69,18 +70,6 @@ export function useLocalStorage<T>(
     },
     [key, debounceMs]
   );
-
-  // Immediate persist (bypass debounce)
-  const persistNow = useCallback(() => {
-    if (debounceRef.current) {
-      clearTimeout(debounceRef.current);
-    }
-    try {
-      window.localStorage.setItem(key, JSON.stringify(storedValue));
-    } catch (error) {
-      console.warn(`Error persisting localStorage key "${key}":`, error);
-    }
-  }, [key, storedValue]);
 
   // Remove from storage
   const removeValue = useCallback(() => {

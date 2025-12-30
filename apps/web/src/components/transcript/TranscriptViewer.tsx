@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { ParsedTranscript, TranscriptSection as TSection, TranscriptContent } from "@/lib/transcript-parser";
+import { CopyButton } from "@/components/ui/copy-button";
 
 // ============================================================================
 // TRANSCRIPT HERO
@@ -254,11 +255,22 @@ function BrennerQuote({ text, highlights }: BrennerQuoteProps) {
       {/* Quote card */}
       <div className="relative pl-8 pr-6 py-6 rounded-2xl bg-gradient-to-br from-primary/[0.03] to-transparent border-l-4 border-primary/40 hover:border-primary/60 transition-colors">
         {/* Speaker badge */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="size-8 rounded-full bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center text-sm font-bold text-primary">
-            SB
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
+            <div className="size-8 rounded-full bg-gradient-to-br from-primary/20 to-amber-500/20 flex items-center justify-center text-sm font-bold text-primary">
+              SB
+            </div>
+            <span className="text-sm font-medium text-primary">Sydney Brenner</span>
           </div>
-          <span className="text-sm font-medium text-primary">Sydney Brenner</span>
+          {/* Copy button - appears on hover */}
+          <CopyButton
+            text={text}
+            attribution="— Sydney Brenner"
+            variant="ghost"
+            size="sm"
+            className="opacity-0 group-hover:opacity-100 transition-opacity"
+            showPreview={true}
+          />
         </div>
 
         {/* Quote text */}

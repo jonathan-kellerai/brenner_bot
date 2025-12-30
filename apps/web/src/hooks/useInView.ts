@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect, type RefObject } from "react";
+import { useEffect, useMemo, useRef, useState, type RefObject } from "react";
 
 interface UseInViewOptions {
   threshold?: number;
@@ -77,20 +77,24 @@ export function useInViewStagger(
 ): { refs: RefObject<HTMLDivElement | null>[]; inViewStates: boolean[] } {
   const { threshold = 0.1, rootMargin = "0px 0px -50px 0px", triggerOnce = true } = options;
 
-  const refs = useRef<RefObject<HTMLDivElement | null>[]>([]);
   const [inViewStates, setInViewStates] = useState<boolean[]>(() => Array(count).fill(false));
 
-  // Initialize refs array
-  if (refs.current.length !== count) {
-    refs.current = Array(count)
-      .fill(null)
-      .map((_, i) => refs.current[i] || { current: null });
-  }
+  const refs = useMemo<RefObject<HTMLDivElement | null>[]>(
+    () => Array.from({ length: count }, () => ({ current: null })),
+    [count]
+  );
+
+  const normalizedStates = useMemo(() => {
+    if (inViewStates.length === count) return inViewStates;
+    const next = inViewStates.slice(0, count);
+    while (next.length < count) next.push(false);
+    return next;
+  }, [count, inViewStates]);
 
   useEffect(() => {
     const observers: IntersectionObserver[] = [];
 
-    refs.current.forEach((ref, index) => {
+    refs.forEach((ref, index) => {
       const element = ref.current;
       if (!element) return;
 
@@ -126,7 +130,7 @@ export function useInViewStagger(
     return () => {
       observers.forEach((observer) => observer.disconnect());
     };
-  }, [count, threshold, rootMargin, triggerOnce]);
+  }, [count, refs, threshold, rootMargin, triggerOnce]);
 
-  return { refs: refs.current, inViewStates };
+  return { refs, inViewStates: normalizedStates };
 }

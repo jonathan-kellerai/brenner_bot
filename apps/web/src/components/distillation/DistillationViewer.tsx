@@ -9,6 +9,7 @@ import type {
   DistillationContent,
 } from "@/lib/distillation-parser";
 import { getDistillationMeta, getModelFromId } from "@/lib/distillation-parser";
+import { ReferenceCopyButton, CopyButton } from "@/components/ui/copy-button";
 
 // ============================================================================
 // MODEL THEME SYSTEM - Stripe-level color consistency
@@ -451,21 +452,33 @@ function ContentRenderer({ content, docId }: ContentRendererProps) {
 
     case "quote":
       return (
-        <figure className="my-6">
+        <figure className="my-6 group">
           <blockquote className="relative pl-5 sm:pl-6 pr-4 py-4 rounded-xl border-l-4 border-primary bg-primary/5">
             {/* Quote mark */}
             <div className="absolute -left-2 -top-2 text-3xl sm:text-4xl text-primary/30 font-serif select-none">
               &ldquo;
             </div>
-            <p className="text-base lg:text-lg leading-relaxed text-foreground/90 italic font-serif">
+            {/* Copy button - appears on hover */}
+            <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <CopyButton
+                text={content.text}
+                attribution={content.reference ? `— Sydney Brenner, §${content.reference}` : "— Sydney Brenner"}
+                variant="ghost"
+                size="sm"
+                showPreview={true}
+              />
+            </div>
+            <p className="text-base lg:text-lg leading-relaxed text-foreground/90 italic font-serif pr-8">
               {content.text}
             </p>
           </blockquote>
           {content.reference && (
             <figcaption className="mt-2 text-sm text-muted-foreground text-right">
-              <span className="font-mono px-2 py-0.5 rounded bg-muted text-xs">
-                §{content.reference}
-              </span>
+              <ReferenceCopyButton
+                reference={`§${content.reference}`}
+                quoteText={content.text}
+                source="Sydney Brenner"
+              />
             </figcaption>
           )}
         </figure>

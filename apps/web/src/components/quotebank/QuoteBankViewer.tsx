@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
 import { filterQuotesByTag, searchQuotes } from "@/lib/quotebank-parser";
+import { ReferenceCopyButton, CopyButton } from "@/components/ui/copy-button";
 
 // ============================================================================
 // HERO
@@ -180,11 +181,13 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
       `}
       style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
     >
-      {/* Reference badge */}
+      {/* Reference badge - clickable to copy */}
       <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
-        <span className="font-mono text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
-          {quote.reference}
-        </span>
+        <ReferenceCopyButton
+          reference={quote.reference}
+          quoteText={quote.text}
+          source="Sydney Brenner"
+        />
       </div>
 
       <div className="p-4 sm:p-6 lg:p-8">
@@ -194,7 +197,7 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
         </h3>
 
         {/* Quote text */}
-        <div className="relative">
+        <div className="relative group/quote">
           <div className="absolute -left-1 -top-1 sm:-left-2 sm:-top-2 text-3xl sm:text-4xl text-primary/20 font-serif select-none">
             &ldquo;
           </div>
@@ -203,6 +206,16 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
               ? quote.text
               : `${quote.text.slice(0, 300)}...`}
           </blockquote>
+          {/* Copy button - appears on hover */}
+          <div className="absolute -right-2 top-0 opacity-0 group-hover/quote:opacity-100 transition-opacity">
+            <CopyButton
+              text={quote.text}
+              attribution={`— Sydney Brenner, ${quote.reference}`}
+              variant="ghost"
+              size="sm"
+              showPreview={true}
+            />
+          </div>
           {quote.text.length >= 300 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}

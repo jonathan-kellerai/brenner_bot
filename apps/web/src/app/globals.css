@@ -372,6 +372,108 @@
   100% { opacity: 1; filter: blur(0); }
 }
 
+/* --- SCROLL REVEAL ANIMATIONS (Linear/Stripe-style) --- */
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px) scale(0.98);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes reveal-scale {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes reveal-slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes reveal-slide-left {
+  from {
+    opacity: 0;
+    transform: translateX(60px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes reveal-blur {
+  from {
+    opacity: 0;
+    filter: blur(12px);
+    transform: scale(1.05);
+  }
+  to {
+    opacity: 1;
+    filter: blur(0);
+    transform: scale(1);
+  }
+}
+
+/* --- HERO ORB FLOATING ANIMATIONS --- */
+@keyframes orb-float-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(30px, -30px) scale(1.05); }
+  66% { transform: translate(-20px, 20px) scale(0.95); }
+}
+
+@keyframes orb-float-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(-40px, 20px) scale(0.95); }
+  66% { transform: translate(25px, -35px) scale(1.05); }
+}
+
+@keyframes orb-float-3 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(15px, 25px) scale(1.03); }
+  50% { transform: translate(-25px, -15px) scale(0.97); }
+  75% { transform: translate(20px, -20px) scale(1.02); }
+}
+
+/* --- ICON MICRO-INTERACTIONS --- */
+@keyframes icon-bounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-3px); }
+  50% { transform: translateY(0); }
+  75% { transform: translateY(-2px); }
+}
+
+@keyframes icon-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-8deg); }
+  75% { transform: rotate(8deg); }
+}
+
+@keyframes icon-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.8; }
+}
+
 /* ============================================================================
    THEME CONFIGURATION
    ============================================================================ */
@@ -1285,6 +1387,63 @@
 
   .animate-content-reveal {
     animation: content-reveal var(--duration-normal) var(--ease-out) both;
+  }
+
+  /* --- Scroll Reveal (Linear/Stripe-style) --- */
+  .animate-reveal-up {
+    animation: reveal-up 0.6s var(--ease-out) both;
+  }
+
+  .animate-reveal-scale {
+    animation: reveal-scale 0.5s var(--ease-spring) both;
+  }
+
+  .animate-reveal-slide-right {
+    animation: reveal-slide-right 0.5s var(--ease-out) both;
+  }
+
+  .animate-reveal-slide-left {
+    animation: reveal-slide-left 0.5s var(--ease-out) both;
+  }
+
+  .animate-reveal-blur {
+    animation: reveal-blur 0.6s var(--ease-out) both;
+  }
+
+  /* --- Hero Orb Floating --- */
+  .animate-orb-float-1 {
+    animation: orb-float-1 20s ease-in-out infinite;
+  }
+
+  .animate-orb-float-2 {
+    animation: orb-float-2 25s ease-in-out infinite;
+  }
+
+  .animate-orb-float-3 {
+    animation: orb-float-3 30s ease-in-out infinite;
+  }
+
+  /* --- Icon Micro-interactions (apply via group-hover) --- */
+  .group:hover .icon-bounce-hover {
+    animation: icon-bounce 0.5s var(--ease-spring);
+  }
+
+  .group:hover .icon-wiggle-hover {
+    animation: icon-wiggle 0.4s var(--ease-spring);
+  }
+
+  .group:hover .icon-pulse-hover {
+    animation: icon-pulse 0.4s var(--ease-spring);
+  }
+
+  .group:hover .icon-scale-hover {
+    transform: scale(1.15);
+    transition: transform 0.2s var(--ease-spring);
+  }
+
+  .group:hover .icon-rotate-hover {
+    transform: rotate(12deg);
+    transition: transform 0.3s var(--ease-spring);
   }
 
   /* --- Draw & Path --- */
@@ -2334,8 +2493,11 @@
      ======================================================================== */
 
   .back-to-top {
-    @apply fixed bottom-20 right-4 z-40 rounded-full bg-primary text-primary-foreground p-3;
+    @apply fixed z-40 rounded-full bg-primary text-primary-foreground p-3;
     @apply opacity-0 translate-y-4 pointer-events-none;
+    right: 1rem;
+    /* Mobile: account for bottom nav (64px) + safe area + spacing */
+    bottom: calc(4rem + 1.5rem + env(safe-area-inset-bottom, 0px));
     box-shadow: var(--elevation-lg);
     transition:
       opacity var(--duration-normal) var(--ease-out),
@@ -2356,9 +2518,11 @@
     transform: scale(0.92);
   }
 
+  /* Desktop: no bottom nav, use normal spacing */
   @media (min-width: 1024px) {
     .back-to-top {
-      @apply bottom-8 right-8;
+      bottom: 2rem;
+      right: 2rem;
     }
   }
 
@@ -2525,9 +2689,11 @@
     @apply fixed bottom-4 right-4 z-50 flex flex-col gap-2;
   }
 
-  @media (max-width: 640px) {
+  /* Mobile: account for bottom nav (64px) + safe area + spacing */
+  @media (max-width: 1023px) {
     .toast-container {
-      @apply bottom-20 left-4 right-4;
+      @apply left-4 right-4;
+      bottom: calc(4rem + 1.5rem + env(safe-area-inset-bottom, 0px));
     }
   }
 
