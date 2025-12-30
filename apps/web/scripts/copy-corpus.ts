@@ -1,4 +1,4 @@
-import { copyFile, mkdir, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, stat } from "node:fs/promises";
 import { resolve } from "node:path";
 import { CORPUS_DOCS } from "../src/lib/corpus";
 
@@ -11,33 +11,6 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
-function restrictedCorpusStub(filename: string): string {
-  return [
-    `# Restricted document`,
-    ``,
-    `This document is not included in public builds of Brenner Bot.`,
-    ``,
-    `- File: \`${filename}\``,
-    `- Reason: content policy / distribution constraints`,
-    ``,
-    `See: \`content_policy_research_v0.1.md\``,
-    ``,
-  ].join("\n");
-}
-
-function missingFileStub(filename: string): string {
-  return [
-    `# Document not available`,
-    ``,
-    `This document could not be found during build.`,
-    ``,
-    `- File: \`${filename}\``,
-    ``,
-    `This may occur in cloud builds where the full repository structure is not available.`,
-    ``,
-  ].join("\n");
-}
-
 async function main(): Promise<void> {
   const repoRoot = resolve(process.cwd(), "../..");
   const outputDir = resolve(process.cwd(), "public/corpus");
@@ -48,26 +21,23 @@ async function main(): Promise<void> {
     const sourcePath = resolve(repoRoot, doc.filename);
     const outputPath = resolve(outputDir, doc.filename);
 
-    // Never copy restricted docs into public assets; write a stub instead.
-    if (doc.access === "restricted") {
-      await writeFile(outputPath, restrictedCorpusStub(doc.filename), "utf8");
-      continue;
-    }
-
-    // Check if the output file already exists (e.g., committed to git for Vercel)
+    // Check if the output file already exists and is not a stub
     if (await fileExists(outputPath)) {
-      console.log(`[copy-corpus] Skipping ${doc.filename} - already exists in public/corpus`);
-      continue;
+      const stats = await stat(outputPath);
+      // If file is larger than 1KB, assume it's already the real file
+      if (stats.size > 1024) {
+        console.log(`[copy-corpus] Skipping ${doc.filename} - already exists (${Math.round(stats.size / 1024)}KB)`);
+        continue;
+      }
     }
 
-    // Try to copy from repo root (local dev scenario)
+    // Try to copy from repo root
     if (await fileExists(sourcePath)) {
       await copyFile(sourcePath, outputPath);
-      console.log(`[copy-corpus] Copied ${doc.filename}`);
+      const stats = await stat(outputPath);
+      console.log(`[copy-corpus] Copied ${doc.filename} (${Math.round(stats.size / 1024)}KB)`);
     } else {
-      // Write a stub for missing files (Vercel build without repo root access)
-      console.warn(`[copy-corpus] Source not found, writing stub for ${doc.filename}`);
-      await writeFile(outputPath, missingFileStub(doc.filename), "utf8");
+      console.warn(`[copy-corpus] WARNING: Source not found: ${doc.filename}`);
     }
   }
 }

@@ -1,6 +1,12 @@
 import Link from "next/link";
-import { listCorpusDocs, isLabModeEnabled } from "@/lib/corpus";
+import { listCorpusDocs } from "@/lib/corpus";
 import { Card, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Corpus",
+  description: "The complete Brenner document collection - transcripts, distillations, and metaprompts.",
+};
 
 export const runtime = "nodejs";
 
@@ -29,21 +35,27 @@ const ArrowRightIcon = () => (
   </svg>
 );
 
+const ClockIcon = () => (
+  <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
 // Categorize documents
 const categories = {
   primary: {
     title: "Primary Sources",
-    description: "The original transcript collection from Sydney Brenner's interviews",
+    description: "The original transcript collection from Sydney Brenner's Web of Stories interviews",
     icon: <BookOpenIcon />,
   },
   distillations: {
     title: "Model Distillations",
-    description: "Frontier model analyses of Brenner's methodology",
+    description: "Frontier model analyses of Brenner's methodology - three different perspectives",
     icon: <SparklesIcon />,
   },
   prompts: {
-    title: "Metaprompts",
-    description: "Structured prompts for applying the Brenner method",
+    title: "Metaprompts & Reference",
+    description: "Structured prompts and curated quotes for applying the Brenner method",
     icon: <DocumentIcon />,
   },
 };
@@ -55,7 +67,6 @@ function getCategory(id: string): keyof typeof categories {
 }
 
 function getReadTime(id: string): string {
-  // Approximate read times based on document size
   const times: Record<string, string> = {
     transcript: "2+ hours",
     "quote-bank": "45 min",
@@ -70,7 +81,6 @@ function getReadTime(id: string): string {
 
 export default async function CorpusIndexPage() {
   const docs = await listCorpusDocs();
-  const labModeEnabled = isLabModeEnabled();
 
   // Group by category
   const grouped = docs.reduce(
@@ -86,7 +96,7 @@ export default async function CorpusIndexPage() {
   return (
     <div className="space-y-12">
       {/* Header */}
-      <header className="space-y-4">
+      <header className="space-y-4 animate-fade-in-up">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 text-primary">
             <BookOpenIcon />
@@ -108,7 +118,7 @@ export default async function CorpusIndexPage() {
         if (categoryDocs.length === 0) return null;
 
         return (
-          <section key={categoryKey} className="space-y-4">
+          <section key={categoryKey} className="space-y-4 animate-fade-in-up">
             <div className="flex items-center gap-2 text-muted-foreground">
               {category.icon}
               <h2 className="text-lg font-semibold text-foreground">{category.title}</h2>
@@ -118,85 +128,63 @@ export default async function CorpusIndexPage() {
             </p>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              {categoryDocs.map((doc, index) => {
-                const locked = doc.access === "restricted" && !labModeEnabled;
-
-                return (
-                  <Link
-                    key={doc.id}
-                    href={`/corpus/${doc.id}`}
-                    className={`group animate-fade-in-up stagger-${index + 1}`}
-                  >
-                    <Card
-                      hover={!locked}
-                      className={`h-full ${locked ? "opacity-70 hover:opacity-90" : ""}`}
-                    >
-                      <CardHeader>
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="space-y-1 flex-1">
-                            <CardTitle className="group-hover:text-primary transition-colors">
-                              {doc.title}
-                            </CardTitle>
-                            <CardDescription className="font-mono text-xs">
-                              {doc.filename}
-                            </CardDescription>
-                            {locked && (
-                              <div className="pt-2">
-                                <span className="inline-flex items-center gap-1 rounded-full border border-border bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                  <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 0h10.5A2.25 2.25 0 0119.5 12.75v6A2.25 2.25 0 0117.25 21H6.75A2.25 2.25 0 014.5 18.75v-6A2.25 2.25 0 016.75 10.5z" />
-                                  </svg>
-                                  Restricted
-                                </span>
-                              </div>
-                            )}
-                          </div>
-                          {!locked && (
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">
-                              <span>Read</span>
-                              <ArrowRightIcon />
-                            </div>
+              {categoryDocs.map((doc, index) => (
+                <Link
+                  key={doc.id}
+                  href={`/corpus/${doc.id}`}
+                  className={`group animate-fade-in-up stagger-${index + 1}`}
+                >
+                  <Card hover className="h-full">
+                    <CardHeader>
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="space-y-1.5 flex-1">
+                          <CardTitle className="group-hover:text-primary transition-colors">
+                            {doc.title}
+                          </CardTitle>
+                          {doc.description && (
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {doc.description}
+                            </p>
                           )}
+                          <CardDescription className="font-mono text-xs">
+                            {doc.filename}
+                          </CardDescription>
                         </div>
-                        <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <svg className="size-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                            {locked ? "Restricted" : getReadTime(doc.id)}
-                          </span>
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                          <span>Read</span>
+                          <ArrowRightIcon />
                         </div>
-                      </CardHeader>
-                    </Card>
-                  </Link>
-                );
-              })}
+                      </div>
+                      <div className="flex items-center gap-4 pt-2 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <ClockIcon />
+                          {getReadTime(doc.id)}
+                        </span>
+                      </div>
+                    </CardHeader>
+                  </Card>
+                </Link>
+              ))}
             </div>
           </section>
         );
       })}
 
       {/* Quick Tips */}
-      <section className="rounded-xl border bg-muted/30 p-6 space-y-3">
+      <section className="rounded-xl border bg-muted/30 p-6 space-y-3 animate-fade-in-up">
         <h3 className="font-semibold">Reading Tips</h3>
         <ul className="text-sm text-muted-foreground space-y-2">
           <li className="flex items-start gap-2">
-            <span className="text-primary mt-1">1.</span>
+            <span className="text-primary mt-0.5 font-semibold">1.</span>
             <span>Start with a <strong>Distillation</strong> for a structured overview of Brenner&apos;s methodology.</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-primary mt-1">2.</span>
+            <span className="text-primary mt-0.5 font-semibold">2.</span>
             <span>Use the <strong>Quote Bank</strong> to find specific Brenner quotes on topics of interest.</span>
           </li>
           <li className="flex items-start gap-2">
-            <span className="text-primary mt-1">3.</span>
-            <span>
-              {labModeEnabled ? (
-                <>Dive into the full <strong>Transcript</strong> for context and nuance around specific ideas.</>
-              ) : (
-                <>Use the <strong>Transcript excerpts</strong> in the Quote Bank to find anchorable primitives without reading the full corpus.</>
-              )}
-            </span>
+            <span className="text-primary mt-0.5 font-semibold">3.</span>
+            <span>Dive into the full <strong>Transcript</strong> for context and nuance around specific ideas.</span>
           </li>
         </ul>
       </section>

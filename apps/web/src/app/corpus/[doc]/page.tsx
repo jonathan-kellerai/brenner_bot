@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { readCorpusDoc, CORPUS_DOCS } from "@/lib/corpus";
+import { MarkdownRenderer } from "@/components/ui/markdown";
 import type { Metadata } from "next";
 
 export const runtime = "nodejs";
@@ -15,7 +16,7 @@ export async function generateMetadata({
 
   return {
     title: docInfo?.title || "Document",
-    description: `Read ${docInfo?.title || "this document"} from the Brenner Bot corpus.`,
+    description: docInfo?.description || `Read ${docInfo?.title || "this document"} from the Brenner Bot corpus.`,
   };
 }
 
@@ -35,6 +36,18 @@ const ClockIcon = () => (
 const DocumentIcon = () => (
   <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+  </svg>
+);
+
+const ArrowLeftIcon = () => (
+  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
+  </svg>
+);
+
+const ArrowRightIcon = () => (
+  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
   </svg>
 );
 
@@ -72,14 +85,14 @@ export default async function CorpusDocPage({
   params: Promise<{ doc: string }>;
 }) {
   const { doc: docId } = await params;
-  const { doc, content, restricted } = await readCorpusDoc(docId);
+  const { doc, content } = await readCorpusDoc(docId);
   const { prev, next } = getNavLinks(docId);
   const wordCount = getWordCount(content);
 
   return (
-    <article className="max-w-none">
+    <div className="max-w-4xl mx-auto">
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+      <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-6 animate-fade-in" aria-label="Breadcrumb">
         <Link href="/corpus" className="hover:text-foreground transition-colors link-underline">
           Corpus
         </Link>
@@ -88,57 +101,54 @@ export default async function CorpusDocPage({
       </nav>
 
       {/* Header */}
-      <header className="mb-8 pb-8 border-b border-border">
-        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4 animate-fade-in-up">
+      <header className="mb-10 pb-8 border-b border-border animate-fade-in-up">
+        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight mb-4">
           {doc.title}
         </h1>
 
-        <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground animate-fade-in-up stagger-1">
-          <span className="flex items-center gap-1.5">
+        {doc.description && (
+          <p className="text-lg text-muted-foreground mb-4 max-w-2xl">
+            {doc.description}
+          </p>
+        )}
+
+        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted border border-border/50">
             <ClockIcon />
-            {restricted ? "Restricted" : `${getReadTime(docId)} read`}
+            {getReadTime(docId)} read
           </span>
-          {!restricted && (
-            <span className="flex items-center gap-1.5">
-              <DocumentIcon />
-              {wordCount}
-            </span>
-          )}
-          <span className="font-mono text-xs bg-muted px-2 py-0.5 rounded">
+          <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-muted border border-border/50">
+            <DocumentIcon />
+            {wordCount}
+          </span>
+          <span className="font-mono text-xs px-3 py-1.5 rounded-full bg-muted border border-border/50">
             {doc.filename}
           </span>
         </div>
       </header>
 
-      {restricted && (
-        <section className="mb-8 rounded-xl border border-border bg-muted/30 p-6 animate-fade-in-up stagger-2">
-          <h2 className="text-lg font-semibold mb-2">Restricted document</h2>
-          <p className="text-sm text-muted-foreground">
-            This document is not served in public mode. If you are running Brenner Bot locally, enable lab mode with{" "}
-            <span className="font-mono">BRENNER_LAB_MODE=true</span> and reload.
-          </p>
-        </section>
-      )}
-
-      {/* Content */}
-      <div className="prose prose-wide dark:prose-invert animate-fade-in-up stagger-3">
-        <pre className="whitespace-pre-wrap break-words font-sans text-base leading-relaxed bg-transparent border-0 p-0 m-0 overflow-visible">
-          {content}
-        </pre>
+      {/* Content - Beautiful Markdown Rendering */}
+      <div className="animate-fade-in-up stagger-1">
+        <MarkdownRenderer content={content} />
       </div>
 
       {/* Navigation */}
-      <nav className="mt-16 pt-8 border-t border-border">
+      <nav className="mt-16 pt-8 border-t border-border animate-fade-in-up">
         <div className="grid gap-4 sm:grid-cols-2">
           {prev ? (
             <Link
               href={`/corpus/${prev.id}`}
-              className="group flex flex-col p-4 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all"
+              className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all"
             >
-              <span className="text-xs text-muted-foreground mb-1">Previous</span>
-              <span className="font-medium group-hover:text-primary transition-colors line-clamp-1">
-                {prev.title}
-              </span>
+              <div className="flex items-center justify-center size-10 rounded-lg bg-muted text-muted-foreground group-hover:text-primary transition-colors">
+                <ArrowLeftIcon />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs text-muted-foreground">Previous</span>
+                <div className="font-medium group-hover:text-primary transition-colors truncate">
+                  {prev.title}
+                </div>
+              </div>
             </Link>
           ) : (
             <div />
@@ -147,12 +157,17 @@ export default async function CorpusDocPage({
           {next ? (
             <Link
               href={`/corpus/${next.id}`}
-              className="group flex flex-col p-4 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all text-right sm:items-end"
+              className="group flex items-center gap-4 p-4 rounded-xl border bg-card hover:bg-muted/50 hover:border-primary/30 transition-all text-right sm:flex-row-reverse"
             >
-              <span className="text-xs text-muted-foreground mb-1">Next</span>
-              <span className="font-medium group-hover:text-primary transition-colors line-clamp-1">
-                {next.title}
-              </span>
+              <div className="flex items-center justify-center size-10 rounded-lg bg-muted text-muted-foreground group-hover:text-primary transition-colors">
+                <ArrowRightIcon />
+              </div>
+              <div className="flex-1 min-w-0">
+                <span className="text-xs text-muted-foreground">Next</span>
+                <div className="font-medium group-hover:text-primary transition-colors truncate">
+                  {next.title}
+                </div>
+              </div>
             </Link>
           ) : (
             <div />
@@ -164,13 +179,11 @@ export default async function CorpusDocPage({
             href="/corpus"
             className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" />
-            </svg>
+            <ArrowLeftIcon />
             Back to Corpus
           </Link>
         </div>
       </nav>
-    </article>
+    </div>
   );
 }

@@ -1,23 +1,56 @@
 import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 
-export type CorpusAccess = "public" | "restricted";
-
 export type CorpusDoc = {
   id: string;
   title: string;
   filename: string;
-  access: CorpusAccess;
+  description?: string;
 };
 
 export const CORPUS_DOCS: CorpusDoc[] = [
-  { id: "transcript", title: "Complete Transcript Collection", filename: "complete_brenner_transcript.md", access: "restricted" },
-  { id: "quote-bank", title: "Quote Bank (Verbatim Primitives)", filename: "quote_bank_restored_primitives.md", access: "public" },
-  { id: "metaprompt", title: "Metaprompt (v0.2)", filename: "metaprompt_by_gpt_52.md", access: "public" },
-  { id: "initial-metaprompt", title: "Initial Metaprompt", filename: "initial_metaprompt.md", access: "public" },
-  { id: "distillation-gpt-52", title: "Final Distillation (GPT‑5.2)", filename: "final_distillation_of_brenner_method_by_gpt_52_extra_high_reasoning.md", access: "public" },
-  { id: "distillation-opus-45", title: "Final Distillation (Opus 4.5)", filename: "final_distillation_of_brenner_method_by_opus45.md", access: "public" },
-  { id: "distillation-gemini-3", title: "Final Distillation (Gemini 3)", filename: "final_distillation_of_brenner_method_by_gemini3.md", access: "public" },
+  {
+    id: "transcript",
+    title: "Complete Transcript Collection",
+    filename: "complete_brenner_transcript.md",
+    description: "The full Web of Stories interview transcript with Sydney Brenner - 236 segments of wisdom.",
+  },
+  {
+    id: "quote-bank",
+    title: "Quote Bank",
+    filename: "quote_bank_restored_primitives.md",
+    description: "Curated verbatim quotes organized by theme for quick reference.",
+  },
+  {
+    id: "metaprompt",
+    title: "Metaprompt (v0.2)",
+    filename: "metaprompt_by_gpt_52.md",
+    description: "A structured prompt for applying the Brenner method to new domains.",
+  },
+  {
+    id: "initial-metaprompt",
+    title: "Initial Metaprompt",
+    filename: "initial_metaprompt.md",
+    description: "The original metaprompt that started the distillation process.",
+  },
+  {
+    id: "distillation-gpt-52",
+    title: "Final Distillation (GPT-5.2)",
+    filename: "final_distillation_of_brenner_method_by_gpt_52_extra_high_reasoning.md",
+    description: "GPT-5.2's analysis emphasizing optimization and systematic search.",
+  },
+  {
+    id: "distillation-opus-45",
+    title: "Final Distillation (Opus 4.5)",
+    filename: "final_distillation_of_brenner_method_by_opus45.md",
+    description: "Claude Opus 4.5's analysis framing the method through epistemic axioms.",
+  },
+  {
+    id: "distillation-gemini-3",
+    title: "Final Distillation (Gemini 3)",
+    filename: "final_distillation_of_brenner_method_by_gemini3.md",
+    description: "Gemini 3's minimal kernel distillation of core cognitive operations.",
+  },
 ];
 
 async function fileExists(path: string): Promise<boolean> {
@@ -29,61 +62,26 @@ async function fileExists(path: string): Promise<boolean> {
   }
 }
 
-export function isLabModeEnabled(): boolean {
-  const labModeValue = (process.env.BRENNER_LAB_MODE ?? "").trim().toLowerCase();
-  return labModeValue === "1" || labModeValue === "true";
-}
+async function resolveCorpusPath(filename: string): Promise<string> {
+  const publicPath = resolve(process.cwd(), "public/corpus", filename);
+  const repoRootPath = resolve(process.cwd(), "../..", filename);
 
-function canReadDoc(doc: CorpusDoc): boolean {
-  return doc.access === "public" || isLabModeEnabled();
-}
+  // Prefer public/corpus/ for deployment, fallback to repo root for local dev.
+  if (await fileExists(publicPath)) return publicPath;
+  if (await fileExists(repoRootPath)) return repoRootPath;
 
-function restrictedDocStub(doc: CorpusDoc): string {
-  return [
-    `# Restricted document`,
-    ``,
-    `This document is not available in public mode.`,
-    ``,
-    `- Doc: \`${doc.filename}\``,
-    `- Reason: content policy / distribution constraints`,
-    ``,
-    `If you are running Brenner Bot in lab mode, set \`BRENNER_LAB_MODE=true\` and reload.`,
-    ``,
-    `See: \`content_policy_research_v0.1.md\``,
-    ``,
-  ].join("\n");
-}
-
-async function resolveCorpusPath(doc: CorpusDoc): Promise<string> {
-  const publicPath = resolve(process.cwd(), "public/corpus", doc.filename);
-  const repoRootPath = resolve(process.cwd(), "../..", doc.filename);
-
-  // Prefer repo root for restricted docs (avoid relying on copied public assets in local dev).
-  if (doc.access === "restricted") {
-    if (await fileExists(repoRootPath)) return repoRootPath;
-    if (await fileExists(publicPath)) return publicPath;
-  } else {
-    // Prefer public/corpus/ for deployment, fallback to repo root for local dev.
-    if (await fileExists(publicPath)) return publicPath;
-    if (await fileExists(repoRootPath)) return repoRootPath;
-  }
-
-  throw new Error(`Corpus file not found: ${doc.filename}`);
+  throw new Error(`Corpus file not found: ${filename}`);
 }
 
 export async function listCorpusDocs(): Promise<CorpusDoc[]> {
   return CORPUS_DOCS;
 }
 
-export async function readCorpusDoc(id: string): Promise<{ doc: CorpusDoc; content: string; restricted: boolean }> {
+export async function readCorpusDoc(id: string): Promise<{ doc: CorpusDoc; content: string }> {
   const doc = CORPUS_DOCS.find((d) => d.id === id);
   if (!doc) throw new Error(`Unknown doc: ${id}`);
 
-  if (!canReadDoc(doc)) {
-    return { doc, content: restrictedDocStub(doc), restricted: true };
-  }
-
-  const absPath = await resolveCorpusPath(doc);
+  const absPath = await resolveCorpusPath(doc.filename);
   const content = await readFile(absPath, "utf8");
-  return { doc, content, restricted: false };
+  return { doc, content };
 }
