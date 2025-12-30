@@ -170,7 +170,7 @@ function ThreadCard({ thread }: { thread: ThreadSummary }) {
   return (
     <Link
       href={`/sessions/${thread.threadId}`}
-      className="block rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:bg-muted/30 transition-all"
+      className="group block rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:bg-muted/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all touch-manipulation"
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0 flex-1">

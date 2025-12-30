@@ -210,7 +210,7 @@ export default function MethodPage() {
         <div className="grid gap-4 sm:grid-cols-2">
           <Link
             href="/corpus"
-            className="group rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30"
+            className="group rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] touch-manipulation"
           >
             <div className="flex items-center gap-3 mb-2">
               <div className="flex items-center justify-center size-10 rounded-lg bg-primary/10 text-primary">
@@ -230,7 +230,7 @@ export default function MethodPage() {
 
           <Link
             href="/distillations"
-            className="group rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30"
+            className="group rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] touch-manipulation"
           >
             <div className="flex items-center gap-3 mb-2">
               <div className="flex items-center justify-center size-10 rounded-lg bg-accent/10 text-accent">
