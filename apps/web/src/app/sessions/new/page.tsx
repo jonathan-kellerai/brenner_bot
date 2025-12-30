@@ -2,9 +2,43 @@ import { resolve } from "node:path";
 import { notFound, redirect } from "next/navigation";
 import { AgentMailClient } from "@/lib/agentMail";
 import { composePrompt } from "@/lib/prompts";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "New Session",
+  description: "Start a new Brenner Loop research session via Agent Mail.",
+};
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// Icons
+const PlayIcon = () => (
+  <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z" />
+  </svg>
+);
+
+const CheckCircleIcon = () => (
+  <svg className="size-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+  </svg>
+);
+
+const ServerIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008zm-3 6h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+  </svg>
+);
+
+const UsersIcon = () => (
+  <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+  </svg>
+);
 
 type AgentDirectory = {
   project?: { slug?: string; human_key?: string };
@@ -168,142 +202,203 @@ export default async function NewSessionPage({
   }
 
   return (
-    <div className="space-y-6">
-      <header className="space-y-2">
-        <h1 className="text-2xl font-semibold tracking-tight">New Session</h1>
-        <p className="text-sm text-zinc-700 dark:text-zinc-300">
-          Composes a Brenner Loop kickoff prompt and sends it via Agent Mail.
-        </p>
+    <div className="max-w-3xl mx-auto space-y-8">
+      {/* Header */}
+      <header className="space-y-4 animate-fade-in-up">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center justify-center size-12 rounded-xl bg-primary text-primary-foreground shadow-lg">
+            <PlayIcon />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">New Session</h1>
+            <p className="text-muted-foreground">
+              Start a Brenner Loop research session via Agent Mail
+            </p>
+          </div>
+        </div>
       </header>
 
-      {sent === "1" ? (
-        <div className="rounded-xl border border-emerald-500/30 bg-emerald-50 p-4 text-sm text-emerald-900 dark:border-emerald-400/20 dark:bg-emerald-950/40 dark:text-emerald-100">
-          Sent kickoff for thread <span className="font-mono">{thread}</span>.
-        </div>
-      ) : null}
-
-      <div className="rounded-xl border border-black/10 bg-white p-4 text-sm text-zinc-700 shadow-sm dark:border-white/10 dark:bg-zinc-950 dark:text-zinc-300">
-        <div className="font-medium text-zinc-900 dark:text-zinc-50">Agent Mail</div>
-        <div className="mt-1">
-          Base URL: <span className="font-mono">{agentMailBaseUrl}</span>
-        </div>
-        {agentMailError ? (
-          <div className="mt-2 text-amber-700 dark:text-amber-300">
-            Not reachable from this server: <span className="font-mono">{agentMailError}</span>
+      {/* Success Message */}
+      {sent === "1" && (
+        <div className="rounded-xl border border-success/30 bg-success/5 p-4 flex items-start gap-3 animate-fade-in-up">
+          <div className="text-success mt-0.5">
+            <CheckCircleIcon />
           </div>
-        ) : (
-          <div className="mt-2 text-emerald-700 dark:text-emerald-300">Connected.</div>
+          <div>
+            <div className="font-semibold text-success">Kickoff sent successfully!</div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Thread <span className="font-mono bg-muted px-1.5 py-0.5 rounded text-foreground">{thread}</span> has been initiated.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Agent Mail Status */}
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 animate-fade-in-up stagger-1">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center justify-center size-10 rounded-lg bg-muted text-muted-foreground">
+              <ServerIcon />
+            </div>
+            <div>
+              <div className="font-semibold text-foreground">Agent Mail</div>
+              <div className="text-sm text-muted-foreground font-mono">{agentMailBaseUrl}</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {agentMailError ? (
+              <>
+                <span className="flex size-2.5 rounded-full bg-warning animate-pulse" />
+                <span className="text-sm text-warning font-medium">Unreachable</span>
+              </>
+            ) : (
+              <>
+                <span className="flex size-2.5 rounded-full bg-success animate-pulse" />
+                <span className="text-sm text-success font-medium">Connected</span>
+              </>
+            )}
+          </div>
+        </div>
+
+        {agentMailError && (
+          <div className="rounded-lg bg-warning/10 border border-warning/20 p-3 text-sm text-warning">
+            {agentMailError}
+          </div>
         )}
-        {agentNames.length ? (
-          <div className="mt-3">
-            <div className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Known agents</div>
-            <div className="mt-1 flex flex-wrap gap-2">
+
+        {agentNames.length > 0 && (
+          <div className="pt-2 border-t border-border">
+            <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground mb-2">
+              <UsersIcon />
+              <span>Known agents ({agentNames.length})</span>
+            </div>
+            <div className="flex flex-wrap gap-2">
               {agentNames.slice(0, 24).map((name) => (
                 <span
                   key={name}
-                  className="rounded-full border border-black/10 bg-zinc-50 px-2 py-0.5 text-xs text-zinc-700 dark:border-white/10 dark:bg-black dark:text-zinc-300"
+                  className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-muted text-foreground border border-border"
                 >
                   {name}
                 </span>
               ))}
+              {agentNames.length > 24 && (
+                <span className="text-xs text-muted-foreground self-center">
+                  +{agentNames.length - 24} more
+                </span>
+              )}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
 
-      <form action={sendKickoff} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Thread ID</span>
-            <input
+      {/* Form */}
+      <form action={sendKickoff} className="space-y-6 animate-fade-in-up stagger-2">
+        {/* Session Setup */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Session Setup</h2>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Input
               name="threadId"
+              label="Thread ID"
               placeholder="FEAT-123"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
+              hint="Unique identifier for this research thread"
               required
             />
-          </label>
-
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Sender (Agent Name)</span>
-            <input
+            <Input
               name="sender"
+              label="Your Agent Name"
               defaultValue={senderDefault}
               placeholder="GreenCastle"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
+              hint="How you'll appear in Agent Mail"
               required
             />
-          </label>
+          </div>
 
-          <label className="grid gap-1 text-sm sm:col-span-2">
-            <span className="font-medium">Recipients (comma-separated agent names)</span>
-            <input
-              name="to"
-              placeholder="BlueMountain,RedForest"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
-              required
-            />
-          </label>
-
-          <label className="grid gap-1 text-sm sm:col-span-2">
-            <span className="font-medium">Subject (optional)</span>
-            <input
-              name="subject"
-              placeholder="[FEAT-123] Brenner Loop kickoff"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
-            />
-          </label>
-        </div>
-
-        <label className="grid gap-1 text-sm">
-          <span className="font-medium">Transcript excerpt</span>
-          <textarea
-            name="excerpt"
-            className="min-h-48 rounded-lg border border-black/10 bg-white px-3 py-2 font-mono text-xs leading-5 dark:border-white/10 dark:bg-black"
-            placeholder="Paste transcript chunks here (with section headings if you have them)."
+          <Input
+            name="to"
+            label="Recipients"
+            placeholder="BlueMountain, RedForest"
+            hint="Comma-separated list of agent names"
             required
           />
-        </label>
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Theme (optional)</span>
-            <input
+          <Input
+            name="subject"
+            label="Subject"
+            placeholder="[FEAT-123] Brenner Loop kickoff"
+            hint="Optional - will auto-generate from thread ID if left blank"
+          />
+        </div>
+
+        {/* Content */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Content</h2>
+
+          <Textarea
+            name="excerpt"
+            label="Transcript Excerpt"
+            placeholder="Paste transcript chunks here (with section headings if you have them)."
+            hint="The raw Brenner transcript material to analyze"
+            className="min-h-[200px] font-mono text-sm"
+            autoResize
+            required
+          />
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Input
               name="theme"
+              label="Theme"
               placeholder="decision experiments"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
+              hint="Optional focus area"
             />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Domain (optional)</span>
-            <input
+            <Input
               name="domain"
+              label="Domain"
               placeholder="biology"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
+              hint="Optional field context"
             />
-          </label>
-          <label className="grid gap-1 text-sm">
-            <span className="font-medium">Question (optional)</span>
-            <input
+            <Input
               name="question"
-              placeholder="What’s the most discriminative next experiment?"
-              className="rounded-lg border border-black/10 bg-white px-3 py-2 dark:border-white/10 dark:bg-black"
+              label="Question"
+              placeholder="What's the most discriminative next experiment?"
+              hint="Optional guiding question"
             />
+          </div>
+        </div>
+
+        {/* Options */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold text-foreground">Options</h2>
+
+          <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
+            <input
+              type="checkbox"
+              name="ackRequired"
+              className="size-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background"
+            />
+            <div>
+              <div className="font-medium text-foreground">Require acknowledgment</div>
+              <div className="text-sm text-muted-foreground">Recipients must explicitly confirm receipt</div>
+            </div>
           </label>
         </div>
 
-        <label className="flex items-center gap-2 text-sm">
-          <input type="checkbox" name="ackRequired" className="h-4 w-4" />
-          <span>Require ack</span>
-        </label>
-
+        {/* Hidden Fields */}
         <input type="hidden" name="projectKey" value={projectKeyDefault} />
 
-        <button
-          type="submit"
-          className="inline-flex items-center justify-center rounded-lg bg-black px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-        >
-          Send kickoff
-        </button>
+        {/* Submit */}
+        <div className="flex items-center gap-4 pt-4 border-t border-border">
+          <Button type="submit" size="lg" className="gap-2">
+            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+            </svg>
+            Send Kickoff
+          </Button>
+          <p className="text-sm text-muted-foreground">
+            This will compose and send a Brenner Loop prompt to the specified agents.
+          </p>
+        </div>
       </form>
     </div>
   );
