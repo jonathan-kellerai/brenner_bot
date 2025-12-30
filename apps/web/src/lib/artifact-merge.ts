@@ -1357,12 +1357,13 @@ export function lintArtifact(artifact: Artifact): LintReport {
     });
   }
 
-  const hypothesisIds = sortById(artifact.sections.hypothesis_slate).map((h) => h.id);
+  // Use only active hypotheses for discrimination check (not killed ones)
+  const activeHypothesisIds = sortById(hypotheses).map((h) => h.id);
   for (const p of predictions) {
-    const values = hypothesisIds.map((hid) => (p.predictions ?? {})[hid] ?? "");
+    const values = activeHypothesisIds.map((hid) => (p.predictions ?? {})[hid] ?? "");
     const normalized = values.map((v) => v.trim()).filter(Boolean);
     const unique = new Set(normalized);
-    if (normalized.length > 0 && unique.size <= 1 && hypothesisIds.length >= 2) {
+    if (normalized.length > 0 && unique.size <= 1 && activeHypothesisIds.length >= 2) {
       pushViolation(violations, {
         id: "WP-001",
         severity: "warning",
