@@ -582,6 +582,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   const [mobileSectionsLoaded, setMobileSectionsLoaded] = useState(MOBILE_INITIAL_SECTIONS);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
+  const initialScrollHandledRef = useRef(false);
 
   // Current section for sticky indicator
   const currentSection = data.sections[activeSection] ?? null;
@@ -741,6 +742,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   // Handle URL hash OR restore saved position on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (initialScrollHandledRef.current) return;
 
     const hash = window.location.hash;
     const urlParams = new URLSearchParams(window.location.search);
@@ -760,14 +762,26 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
       const sectionIndex = data.sections.findIndex((s) => s.number === sectionNum);
 
       if (sectionIndex >= 0) {
+        initialScrollHandledRef.current = true;
+
         // Delay to ensure DOM/virtualizer is initialized
         setTimeout(() => {
           if (isMobile) {
-            // Mobile: scroll element into view
-            const el = document.getElementById(`section-${sectionNum}`);
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "start" });
+            // Mobile: ensure the target section is loaded before scrolling (progressive loading)
+            if (sectionIndex >= mobileSectionsLoaded) {
+              setMobileSectionsLoaded(
+                Math.min(sectionIndex + MOBILE_LOAD_INCREMENT, data.sections.length)
+              );
             }
+
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const el = document.getElementById(`section-${sectionNum}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              });
+            });
           } else {
             // Desktop: use virtualizer
             virtualizer.scrollToIndex(sectionIndex, { align: "start", behavior: "smooth" });
@@ -783,9 +797,32 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
 
     // Restore saved position if no hash and we have a saved position
     if (canRestore && position) {
+      initialScrollHandledRef.current = true;
+
       setTimeout(() => {
         if (isMobile) {
-          // Mobile: scroll to section element
+          // Mobile: ensure the saved section is loaded before scrolling (progressive loading)
+          if (position.activeSection >= mobileSectionsLoaded) {
+            setMobileSectionsLoaded(
+              Math.min(position.activeSection + MOBILE_LOAD_INCREMENT, data.sections.length)
+            );
+
+            requestAnimationFrame(() => {
+              requestAnimationFrame(() => {
+                const section = data.sections[position.activeSection];
+                if (section) {
+                  const el = document.getElementById(`section-${section.number}`);
+                  if (el) {
+                    el.scrollIntoView({ block: "start" });
+                  }
+                }
+                markRestored();
+              });
+            });
+
+            return;
+          }
+
           const section = data.sections[position.activeSection];
           if (section) {
             const el = document.getElementById(`section-${section.number}`);
@@ -800,7 +837,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         markRestored();
       }, 100);
     }
-  }, [data.sections, virtualizer, canRestore, position, markRestored]);
+  }, [data.sections, virtualizer, canRestore, position, markRestored, mobileSectionsLoaded]);
 
   // Scroll to section from TOC
   // Mobile: scroll element into view, Desktop: use virtualizer
