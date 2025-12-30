@@ -286,16 +286,12 @@ export function parseDistillation(markdown: string, docId: string): ParsedDistil
     preamble = preambleMatch[1].trim().replace(/^>\s*/gm, "").replace(/\n+/g, " ");
   }
 
-  // If no parts/sections found, include raw content as fallback
-  const rawContent = parts.length === 0 ? markdown.trim() : undefined;
-
   return {
     title,
     author: model.name,
     subtitle,
     preamble,
     parts,
-    rawContent,
     wordCount,
   };
 }
