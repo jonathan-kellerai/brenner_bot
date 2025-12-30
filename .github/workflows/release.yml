@@ -79,7 +79,16 @@ jobs:
             echo "install.ps1 not present; skipping"
           fi
 
+      - name: Upload dist artifact (dry-run)
+        if: ${{ !startsWith(github.ref, 'refs/tags/') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: brenner-dist-${{ github.ref_name }}
+          path: dist/
+          retention-days: 7
+
       - name: Publish GitHub Release assets
+        if: ${{ startsWith(github.ref, 'refs/tags/') }}
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
