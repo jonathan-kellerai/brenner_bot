@@ -43,6 +43,7 @@ const ArrowRightIcon = () => (
 
 function getNavLinks(currentId: string) {
   const currentIndex = CORPUS_DOCS.findIndex((d) => d.id === currentId);
+  if (currentIndex < 0) return { prev: null, next: null };
   const prev = currentIndex > 0 ? CORPUS_DOCS[currentIndex - 1] : null;
   const next = currentIndex < CORPUS_DOCS.length - 1 ? CORPUS_DOCS[currentIndex + 1] : null;
   return { prev, next };

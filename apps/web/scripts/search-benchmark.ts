@@ -6,7 +6,8 @@
  */
 
 import { readFileSync } from "fs";
-import { join } from "path";
+import { dirname, join } from "path";
+import { fileURLToPath } from "url";
 import FlexSearch from "flexsearch";
 import MiniSearch from "minisearch";
 import Fuse from "fuse.js";
@@ -15,7 +16,8 @@ import Fuse from "fuse.js";
 // Load Corpus
 // ============================================================================
 
-const CORPUS_DIR = join(import.meta.dir, "../../../");
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const CORPUS_DIR = join(__dirname, "../../../");
 
 const corpusFiles = [
   "complete_brenner_transcript.md",
@@ -30,6 +32,7 @@ interface Document {
   id: number;
   title: string;
   content: string;
+  [key: string]: string | number; // Index signature for FlexSearch compatibility
 }
 
 function loadCorpus(): Document[] {
@@ -130,7 +133,12 @@ async function benchmarkFlexSearch(docs: Document[]) {
       return indexBuild.result.search(query, { limit: 10 });
     });
     searchTimes.push(search.time);
-    const resultCount = search.result.reduce((sum: number, r: any) => sum + (r.result?.length || 0), 0);
+    const resultCount = search.result.reduce((sum: number, item: unknown) => {
+      if (!item || typeof item !== "object") return sum;
+      const record = item as { result?: unknown };
+      if (!Array.isArray(record.result)) return sum;
+      return sum + record.result.length;
+    }, 0);
     results.push({ query, count: resultCount });
   }
 
