@@ -827,6 +827,44 @@ Context augmentation via cass-memory (local-first, no AI APIs):
 - `cm context --json` to augment kickoffs with relevant prior work
 - Feedback loop from session artifacts back to durable memory
 
+#### Using `cass` (session search)
+
+`cass` indexes **local CLI-agent session logs** (Codex CLI / Claude Code / Gemini CLI) on your machine so you can search for prior work by keyword, thread ID, or file paths.
+
+What gets indexed (default connectors; run `cass diag --json` to confirm on your machine):
+- Codex CLI sessions: `~/.codex/sessions`
+- Claude Code sessions: `~/.claude/projects`
+- Gemini CLI sessions: `~/.gemini/tmp`
+
+What does **not** get indexed by default:
+- Agent Mail’s git mailbox archive (use Agent Mail search tools or `rg` on the mailbox repo instead)
+
+One-time setup (build the index):
+```bash
+cass index --full
+```
+
+Keep the index current:
+```bash
+# Option A: run continuously in a background terminal
+cass index --watch
+
+# Option B: re-run periodically
+cass index
+```
+
+Search examples:
+```bash
+# Recommended: search by the join-key thread id (make sure your prompts include THREAD_ID)
+cass search "$THREAD_ID" --workspace "$PWD" --robot --limit 10
+
+# Search by keyword (optionally time-box it)
+cass search "forbidden pattern" --workspace "$PWD" --week --robot --limit 10
+
+# Quick health check (if stale, run cass index)
+cass status --json
+```
+
 ### 8. Deployment
 
 Production infrastructure:
