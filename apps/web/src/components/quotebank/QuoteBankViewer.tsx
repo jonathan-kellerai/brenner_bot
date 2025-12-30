@@ -77,42 +77,47 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
       <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">
         Filter by Category
       </h3>
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => onTagSelect(null)}
-          className={`
-            px-3 py-1.5 rounded-lg text-sm font-medium transition-all
-            ${
-              selectedTag === null
-                ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
-            }
-          `}
-        >
-          All
-        </button>
-        {tags.map((tag) => (
+      {/* Horizontal scroll on mobile, wrap on desktop */}
+      <div className="relative -mx-4 px-4 sm:mx-0 sm:px-0">
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 sm:flex-wrap scrollbar-hide snap-x snap-mandatory">
           <button
-            key={tag}
-            onClick={() => onTagSelect(tag === selectedTag ? null : tag)}
+            onClick={() => onTagSelect(null)}
             className={`
-              group px-3 py-1.5 rounded-lg text-sm font-medium transition-all
+              flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation
               ${
-                selectedTag === tag
+                selectedTag === null
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-95"
               }
             `}
           >
-            {tag.replace(/-/g, " ")}
-            <span className={`
-              ml-1.5 text-xs
-              ${selectedTag === tag ? "opacity-80" : "opacity-50 group-hover:opacity-70"}
-            `}>
-              {quoteCounts[tag] || 0}
-            </span>
+            All
           </button>
-        ))}
+          {tags.map((tag) => (
+            <button
+              key={tag}
+              onClick={() => onTagSelect(tag === selectedTag ? null : tag)}
+              className={`
+                group flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation
+                ${
+                  selectedTag === tag
+                    ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
+                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-95"
+                }
+              `}
+            >
+              {tag.replace(/-/g, " ")}
+              <span className={`
+                ml-1.5 text-xs
+                ${selectedTag === tag ? "opacity-80" : "opacity-50 group-hover:opacity-70"}
+              `}>
+                {quoteCounts[tag] || 0}
+              </span>
+            </button>
+          ))}
+        </div>
+        {/* Fade hint for horizontal scroll on mobile */}
+        <div className="absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none sm:hidden" />
       </div>
     </div>
   );
@@ -167,29 +172,29 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
       className={`
         group relative rounded-2xl border border-border bg-card overflow-hidden
         hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5
-        transition-all duration-300 animate-fade-in-up
+        active:scale-[0.995] transition-all duration-300 animate-fade-in-up
       `}
       style={{ animationDelay: `${Math.min(index * 50, 300)}ms` }}
     >
       {/* Reference badge */}
-      <div className="absolute top-4 right-4">
-        <span className="font-mono text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
+      <div className="absolute top-3 right-3 sm:top-4 sm:right-4 z-10">
+        <span className="font-mono text-[10px] sm:text-xs px-2 py-1 rounded-lg bg-primary/10 text-primary border border-primary/20">
           {quote.reference}
         </span>
       </div>
 
-      <div className="p-6 lg:p-8">
+      <div className="p-4 sm:p-6 lg:p-8">
         {/* Title */}
-        <h3 className="text-lg lg:text-xl font-semibold text-foreground mb-4 pr-16 group-hover:text-primary transition-colors">
+        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground mb-3 sm:mb-4 pr-12 sm:pr-16 group-hover:text-primary transition-colors leading-snug">
           {quote.title}
         </h3>
 
         {/* Quote text */}
         <div className="relative">
-          <div className="absolute -left-2 -top-2 text-4xl text-primary/20 font-serif select-none">
+          <div className="absolute -left-1 -top-1 sm:-left-2 sm:-top-2 text-3xl sm:text-4xl text-primary/20 font-serif select-none">
             &ldquo;
           </div>
-          <blockquote className="pl-4 text-base lg:text-lg leading-relaxed text-foreground/85 italic font-serif">
+          <blockquote className="pl-3 sm:pl-4 text-[15px] sm:text-base lg:text-lg leading-relaxed text-foreground/85 italic font-serif">
             {isExpanded || quote.text.length < 300
               ? quote.text
               : `${quote.text.slice(0, 300)}...`}
@@ -197,7 +202,7 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
           {quote.text.length >= 300 && (
             <button
               onClick={() => setIsExpanded(!isExpanded)}
-              className="mt-2 text-sm text-primary hover:underline"
+              className="mt-3 px-3 py-1.5 -ml-1 text-sm text-primary hover:underline active:scale-95 transition-transform touch-manipulation rounded-lg"
             >
               {isExpanded ? "Show less" : "Read more"}
             </button>
@@ -206,13 +211,13 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
 
         {/* Why it matters */}
         {quote.whyItMatters && (
-          <div className="mt-6 pt-6 border-t border-border/50">
-            <div className="flex items-start gap-3">
-              <div className="flex-shrink-0 size-6 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <LightbulbIcon className="size-3.5 text-amber-500" />
+          <div className="mt-5 sm:mt-6 pt-5 sm:pt-6 border-t border-border/50">
+            <div className="flex items-start gap-2.5 sm:gap-3">
+              <div className="flex-shrink-0 size-5 sm:size-6 rounded-full bg-amber-500/10 flex items-center justify-center">
+                <LightbulbIcon className="size-3 sm:size-3.5 text-amber-500" />
               </div>
-              <div>
-                <div className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+              <div className="min-w-0 flex-1">
+                <div className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
                   Why it matters
                 </div>
                 <p className="text-sm text-foreground/80 leading-relaxed">
@@ -223,17 +228,19 @@ function QuoteCard({ quote, index }: QuoteCardProps) {
           </div>
         )}
 
-        {/* Tags */}
+        {/* Tags - horizontal scroll on mobile */}
         {quote.tags.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {quote.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-0.5 text-xs rounded-md bg-muted text-muted-foreground"
-              >
-                {tag.replace(/-/g, " ")}
-              </span>
-            ))}
+          <div className="mt-4 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="flex gap-1.5 sm:gap-2 overflow-x-auto sm:flex-wrap scrollbar-hide">
+              {quote.tags.map((tag) => (
+                <span
+                  key={tag}
+                  className="flex-shrink-0 px-2 py-0.5 text-xs rounded-md bg-muted text-muted-foreground whitespace-nowrap"
+                >
+                  {tag.replace(/-/g, " ")}
+                </span>
+              ))}
+            </div>
           </div>
         )}
       </div>
