@@ -970,7 +970,7 @@ export default function CorpusIndexPage() {
                   2
                 </span>
                 <span>
-                  Use the <Jargon term="quotebank"><strong className="text-foreground">Quote Bank</strong></Jargon> to find specific Brenner quotes on topics of interest.
+                  Use the <Jargon term="quote-bank"><strong className="text-foreground">Quote Bank</strong></Jargon> to find specific Brenner quotes on topics of interest.
                 </span>
               </li>
               <li className="flex items-start gap-3">

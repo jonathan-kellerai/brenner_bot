@@ -1059,14 +1059,6 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["thread", "agent-mail"],
     category: "project",
   },
-  quotebank: {
-    term: "Quote Bank",
-    short: "A curated collection of quotable passages from the Brenner corpus.",
-    long:
-      "The quote bank organizes memorable passages from Brenner's transcript by theme, operator, or concept. It enables quick access to relevant quotes for research sessions and UI display.",
-    related: ["anchor", "excerpt", "corpus"],
-    category: "project",
-  },
   distillation: {
     term: "Distillation",
     short: "A processed, structured summary derived from the raw corpus.",
@@ -1313,7 +1305,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     analogy:
       "Pair programming catches errors that solo coding misses. The blackboard discussions weren't social niceties but thinking technology.",
     why:
-      "The 20 years sharing an office with Crick, the Talmudic readings of textbooks aloud, the late nights talking science till 4am were research methods, not recreation. Transcript anchors: §167, §319-332.",
+      "The 20 years sharing an office with Crick, the Talmudic readings of textbooks aloud, the late nights talking science till 4am were research methods, not recreation. Transcript anchor: §167.",
     related: ["productive-ignorance", "cross-domain-import", "brenner-loop"],
     category: "brenner",
   },

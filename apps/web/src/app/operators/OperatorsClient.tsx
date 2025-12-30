@@ -675,7 +675,7 @@ export function OperatorsClient({ operators }: { operators: BrennerOperatorPalet
             Reusable cognitive moves for turning vague questions into{" "}
             <Jargon term="discriminative-test">discriminative tests</Jargon>—grounded in transcript{" "}
             <Jargon term="anchor">anchors</Jargon> and curated{" "}
-            <Jargon term="quotebank">quote-bank</Jargon> primitives.
+            <Jargon term="quote-bank">quote-bank</Jargon> primitives.
           </p>
 
           {/* Stats */}
