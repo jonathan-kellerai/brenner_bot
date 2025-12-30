@@ -371,6 +371,24 @@ export function BackToTop() {
 }
 
 // ============================================================================
+// RAW CONTENT FALLBACK (for unstructured files)
+// ============================================================================
+
+function RawContentFallback({ content }: { content: string }) {
+  const paragraphs = content.split(/\n\n+/).filter(Boolean);
+
+  return (
+    <div className="prose prose-lg dark:prose-invert max-w-none">
+      {paragraphs.map((para, i) => (
+        <p key={i} className="text-lg leading-relaxed text-foreground/85 mb-4">
+          {para}
+        </p>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
 // MAIN VIEWER COMPONENT
 // ============================================================================
 
@@ -445,18 +463,22 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
 
         {/* Main content */}
         <main>
-          {data.sections.map((section, index) => (
-            <div
-              key={section.number}
-              ref={(el) => { sectionRefs.current[index] = el; }}
-              data-index={index}
-            >
-              <TranscriptSection
-                section={section}
-                isActive={activeSection === index}
-              />
-            </div>
-          ))}
+          {data.sections.length > 0 ? (
+            data.sections.map((section, index) => (
+              <div
+                key={section.number}
+                ref={(el) => { sectionRefs.current[index] = el; }}
+                data-index={index}
+              >
+                <TranscriptSection
+                  section={section}
+                  isActive={activeSection === index}
+                />
+              </div>
+            ))
+          ) : data.rawContent ? (
+            <RawContentFallback content={data.rawContent} />
+          ) : null}
         </main>
       </div>
 
