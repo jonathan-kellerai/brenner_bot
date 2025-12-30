@@ -39,19 +39,81 @@ export interface ParsedDistillation {
 }
 
 /**
- * Extract model name from filename
+ * Rich metadata for each distillation - hardcoded for beautiful display
+ */
+export interface DistillationMeta {
+  name: string;
+  color: string;
+  icon: string;
+  tagline: string;
+  approach: string;
+  strengths: string[];
+  date: string;
+}
+
+const DISTILLATION_META: Record<string, DistillationMeta> = {
+  "distillation-gpt-52": {
+    name: "GPT-5.2",
+    color: "from-emerald-500 to-teal-600",
+    icon: "G",
+    tagline: "Extra-high reasoning synthesis",
+    approach: "Systematic operator extraction with Bayesian decision theory framing",
+    strengths: [
+      "Rigorous formalization of the evidence-per-week objective",
+      "Clear loop structure with explicit decision procedures",
+      "Strong emphasis on discriminative leverage and cheap experiments",
+    ],
+    date: "December 2025",
+  },
+  "distillation-opus-45": {
+    name: "Claude Opus 4.5",
+    color: "from-violet-500 to-purple-600",
+    icon: "A",
+    tagline: "Deep philosophical synthesis",
+    approach: "Phenomenological analysis of Brenner's epistemological framework",
+    strengths: [
+      "Rich exploration of the 'third alternative' anti-binary thinking",
+      "Emphasis on system selection and reusable experimental platforms",
+      "Nuanced treatment of historical context and methodology evolution",
+    ],
+    date: "December 2025",
+  },
+  "distillation-gemini-3": {
+    name: "Gemini 3",
+    color: "from-blue-500 to-cyan-600",
+    icon: "G",
+    tagline: "Deep think distillation",
+    approach: "Compact extraction focused on actionable operators and heuristics",
+    strengths: [
+      "Concise operator taxonomy with clear applicability",
+      "Focus on practical decision-making frameworks",
+      "Efficient synthesis of core methodological principles",
+    ],
+    date: "December 2025",
+  },
+};
+
+/**
+ * Get rich metadata for a distillation by ID
+ */
+export function getDistillationMeta(id: string): DistillationMeta {
+  return DISTILLATION_META[id] ?? {
+    name: "AI Model",
+    color: "from-gray-500 to-gray-600",
+    icon: "?",
+    tagline: "Model distillation",
+    approach: "Synthesis of Brenner's methodology",
+    strengths: ["Systematic analysis of the transcript"],
+    date: "2025",
+  };
+}
+
+/**
+ * Legacy function - get basic model info from ID
  */
 export function getModelFromId(id: string): { name: string; color: string; icon: string } {
-  if (id.includes("opus")) {
-    return { name: "Claude Opus 4.5", color: "from-violet-500 to-purple-600", icon: "A" };
-  }
-  if (id.includes("gpt")) {
-    return { name: "GPT-5.2", color: "from-emerald-500 to-teal-600", icon: "G" };
-  }
-  if (id.includes("gemini")) {
-    return { name: "Gemini 3", color: "from-blue-500 to-cyan-600", icon: "G" };
-  }
-  return { name: "AI Model", color: "from-gray-500 to-gray-600", icon: "?" };
+  const meta = getDistillationMeta(id);
+  return { name: meta.name, color: meta.color, icon: meta.icon };
 }
 
 /**
