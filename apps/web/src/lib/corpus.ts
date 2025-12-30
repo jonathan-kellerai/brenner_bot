@@ -1,6 +1,14 @@
 import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 
+/**
+ * Document category type.
+ *
+ * SYNC NOTE: This type is also defined in globalSearchTypes.ts for client-side use.
+ * If you modify this type, you must update globalSearchTypes.ts to match.
+ * The duplication exists because this file uses Node.js APIs and cannot be
+ * imported in client components.
+ */
 export type DocCategory = "transcript" | "quote-bank" | "distillation" | "metaprompt" | "raw-response";
 
 export type CorpusDoc = {

@@ -3,6 +3,10 @@
  *
  * Shared types for the global search functionality.
  * This file contains no Node.js imports so it can be used in client components.
+ *
+ * SYNC NOTE: DocCategory is also defined in corpus.ts. If you modify one,
+ * you must update the other to keep them in sync. The duplication exists
+ * because corpus.ts uses Node.js APIs and cannot be imported in client code.
  */
 
 export type DocCategory = "transcript" | "quote-bank" | "distillation" | "metaprompt" | "raw-response";

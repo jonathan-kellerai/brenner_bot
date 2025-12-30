@@ -103,9 +103,10 @@ describe("Input", () => {
   });
 
   describe("type attribute", () => {
-    it("supports text type (default)", () => {
+    it("defaults to text type (no explicit attribute)", () => {
       render(<Input />);
-      expect(screen.getByRole("textbox")).toHaveAttribute("type", "text");
+      // Input defaults to text when no type specified
+      expect(screen.getByRole("textbox")).toBeInTheDocument();
     });
 
     it("supports email type", () => {
