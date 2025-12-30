@@ -665,8 +665,9 @@ Terminal-first workflow:
 ### 6. Memory integration
 
 Optional context augmentation via cass-memory:
-- `cm context` integration to augment kickoffs with relevant prior sessions
+- `cm context --json` integration to augment kickoffs with relevant rules + prior sessions (local-first; no vendor AI APIs required)
 - Feedback loop from session artifacts back to durable memory
+- Notes: `cass_memory_integration_notes_v0.1.md`
 
 ### 7. Deployment
 

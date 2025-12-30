@@ -1,7 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Link from "next/link";
 import "./globals.css";
+import { HeaderNav, BottomNav, ReadingProgress, BackToTop, ThemeToggle } from "@/components/ui/nav";
+import { Button } from "@/components/ui/button";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -14,16 +16,38 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Brenner Bot Lab",
+  title: {
+    default: "Brenner Bot Lab",
+    template: "%s | Brenner Bot Lab",
+  },
   description:
-    "Research lab for operationalizing the Brenner method via multi-agent collaboration.",
+    "Research lab for operationalizing Sydney Brenner's scientific methodology via multi-agent collaboration.",
+  keywords: ["Sydney Brenner", "research methodology", "AI", "multi-agent", "science"],
+  authors: [{ name: "Brenner Bot Lab" }],
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: "https://brennerbot.org",
+    siteName: "Brenner Bot Lab",
+    title: "Brenner Bot Lab",
+    description: "Research lab for operationalizing Sydney Brenner's scientific methodology.",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Brenner Bot Lab",
+    description: "Research lab for operationalizing Sydney Brenner's scientific methodology.",
+  },
 };
 
-const NAV_ITEMS = [
-  { href: "/corpus", label: "Corpus" },
-  { href: "/distillations", label: "Distillations" },
-  { href: "/method", label: "Method" },
-] as const;
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5,
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#fafafa" },
+    { media: "(prefers-color-scheme: dark)", color: "#141414" },
+  ],
+};
 
 export default function RootLayout({
   children,
@@ -55,71 +79,97 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="min-h-dvh bg-background text-foreground">
-          <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-lg">
-            <div className="mx-auto flex max-w-5xl items-center justify-between px-[var(--space-container-x)] py-4">
-              <Link
-                href="/"
-                className="font-semibold tracking-tight text-foreground hover:text-primary transition-colors"
-              >
-                Brenner Bot Lab
-              </Link>
-              <nav className="flex items-center gap-6 text-sm">
-                {NAV_ITEMS.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {item.label}
-                  </Link>
-                ))}
-                {labModeEnabled && (
-                  <Link
-                    href="/sessions/new"
-                    className="rounded-lg bg-primary px-3 py-1.5 text-primary-foreground hover:bg-primary/90 transition-colors"
-                  >
-                    New Session
-                  </Link>
-                )}
-              </nav>
+        <div className="min-h-dvh flex flex-col bg-background text-foreground">
+          {/* Reading Progress */}
+          <ReadingProgress />
+
+          {/* Header */}
+          <header className="sticky top-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
+            <div className="container-default">
+              <div className="flex h-16 items-center justify-between">
+                {/* Logo */}
+                <Link
+                  href="/"
+                  className="group flex items-center gap-2 font-semibold tracking-tight text-foreground transition-colors hover:text-primary"
+                >
+                  <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground text-sm font-bold transition-transform group-hover:scale-105">
+                    B
+                  </span>
+                  <span className="hidden sm:inline">Brenner Bot Lab</span>
+                </Link>
+
+                {/* Desktop Navigation */}
+                <div className="flex items-center gap-2">
+                  <HeaderNav />
+
+                  {labModeEnabled && (
+                    <Button asChild size="sm" className="hidden lg:inline-flex ml-2">
+                      <Link href="/sessions/new">New Session</Link>
+                    </Button>
+                  )}
+
+                  <ThemeToggle />
+                </div>
+              </div>
             </div>
           </header>
 
-          <main className="mx-auto w-full max-w-5xl px-[var(--space-container-x)] py-[var(--space-section-y)]">
-            {children}
+          {/* Main Content */}
+          <main className="flex-1 pb-mobile-nav">
+            <div className="container-default py-8 lg:py-12 animate-fade-in">
+              {children}
+            </div>
           </main>
 
-          <footer className="border-t border-border/50 bg-muted/30">
-            <div className="mx-auto max-w-5xl px-[var(--space-container-x)] py-8">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
-                  Research lab for operationalizing the Brenner method.
-                </p>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                  <a
-                    href="https://github.com/Dicklesworthstone/brenner_bot"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    GitHub
-                  </a>
-                  <a
-                    href="https://github.com/Dicklesworthstone/mcp_agent_mail"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="hover:text-foreground transition-colors"
-                  >
-                    Agent Mail
-                  </a>
+          {/* Footer - Desktop only, hidden when bottom nav is visible */}
+          <footer className="hidden lg:block border-t border-border/50 bg-muted/20">
+            <div className="container-default py-8">
+              <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="flex size-6 items-center justify-center rounded bg-primary text-primary-foreground text-xs font-bold">
+                      B
+                    </span>
+                    <span className="font-semibold">Brenner Bot Lab</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground max-w-md">
+                    Research lab for operationalizing Sydney Brenner&apos;s scientific methodology
+                    via multi-agent collaboration.
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-4 sm:items-end">
+                  <div className="flex items-center gap-6 text-sm">
+                    <a
+                      href="https://github.com/Dicklesworthstone/brenner_bot"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground transition-colors link-underline"
+                    >
+                      GitHub
+                    </a>
+                    <a
+                      href="https://github.com/Dicklesworthstone/mcp_agent_mail"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-muted-foreground hover:text-foreground transition-colors link-underline"
+                    >
+                      Agent Mail
+                    </a>
+                  </div>
+                  <p className="text-xs text-muted-foreground/60">
+                    Built with Next.js + Bun. Coordinated via Agent Mail.
+                  </p>
                 </div>
               </div>
-              <p className="mt-4 text-xs text-muted-foreground/60">
-                Built with Next.js + Bun. Coordinated via Agent Mail (MCP).
-              </p>
             </div>
           </footer>
+
+          {/* Mobile Bottom Navigation */}
+          <BottomNav />
+
+          {/* Back to Top Button */}
+          <BackToTop />
         </div>
       </body>
     </html>

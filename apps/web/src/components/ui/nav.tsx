@@ -1,0 +1,219 @@
+"use client"
+
+import * as React from "react"
+import Link from "next/link"
+import { usePathname } from "next/navigation"
+import { cn } from "@/lib/utils"
+
+// Icons
+const HomeIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+  </svg>
+)
+
+const BookIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+  </svg>
+)
+
+const SparklesIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" />
+  </svg>
+)
+
+const BeakerIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 5.07a1.125 1.125 0 01-1.135 1.416H3.933a1.125 1.125 0 01-1.135-1.416L5 14.5" />
+  </svg>
+)
+
+interface NavItem {
+  href: string
+  label: string
+  icon: React.ReactNode
+}
+
+const navItems: NavItem[] = [
+  { href: "/", label: "Home", icon: <HomeIcon /> },
+  { href: "/corpus", label: "Corpus", icon: <BookIcon /> },
+  { href: "/distillations", label: "Distillations", icon: <SparklesIcon /> },
+  { href: "/method", label: "Method", icon: <BeakerIcon /> },
+]
+
+// Desktop Header Navigation
+export function HeaderNav({ className }: { className?: string }) {
+  const pathname = usePathname()
+
+  return (
+    <nav className={cn("hidden lg:flex items-center gap-1", className)}>
+      {navItems.slice(1).map((item) => {
+        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={cn(
+              "relative px-4 py-2 text-sm font-medium rounded-lg transition-colors",
+              isActive
+                ? "text-primary"
+                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+            )}
+          >
+            {item.label}
+            {isActive && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-0.5 bg-primary rounded-full" />
+            )}
+          </Link>
+        )
+      })}
+    </nav>
+  )
+}
+
+// Mobile Bottom Navigation
+export function BottomNav({ className }: { className?: string }) {
+  const pathname = usePathname()
+
+  return (
+    <nav
+      className={cn(
+        "bottom-nav lg:hidden",
+        className
+      )}
+    >
+      <div className="flex items-center justify-around h-16">
+        {navItems.map((item) => {
+          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="bottom-nav-item touch-target"
+              data-active={isActive}
+            >
+              {item.icon}
+              <span className="text-xs">{item.label}</span>
+            </Link>
+          )
+        })}
+      </div>
+    </nav>
+  )
+}
+
+// Reading Progress Bar
+export function ReadingProgress({ className }: { className?: string }) {
+  const [progress, setProgress] = React.useState(0)
+
+  React.useEffect(() => {
+    const updateProgress = () => {
+      const scrollTop = window.scrollY
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight
+      const scrollPercent = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0
+      setProgress(Math.min(100, Math.max(0, scrollPercent)))
+    }
+
+    window.addEventListener("scroll", updateProgress, { passive: true })
+    updateProgress()
+
+    return () => window.removeEventListener("scroll", updateProgress)
+  }, [])
+
+  if (progress === 0) return null
+
+  return (
+    <div
+      className={cn("reading-progress", className)}
+      style={{ width: `${progress}%` }}
+      role="progressbar"
+      aria-valuenow={progress}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      aria-label="Reading progress"
+    />
+  )
+}
+
+// Back to Top Button
+export function BackToTop({ className }: { className?: string }) {
+  const [visible, setVisible] = React.useState(false)
+
+  React.useEffect(() => {
+    const toggleVisible = () => {
+      setVisible(window.scrollY > 500)
+    }
+
+    window.addEventListener("scroll", toggleVisible, { passive: true })
+    toggleVisible()
+
+    return () => window.removeEventListener("scroll", toggleVisible)
+  }, [])
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  return (
+    <button
+      onClick={scrollToTop}
+      className={cn("back-to-top", visible && "visible", className)}
+      aria-label="Back to top"
+    >
+      <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 15.75l7.5-7.5 7.5 7.5" />
+      </svg>
+    </button>
+  )
+}
+
+// Theme Toggle
+export function ThemeToggle({ className }: { className?: string }) {
+  const [theme, setTheme] = React.useState<"light" | "dark">("light")
+  const [mounted, setMounted] = React.useState(false)
+
+  React.useEffect(() => {
+    setMounted(true)
+    const stored = localStorage.getItem("theme")
+    if (stored === "dark" || (!stored && window.matchMedia("(prefers-color-scheme: dark)").matches)) {
+      setTheme("dark")
+      document.documentElement.classList.add("dark")
+    }
+  }, [])
+
+  const toggleTheme = () => {
+    const newTheme = theme === "light" ? "dark" : "light"
+    setTheme(newTheme)
+    localStorage.setItem("theme", newTheme)
+    document.documentElement.classList.toggle("dark")
+  }
+
+  if (!mounted) {
+    return <div className="size-10" /> // Placeholder to prevent layout shift
+  }
+
+  return (
+    <button
+      onClick={toggleTheme}
+      className={cn(
+        "size-10 rounded-lg flex items-center justify-center",
+        "text-muted-foreground hover:text-foreground hover:bg-muted/50",
+        "transition-colors focus-ring",
+        className
+      )}
+      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+    >
+      {theme === "light" ? (
+        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z" />
+        </svg>
+      ) : (
+        <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+        </svg>
+      )}
+    </button>
+  )
+}
