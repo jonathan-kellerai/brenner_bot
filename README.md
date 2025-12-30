@@ -7,16 +7,17 @@
 This repository integrates with **Agent Mail** (coordination + memory + workflow glue) so multiple coding agents can collaborate as a *research group*:
 
 - **Claude Code** running **Opus 4.5**
-- **Codex** running **GPT‑5.2** (extra-high reasoning)
+- **Codex CLI** running **GPT‑5.2** (extra-high reasoning)
 - **Gemini CLI** running **Gemini 3**
 
-Important: Brenner Bot is designed to coordinate these tools via their **CLI subscriptions** (e.g., GPT Pro / Claude Max / Gemini Ultra) — it does **not** call vendor model APIs directly.
+> **Critical constraint (non-negotiable):** We do **not** call vendor AI APIs from code. Instead, we coordinate CLI tools via their **subscription tiers** (Claude Max / GPT Pro / Gemini Ultra) running in terminal sessions. Orchestration is *message passing + compilation*, not remote inference.
 
-…all coordinating via Agent Mail, using prompt templates and repeatable workflows grounded in deep study of Brenner’s method.
+The agents run in parallel via **ntm** (Named Tmux Manager), coordinating through **Agent Mail** threads, producing structured deltas that get compiled into durable artifacts.
 
 The system includes:
-- A Next.js web app at **brennerbot.org** (corpus browser + session orchestration + artifact viewer)
-- A Bun CLI (`brenner`) for terminal-first workflows
+- A **Next.js web app** at `brennerbot.org` — human interface for corpus browsing + session viewing (not agent execution)
+- A **Bun CLI** (`brenner`) — terminal-first workflows for power users
+- A **cockpit runtime** — ntm-based multi-agent sessions with Agent Mail coordination
 
 Deployed on Vercel with Cloudflare DNS at **`brennerbot.org`**.
 
@@ -133,7 +134,7 @@ The idea is to turn those into **prompt templates + structured research protocol
 
 ### Conceptual architecture
 
-> **Key insight**: This is a **CLI-based** architecture. We use subscription-tier CLI tools (Claude Max, GPT Pro, Gemini Ultra) running in terminal sessions—not AI APIs. Coordination happens via Agent Mail; orchestration via ntm (Named Tmux Manager).
+> **Key insight**: This is a **CLI-based** architecture. We do NOT call AI APIs. Instead, CLI tools (claude code, codex-cli, gemini-cli) run in terminal sessions via **ntm** (Named Tmux Manager), coordinating through **Agent Mail**. The web app is a human interface for browsing—not agent execution.
 
 ```mermaid
 %%{init: {'theme': 'base', 'themeVariables': {
@@ -148,69 +149,111 @@ The idea is to turn those into **prompt templates + structured research protocol
 }}}%%
 
 flowchart TB
+    subgraph HUMAN["<b>HUMAN INTERFACES</b>"]
+        direction LR
+        WEB["🌐 Web App<br/><i>corpus · sessions</i>"]
+        BCLI["⌨️ brenner CLI<br/><i>terminal workflows</i>"]
+    end
+
     subgraph SOURCES["<b>PRIMARY SOURCES</b>"]
-        direction TB
-        T["📄 Brenner Transcripts<br/><i>236 segments</i>"]
-        E["🔍 Extraction<br/><i>motifs · heuristics</i>"]
-        Q["📚 Quote Bank<br/><i>§-anchored primitives</i>"]
-        T --> E --> Q
+        direction LR
+        T["📄 Transcripts<br/><i>236 §-anchored</i>"]
+        Q["📚 Quote Bank<br/><i>primitives</i>"]
     end
 
     subgraph KERNEL["<b>PROTOCOL KERNEL</b>"]
-        direction TB
-        S["⚙️ Operators + Schema<br/><i>+ Guardrails</i>"]
-        P["📝 Prompt Templates<br/><i>role-specific deltas</i>"]
-        S --> P
+        direction LR
+        S["⚙️ Schema<br/><i>+ Guardrails</i>"]
+        P["📝 Prompts<br/><i>role deltas</i>"]
     end
 
-    subgraph COCKPIT["<b>TERMINAL COCKPIT</b>"]
-        direction TB
-        NTM["🖥️ ntm · tmux sessions<br/><i>agent panes · routing</i>"]
-        AM["📬 Agent Mail · MCP<br/><i>threads · inbox · acks</i>"]
-        NTM <--> AM
+    subgraph BUS["<b>COORDINATION BUS</b>"]
+        AM["📬 Agent Mail<br/><i>threads · acks · join-key</i>"]
+    end
 
-        subgraph CLI["<b>CLI Agents</b> <i>(subscription tiers)</i>"]
+    subgraph COCKPIT["<b>COCKPIT RUNTIME</b>"]
+        direction TB
+        NTM["🖥️ ntm<br/><i>tmux sessions</i>"]
+
+        subgraph AGENTS["<b>CLI Agents</b>"]
             direction LR
-            C["🟣 claude code<br/><i>Claude Max</i>"]
-            G["🟢 codex-cli<br/><i>GPT Pro</i>"]
-            M["🔵 gemini-cli<br/><i>Gemini Ultra</i>"]
+            C["🟣 claude code<br/><i>Max</i>"]
+            G["🟢 codex-cli<br/><i>Pro</i>"]
+            M["🔵 gemini-cli<br/><i>Ultra</i>"]
         end
 
-        NTM --> CLI
-        CLI --> AM
+        AC["🔧 Compiler<br/><i>merge + lint</i>"]
+
+        NTM --> AGENTS
+        AGENTS --> AC
     end
 
     subgraph ARTIFACTS["<b>DURABLE ARTIFACTS</b>"]
-        direction TB
-        subgraph OUTPUTS[" "]
-            direction LR
-            H["Hypothesis<br/>Slates"]
-            D["Discriminative<br/>Tests"]
-        end
-        subgraph OUTPUTS2[" "]
-            direction LR
-            A["Assumption<br/>Ledgers"]
-            X["Adversarial<br/>Critiques"]
-        end
+        direction LR
+        H["Hypothesis<br/>Slates"]
+        D["Tests"]
+        A["Ledgers"]
+        X["Critiques"]
     end
 
+    subgraph MEMORY["<b>MEMORY</b> <i>(optional)</i>"]
+        direction LR
+        CASS["🔍 cass<br/><i>session search</i>"]
+        CM["🧠 cm<br/><i>rules + patterns</i>"]
+    end
+
+    HUMAN --> SOURCES
+    HUMAN --> BUS
     SOURCES --> KERNEL
-    KERNEL --> COCKPIT
+    KERNEL --> BUS
+    BUS <--> COCKPIT
     COCKPIT --> ARTIFACTS
     ARTIFACTS -.->|"feedback"| SOURCES
+    MEMORY -.->|"augment"| KERNEL
 
+    style HUMAN fill:#e8eaf6,stroke:#7986cb,stroke-width:2px,color:#3949ab
     style SOURCES fill:#e3f2fd,stroke:#64b5f6,stroke-width:2px,color:#1565c0
     style KERNEL fill:#e8f5e9,stroke:#81c784,stroke-width:2px,color:#2e7d32
+    style BUS fill:#fff3e0,stroke:#ffb74d,stroke-width:2px,color:#ef6c00
     style COCKPIT fill:#f3e5f5,stroke:#ba68c8,stroke-width:2px,color:#7b1fa2
-    style CLI fill:#fce4ec,stroke:#f48fb1,stroke-width:1px,color:#880e4f
-    style ARTIFACTS fill:#fff8e1,stroke:#ffb74d,stroke-width:2px,color:#ef6c00
-    style OUTPUTS fill:#fffde7,stroke:#fff59d,stroke-width:1px
-    style OUTPUTS2 fill:#fffde7,stroke:#fff59d,stroke-width:1px
+    style AGENTS fill:#fce4ec,stroke:#f48fb1,stroke-width:1px,color:#880e4f
+    style ARTIFACTS fill:#fff8e1,stroke:#ffd54f,stroke-width:2px,color:#f57f17
+    style MEMORY fill:#eceff1,stroke:#90a4ae,stroke-width:1px,color:#546e7a
 ```
+
+### The join-key contract
+
+**Thread ID is the global join key** that ties everything together:
+- Agent Mail thread → where messages live
+- ntm session name → where agents run
+- Artifact file path → where outputs are persisted
+- Beads issue ID → what work this relates to
+
+This means: given a thread ID, you can find the conversation, the tmux session, and the compiled artifacts without guessing.
 
 ### The Agent Mail connection
 
-Agent Mail is the coordination substrate that makes “a research group of agents” viable: durable threads, inbox/outbox, acknowledgements, and coordination primitives (like reserving files or surfacing pending actions). See the Agent Mail repository: [`Dicklesworthstone/mcp_agent_mail`](https://github.com/Dicklesworthstone/mcp_agent_mail).
+Agent Mail is the **coordination bus** that makes "a research group of agents" viable:
+- Durable threads with inbox/outbox per agent
+- Acknowledgement tracking (who responded, what's pending)
+- File reservations to avoid clobbering
+- Persistent audit trail in git
+
+**Key insight**: Agent Mail provides *message passing*, not inference. The agents (claude code, codex-cli, gemini-cli) run in terminal sessions and post their responses to Agent Mail threads. The artifact compiler then merges those responses.
+
+See: [`Dicklesworthstone/mcp_agent_mail`](https://github.com/Dicklesworthstone/mcp_agent_mail)
+
+### The cockpit runtime
+
+The **cockpit** is where agents actually run. We recommend **ntm** (Named Tmux Manager):
+- Spawn multiple agent panes in parallel
+- Broadcast prompts to all agents at once
+- Capture structured output from each
+- Route responses to Agent Mail threads
+
+**This is humans-in-the-loop**: operators manage the tmux sessions, review agent outputs, and decide when to compile artifacts. The web app and CLI are for *viewing* and *composing*—not for running agents.
+
+See: [`Dicklesworthstone/ntm`](https://github.com/Dicklesworthstone/ntm)
 
 ### Output artifacts
 
@@ -275,9 +318,53 @@ The CLI is the terminal equivalent of the web “lab” flow:
 ./brenner.ts orchestrate start --project-key "$PWD" --sender GreenCastle --to BlueMountain,RedForest --thread-id FEAT-123 --excerpt-file excerpt.md
 ```
 
-### Optional: run a multi-agent cockpit with ntm
+### Run a multi-agent session (the cockpit workflow)
 
-If you want to run Codex / Claude Code / Gemini CLI in parallel, we recommend using **ntm** (Named Tmux Manager): a tmux-based “agent cockpit” for spawning panes and broadcasting prompts: [Dicklesworthstone/ntm](https://github.com/Dicklesworthstone/ntm).
+This is the primary workflow for running Brenner Loop sessions with multiple agents:
+
+**Prerequisites:**
+- Agent Mail running locally (`cd mcp_agent_mail && bash scripts/run_server_with_token.sh`)
+- ntm installed ([Dicklesworthstone/ntm](https://github.com/Dicklesworthstone/ntm))
+- CLI agents available: `claude` (Claude Max), `codex` (GPT Pro), `gemini` (Gemini Ultra)
+
+**Session workflow:**
+
+```bash
+# 1. Pick a thread ID (this is your join-key)
+export THREAD_ID="RS-20251230-cell-fate"
+
+# 2. Create an ntm session with agent panes
+ntm new $THREAD_ID --layout=3-agent
+
+# 3. Compose kickoff prompt with excerpt
+./brenner.ts prompt compose \
+  --template metaprompt_by_gpt_52.md \
+  --excerpt-file excerpt.md \
+  > kickoff.md
+
+# 4. Send kickoff to all agents via Agent Mail
+./brenner.ts orchestrate start \
+  --project-key "$PWD" \
+  --thread-id $THREAD_ID \
+  --sender Operator \
+  --to Claude,GPT,Gemini \
+  --kickoff-file kickoff.md
+
+# 5. Run agents in ntm panes (they post responses to Agent Mail)
+ntm broadcast $THREAD_ID "Please check your Agent Mail inbox"
+
+# 6. Fetch responses and compile artifact
+./brenner.ts orchestrate compile \
+  --thread-id $THREAD_ID \
+  --output artifacts/$THREAD_ID.md
+
+# 7. Publish compiled artifact back to thread
+./brenner.ts orchestrate publish \
+  --thread-id $THREAD_ID \
+  --artifact artifacts/$THREAD_ID.md
+```
+
+**Key insight**: Agents run in **your terminal** (via ntm), not in the cloud. You manage the sessions, review outputs, and decide when to compile. This is humans-in-the-loop orchestration.
 
 ### Build a self-contained executable (Bun)
 
@@ -620,59 +707,71 @@ By having these models **collaborate via Agent Mail** using shared Brenner proto
 
 ## System Architecture
 
-The system is organized into seven components:
+The system is organized into eight components:
 
-### 1. Protocol kernel
+### 1. Primary sources (corpus)
+
+The ground truth that everything references:
+- **`complete_brenner_transcript.md`**: 236 transcript segments with stable `§n` anchors
+- **Quote bank**: curated primitives tagged by operator/motif
+- Transcript parser with structured index
+
+### 2. Protocol kernel
 
 The Brenner method encoded as executable primitives:
-- Canonical **artifact schema** with stable IDs and mergeable deltas
-- Operator library (⊘/𝓛/≡/✂/⟂/↑/⊞/ΔE/∿/…): definitions, triggers, failure modes, anchored quotes
-- Role prompt pack for Claude/GPT/Gemini that outputs structured deltas
-- Guardrails + linter (third alternative check, potency controls, citations, scale constraints)
+- **Artifact schema** (`artifact_schema_v0.1.md`): 7 required sections, stable IDs, validation rules
+- **Delta spec** (`artifact_delta_spec_v0.1.md`): ADD/EDIT/KILL operations, merge rules, conflict policy
+- **Operator library**: definitions, triggers, failure modes, anchored quotes
+- **Role prompts**: Claude/GPT/Gemini-specific templates that output structured deltas
+- **Guardrails + linter**: third alternative check, potency controls, citations, scale constraints
 
-### 2. Corpus engine
+### 3. Coordination bus (Agent Mail)
 
-The primary sources as a searchable, citable tool:
-- Transcript parser with structured index keyed by `§n`
-- Fast full-text search returning stable anchors and snippets
-- Quote bank normalized by operator and motif tags
-- Excerpt builder (web + CLI) for composing cited blocks
+The message-passing substrate for multi-agent work:
+- Thread protocol contract (kickoff, delta response, compiled artifact, critique, admin notes)
+- Acknowledgement tracking (who responded, what's pending)
+- File reservations to prevent clobbering
+- Persistent audit trail in git
 
-### 3. Orchestration layer
+**Key constraint**: Agent Mail does coordination, NOT inference. No AI APIs are called.
 
-Agent Mail integration for multi-model collaboration:
-- Thread protocol contract (message types, ack semantics)
-- Session runner (kickoff → rounds → publish)
-- Artifact compiler (parse deltas → merge → lint → render)
-- Persistence policy (minimal sprawl; explicit writes)
+### 4. Cockpit runtime (ntm + CLI agents)
 
-### 4. Web app (brennerbot.org)
+Where agents actually run—**not** in the web app:
+- **ntm** (Named Tmux Manager): parallel tmux panes, prompt broadcast, output capture
+- **CLI agents**: claude code (Claude Max), codex-cli (GPT Pro), gemini-cli (Gemini Ultra)
+- **Artifact compiler**: parse structured deltas → merge → lint → render canonical markdown
+- **Join-key contract**: thread_id ↔ ntm session ↔ artifact path ↔ beads ID
 
-Full-featured research interface:
-- Corpus reader (markdown render, TOC, anchors, copy citations)
-- Search + excerpt builder
-- Sessions UI (timeline, artifact panel, linter results)
-- Lab mode auth (Cloudflare Access + app-layer gating)
+**This is humans-in-the-loop**: operators run agents in terminal sessions, review outputs, trigger compilation.
 
-### 5. CLI (brenner)
+### 5. Web app (brennerbot.org)
 
-Terminal-first workflow:
+Human interface for browsing and viewing—**not** agent execution:
+- **Public mode**: corpus reader, distillations, method docs (no orchestration side-effects)
+- **Lab mode** (gated): session viewer, artifact panel, kickoff composer
+- Cloudflare Access + app-layer gating for protected actions
+
+### 6. CLI (brenner)
+
+Terminal-first workflow for power users:
 - Command surface: `brenner corpus`, `brenner session`, `brenner mail`
 - Inbox/thread tooling for Agent Mail
-- Session start/status/compile/publish
+- Session compose/send/fetch/compile/publish
 - Single self-contained binary via `bun build --compile`
 
-### 6. Memory integration
+### 7. Memory integration (optional)
 
-Optional context augmentation via cass-memory:
-- `cm context --json` integration to augment kickoffs with relevant rules + prior sessions (local-first; no vendor AI APIs required)
+Context augmentation via cass-memory (local-first, no AI APIs):
+- **cass**: episodic search across prior agent sessions
+- **cm** (cass-memory): procedural rules + anti-patterns with confidence/decay
+- `cm context --json` to augment kickoffs with relevant prior work
 - Feedback loop from session artifacts back to durable memory
-- Notes: `cass_memory_integration_notes_v0.1.md`
 
-### 7. Deployment
+### 8. Deployment
 
 Production infrastructure:
 - Vercel deployment for `apps/web`
 - Cloudflare DNS for `brennerbot.org`
 - Cloudflare Access for lab mode protection
-- Content policy enforcement (public doc allowlist)
+- Content policy enforcement (public doc allowlist vs gated content)
