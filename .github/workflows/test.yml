@@ -443,10 +443,11 @@ jobs:
 
           curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/ultimate_bug_scanner/master/install.sh" \
             | bash -s -- \
-              --easy-mode \
               --non-interactive \
               --skip-hooks \
               --no-path-modify \
+              --skip-doctor \
+              --skip-version-check \
               --install-dir "$install_dir"
 
       - name: Prepare UBS workspace (changed files only)
@@ -470,7 +471,14 @@ jobs:
             exit 0
           fi
 
-          mapfile -t files < <(git diff --name-only "$base" "$head" -- '*.ts' '*.tsx' '*.js' '*.jsx' | sort -u)
+          mapfile -t all_files < <(git diff --name-only "$base" "$head" | sort -u)
+          files=()
+          for f in "${all_files[@]}"; do
+            case "$f" in
+              *.ts|*.tsx|*.js|*.jsx) files+=("$f") ;;
+              *) : ;;
+            esac
+          done
           echo "Found ${#files[@]} changed JS/TS file(s)."
 
           if [[ "${#files[@]}" -eq 0 ]]; then
