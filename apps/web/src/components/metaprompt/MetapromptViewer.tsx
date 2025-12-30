@@ -14,9 +14,9 @@ interface MetapromptHeroProps {
 
 function MetapromptHero({ title, description, wordCount }: MetapromptHeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/10 via-violet-500/5 to-transparent border border-primary/20 mb-12">
+    <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary/10 via-violet-500/5 to-transparent border border-primary/20 mb-8 sm:mb-12">
       {/* Decorative elements */}
-      <div className="absolute top-0 right-0 w-64 h-64 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+      <div className="absolute top-0 right-0 w-48 sm:w-64 h-48 sm:h-64 bg-violet-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
       {/* Code pattern decoration */}
       <div className="absolute bottom-4 right-8 font-mono text-xs text-primary/10 hidden lg:block">
@@ -27,30 +27,30 @@ function MetapromptHero({ title, description, wordCount }: MetapromptHeroProps) 
         {"</metaprompt>"}
       </div>
 
-      <div className="relative px-8 py-10 lg:px-12 lg:py-14">
+      <div className="relative px-5 py-8 sm:px-8 sm:py-10 lg:px-12 lg:py-14">
         {/* Badge */}
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-sm font-medium mb-6">
-          <CodeIcon className="size-4" />
+        <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-primary/10 border border-primary/20 text-primary text-xs sm:text-sm font-medium mb-4 sm:mb-6">
+          <CodeIcon className="size-3.5 sm:size-4" />
           Structured Prompt
         </div>
 
         {/* Title */}
-        <h1 className="text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-4 max-w-3xl">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-foreground mb-3 sm:mb-4 max-w-3xl">
           {title}
         </h1>
 
         {/* Description */}
         {description && (
-          <p className="text-lg text-muted-foreground mb-6 max-w-2xl">
+          <p className="text-base sm:text-lg text-muted-foreground mb-5 sm:mb-6 max-w-2xl">
             {description}
           </p>
         )}
 
         {/* Stats */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
           <span className="font-semibold text-foreground">{wordCount}</span>
           <span>words</span>
-          <span className="mx-2 text-border">•</span>
+          <span className="mx-1.5 sm:mx-2 text-border">•</span>
           <span className="font-semibold text-foreground">{Math.ceil(wordCount / 200)}</span>
           <span>min read</span>
         </div>
@@ -70,21 +70,21 @@ interface SectionProps {
 function Section({ section }: SectionProps) {
   const HeadingTag = `h${section.level + 1}` as "h2" | "h3" | "h4";
   const headingClasses = {
-    1: "text-2xl lg:text-3xl font-bold mb-4 mt-10 first:mt-0 text-foreground",
-    2: "text-xl lg:text-2xl font-semibold mb-3 mt-8 text-foreground",
-    3: "text-lg lg:text-xl font-semibold mb-2 mt-6 text-foreground",
+    1: "text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 mt-8 sm:mt-10 first:mt-0 text-foreground",
+    2: "text-lg sm:text-xl lg:text-2xl font-semibold mb-2.5 sm:mb-3 mt-6 sm:mt-8 text-foreground",
+    3: "text-base sm:text-lg lg:text-xl font-semibold mb-2 mt-5 sm:mt-6 text-foreground",
   };
 
   // Parse content into paragraphs, lists, and code blocks
   const contentParts = parseContent(section.content);
 
   return (
-    <section className="scroll-mt-24">
+    <section className="scroll-mt-20 sm:scroll-mt-24">
       <HeadingTag className={headingClasses[section.level as 1 | 2 | 3] || headingClasses[3]}>
         {section.title}
       </HeadingTag>
 
-      <div className="space-y-4">
+      <div className="space-y-3 sm:space-y-4">
         {contentParts.map((part, i) => (
           <ContentPart key={i} part={part} />
         ))}
@@ -207,14 +207,14 @@ function ContentPart({ part }: { part: ContentPart }) {
   switch (part.type) {
     case "paragraph":
       return (
-        <p className="text-base lg:text-lg leading-relaxed text-foreground/85">
+        <p className="text-[15px] sm:text-base lg:text-lg leading-relaxed text-foreground/85">
           {part.text}
         </p>
       );
 
     case "blockquote":
       return (
-        <blockquote className="pl-6 py-3 border-l-4 border-primary/40 bg-primary/5 rounded-r-xl italic text-foreground/80">
+        <blockquote className="pl-4 sm:pl-6 py-2.5 sm:py-3 border-l-4 border-primary/40 bg-primary/5 rounded-r-lg sm:rounded-r-xl italic text-foreground/80 text-[15px] sm:text-base">
           {part.text}
         </blockquote>
       );
@@ -222,10 +222,10 @@ function ContentPart({ part }: { part: ContentPart }) {
     case "list":
       if (part.ordered) {
         return (
-          <ol className="ml-4 space-y-2">
+          <ol className="ml-2 sm:ml-4 space-y-1.5 sm:space-y-2">
             {part.items.map((item, i) => (
-              <li key={i} className="flex items-start gap-3 text-base lg:text-lg text-foreground/85">
-                <span className="flex-shrink-0 size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-bold">
+              <li key={i} className="flex items-start gap-2 sm:gap-3 text-[15px] sm:text-base lg:text-lg text-foreground/85">
+                <span className="flex-shrink-0 size-5 sm:size-6 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[10px] sm:text-xs font-bold mt-0.5">
                   {i + 1}
                 </span>
                 <span className="leading-relaxed">{item}</span>
@@ -235,10 +235,10 @@ function ContentPart({ part }: { part: ContentPart }) {
         );
       }
       return (
-        <ul className="ml-4 space-y-2">
+        <ul className="ml-2 sm:ml-4 space-y-1.5 sm:space-y-2">
           {part.items.map((item, i) => (
-            <li key={i} className="flex items-start gap-3 text-base lg:text-lg text-foreground/85">
-              <span className="flex-shrink-0 size-1.5 rounded-full bg-primary mt-2.5" />
+            <li key={i} className="flex items-start gap-2 sm:gap-3 text-[15px] sm:text-base lg:text-lg text-foreground/85">
+              <span className="flex-shrink-0 size-1.5 rounded-full bg-primary mt-2" />
               <span className="leading-relaxed">{item}</span>
             </li>
           ))}
@@ -247,8 +247,8 @@ function ContentPart({ part }: { part: ContentPart }) {
 
     case "code":
       return (
-        <pre className="p-4 rounded-xl bg-muted border border-border overflow-x-auto">
-          <code className="text-sm font-mono text-foreground/90">{part.text}</code>
+        <pre className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-muted border border-border overflow-x-auto -mx-2 sm:mx-0">
+          <code className="text-xs sm:text-sm font-mono text-foreground/90">{part.text}</code>
         </pre>
       );
 

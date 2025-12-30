@@ -88,17 +88,17 @@ export default function Home() {
             Extract wisdom from the master, apply it to your domain.
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 pt-4 animate-fade-in-up stagger-3">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-4 px-4 sm:px-0 animate-fade-in-up stagger-3">
             <Link
               href="/corpus"
-              className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98]"
+              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
             >
               Explore the Corpus
               <ArrowRightIcon />
             </Link>
             <Link
               href="/distillations"
-              className="group inline-flex items-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98]"
+              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
             >
               Read Distillations
               <ArrowRightIcon />
@@ -207,20 +207,20 @@ export default function Home() {
       </section>
 
       {/* Quote Section */}
-      <section className="py-8">
+      <section className="py-6 sm:py-8 px-4 sm:px-0">
         <blockquote className="relative max-w-3xl mx-auto text-center">
-          <div className="absolute -top-4 left-1/2 -translate-x-1/2 text-6xl text-primary/20 font-serif">
+          <div className="absolute -top-2 sm:-top-4 left-1/2 -translate-x-1/2 text-5xl sm:text-6xl text-primary/20 font-serif select-none">
             &ldquo;
           </div>
-          <p className="text-xl lg:text-2xl text-foreground leading-relaxed italic pt-8">
+          <p className="text-lg sm:text-xl lg:text-2xl text-foreground leading-relaxed italic pt-6 sm:pt-8">
             I think many fields of science could do a great deal better if they went back to the
             <span className="text-primary font-medium"> classical approach</span> of studying a problem,
             rather than following the latest fashion.
           </p>
-          <footer className="mt-6 text-muted-foreground">
-            <cite className="not-italic font-medium">Sydney Brenner</cite>
-            <span className="mx-2">·</span>
-            <span className="text-sm">Nobel Laureate in Physiology or Medicine, 2002</span>
+          <footer className="mt-4 sm:mt-6 text-muted-foreground">
+            <cite className="not-italic font-medium block sm:inline">Sydney Brenner</cite>
+            <span className="hidden sm:inline mx-2">·</span>
+            <span className="text-xs sm:text-sm block sm:inline mt-1 sm:mt-0">Nobel Laureate in Physiology or Medicine, 2002</span>
           </footer>
         </blockquote>
       </section>

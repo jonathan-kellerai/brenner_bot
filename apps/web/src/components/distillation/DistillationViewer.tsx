@@ -88,14 +88,9 @@ export function DistillationHero({
             {meta.strengths.map((strength, i) => (
               <div
                 key={i}
-                className={`
-                  inline-flex items-center gap-2 px-4 py-2.5 rounded-xl
-                  bg-gradient-to-br ${meta.color} bg-opacity-10
-                  border border-white/10 backdrop-blur-sm
-                  text-sm text-foreground/90
-                `}
+                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-card/50 border border-border/50 backdrop-blur-sm text-sm text-foreground/90"
               >
-                <CheckIcon className={`size-4 text-${meta.color.includes('emerald') ? 'emerald' : meta.color.includes('violet') ? 'violet' : 'blue'}-500`} />
+                <CheckIcon className="size-4 text-primary" />
                 {strength}
               </div>
             ))}
