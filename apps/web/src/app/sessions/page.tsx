@@ -240,7 +240,7 @@ export default async function SessionsListPage() {
   const agentName = process.env.BRENNER_AGENT_NAME ?? "human";
 
   // Fetch inbox (all messages for this project/agent)
-  let threads: ThreadSummary[] = [];
+  const threads: ThreadSummary[] = [];
   let loadError: string | null = null;
 
   try {

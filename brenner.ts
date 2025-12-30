@@ -342,6 +342,14 @@ type CassMemoryContextResult = {
   provenance: CassMemoryContextProvenance;
 };
 
+type CassMemoryKickoffAudit = {
+  enabled: true;
+  ok: boolean;
+  injected: boolean;
+  memoryContext: string | null;
+  provenance: CassMemoryContextProvenance;
+} | null;
+
 function normalizeCassMemoryBullet(item: Json): CassMemoryContextBullet {
   if (typeof item === "string") return { id: null, content: item, raw: item };
 
@@ -1375,6 +1383,7 @@ async function main(): Promise<void> {
     const context = asStringFlag(flags, "context") ?? "See excerpt for background.";
     const unified = asBoolFlag(flags, "unified");
     const withMemory = asBoolFlag(flags, "with-memory");
+    let memoryAudit: CassMemoryKickoffAudit = null;
 
     // Ensure project + sender identity exist
     await client.toolsCall("ensure_project", { human_key: projectKey });
@@ -1406,6 +1415,13 @@ async function main(): Promise<void> {
     if (withMemory) {
       const memoryResult = await getCassMemoryContext(question, { workspace: projectKey, top: 5, history: 0 });
       const memoryContext = formatCassMemoryContextForKickoff(memoryResult);
+      memoryAudit = {
+        enabled: true,
+        ok: memoryResult.ok,
+        injected: Boolean(memoryContext),
+        memoryContext: memoryContext ?? null,
+        provenance: memoryResult.provenance,
+      };
       if (memoryContext) {
         kickoffConfig.memoryContext = memoryContext;
         console.error(`Injected MEMORY CONTEXT (cass-memory) via ${memoryResult.provenance.mode}.`);
@@ -1439,7 +1455,7 @@ async function main(): Promise<void> {
         thread_id: threadId,
         ack_required: true,
       });
-      console.log(JSON.stringify(result, null, 2));
+      console.log(JSON.stringify({ memory: memoryAudit, send: result }, null, 2));
     } else {
       // Role-specific mode: each agent gets their role prompt
       const messages = composeKickoffMessages(kickoffConfig);
@@ -1459,7 +1475,7 @@ async function main(): Promise<void> {
         results.push(result);
       }
 
-      console.log(JSON.stringify({ sent: results.length, messages: results }, null, 2));
+      console.log(JSON.stringify({ memory: memoryAudit, sent: results.length, messages: results }, null, 2));
     }
 
     process.exit(0);
