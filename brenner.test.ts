@@ -102,6 +102,7 @@ describe("help and usage", () => {
     expect(result.stdout).toContain("mail thread");
     expect(result.stdout).toContain("prompt compose");
     expect(result.stdout).toContain("session start");
+    expect(result.stdout).toContain("session status");
   });
 
   it("usage includes environment variable documentation", async () => {
@@ -398,6 +399,44 @@ describe("session start validation", () => {
     ]);
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("--question");
+  });
+});
+
+// ============================================================================
+// Tests: session status Command Validation
+// ============================================================================
+
+describe("session status validation", () => {
+  it("requires --thread-id flag", async () => {
+    const result = await runCli(["session", "status"]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("--thread-id");
+  });
+
+  it("rejects non-integer --timeout value", async () => {
+    const result = await runCli([
+      "session",
+      "status",
+      "--thread-id",
+      "TEST-1",
+      "--timeout",
+      "abc",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("expected integer");
+  });
+
+  it("accepts valid --timeout value and fails on Agent Mail connect", async () => {
+    const result = await runCli([
+      "session",
+      "status",
+      "--thread-id",
+      "TEST-1",
+      "--timeout",
+      "60",
+    ]);
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("connect");
   });
 });
 

@@ -16,6 +16,7 @@ import { resolve } from "node:path";
 import { AgentMailClient } from "./apps/web/src/lib/agentMail";
 import type { Json } from "./apps/web/src/lib/json";
 import { composeKickoffMessages, type KickoffConfig } from "./apps/web/src/lib/session-kickoff";
+import { computeThreadStatusFromThread, formatThreadStatusSummary } from "./apps/web/src/lib/threadStatus";
 
 function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -134,6 +135,8 @@ Commands:
                --excerpt-file <path> --question <s> [--context <s>]
                [--hypotheses <s>] [--constraints <s>] [--outputs <s>]
                [--unified] [--template <path>] [--theme <s>] [--domain <s>]
+
+  session status --project-key <abs-path> --thread-id <id> [--watch] [--timeout <seconds>]
 
     By default, sends role-specific prompts to each recipient:
       - Codex/GPT → Hypothesis Generator
@@ -499,6 +502,65 @@ async function main(): Promise<void> {
       }
 
       console.log(JSON.stringify({ sent: results.length, messages: results }, null, 2));
+    }
+
+    process.exit(0);
+  }
+
+  if (normalizedTop === "session" && sub === "status") {
+    const client = new AgentMailClient();
+    const projectKey = asStringFlag(flags, "project-key") ?? process.cwd();
+    const threadId = asStringFlag(flags, "thread-id");
+    if (!threadId) throw new Error("Missing --thread-id.");
+
+    const watch = asBoolFlag(flags, "watch");
+    const timeoutSeconds = asIntFlag(flags, "timeout") ?? 900;
+    if (timeoutSeconds <= 0) throw new Error(`Invalid --timeout: expected > 0 seconds, got ${timeoutSeconds}`);
+
+    const timeoutMs = timeoutSeconds * 1000;
+    const startMs = Date.now();
+
+    const fetchStatus = async () => {
+      const thread = await client.readThread({ projectKey, threadId, includeBodies: false });
+      return computeThreadStatusFromThread(thread);
+    };
+
+    let status = await fetchStatus();
+    process.stdout.write(formatThreadStatusSummary(status) + "\n");
+
+    if (!watch) {
+      process.exit(status.isComplete ? 0 : 1);
+    }
+
+    let delayMs = 2000;
+    let lastPrintedKey = JSON.stringify({
+      phase: status.phase,
+      roles: Object.fromEntries(Object.entries(status.roles).map(([role, s]) => [role, s.completed])),
+      pendingAcks: status.acks.pendingCount,
+      artifactVersion: status.latestArtifact?.version ?? null,
+    });
+
+    while (!status.isComplete) {
+      if (Date.now() - startMs > timeoutMs) {
+        console.error(`Timed out after ${timeoutSeconds}s waiting for roles to complete in thread ${threadId}.`);
+        process.exit(2);
+      }
+
+      await new Promise((r) => setTimeout(r, delayMs));
+      delayMs = Math.min(Math.round(delayMs * 1.5), 60_000);
+
+      status = await fetchStatus();
+      const key = JSON.stringify({
+        phase: status.phase,
+        roles: Object.fromEntries(Object.entries(status.roles).map(([role, s]) => [role, s.completed])),
+        pendingAcks: status.acks.pendingCount,
+        artifactVersion: status.latestArtifact?.version ?? null,
+      });
+
+      if (key !== lastPrintedKey) {
+        process.stdout.write("\n" + formatThreadStatusSummary(status) + "\n");
+        lastPrintedKey = key;
+      }
     }
 
     process.exit(0);

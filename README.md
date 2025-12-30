@@ -304,6 +304,7 @@ Status legend:
 | `mail send --project-key <abs-path> ...` | Send a message to agents (optionally in a `--thread-id`) | ✅ |
 | `prompt compose --template <path> --excerpt-file <path> ...` | Render a kickoff prompt (template + excerpt injection) | ✅ |
 | `session start --project-key <abs-path> ...` | Compose + send a “kickoff” message via Agent Mail (alias: `orchestrate start`) | ✅ |
+| `session status --thread-id <id> [--watch]` | Show per-role session status (and optionally wait until complete) | ✅ |
 | `mail inbox` / `mail ack` / `mail thread` | Inbox + acknowledgement + thread tooling | ✅ |
 | `session compile` / `session publish` | Compile agent deltas into a canonical artifact + publish back to thread | 🧭 (see `brenner_bot-5so.5.3`, `brenner_bot-5so.3.4`) |
 | `corpus search` / `excerpt build` | Corpus search + excerpt builder | 🧭 (see `brenner_bot-5so.5.4.1`, `brenner_bot-5so.5.4.2`) |
@@ -328,6 +329,7 @@ Required flags (today’s implementation):
 - `mail send`: `--project-key` optional (default: `"$PWD"`), `--sender` (or `AGENT_NAME`), `--to`, `--subject`, `--body-file`
 - `prompt compose`: `--template` optional (default: `metaprompt_by_gpt_52.md`), `--excerpt-file`
 - `session start`: `--project-key` optional (default: `"$PWD"`), `--sender` (or `AGENT_NAME`), `--to`, `--thread-id`, `--excerpt-file`
+- `session status`: `--project-key` optional (default: `"$PWD"`), `--thread-id` (use `--watch` to poll; `--timeout` optional)
 
 ```bash
 ./brenner.ts mail tools
