@@ -8,6 +8,17 @@ import { useReadingPosition } from "@/hooks/useReadingPosition";
 import { useSearch as useLocalSearch } from "@/lib/search";
 import { useSearch as useGlobalSearch } from "@/components/search";
 
+const CANONICAL_SITE_BASE_URL = "https://brennerbot.org";
+
+function buildTranscriptSectionUrl(sectionNumber: number): string {
+  return `${CANONICAL_SITE_BASE_URL}/corpus/transcript#section-${sectionNumber}`;
+}
+
+function buildTranscriptSectionCitation(section: Pick<TSection, "number" | "title">): string {
+  const url = buildTranscriptSectionUrl(section.number);
+  return `[Sydney Brenner transcript §${section.number}: ${section.title}](${url})`;
+}
+
 // ============================================================================
 // TRANSCRIPT HERO
 // ============================================================================
@@ -313,6 +324,15 @@ function StickySectionIndicator({ currentSection, totalSections, onTocClick }: S
           </span>
         </div>
         <div className="flex-shrink-0 flex items-center gap-1 text-xs text-muted-foreground">
+          <CopyButton
+            text={buildTranscriptSectionCitation(currentSection)}
+            variant="ghost"
+            size="sm"
+            label={`Copy citation for §${currentSection.number}`}
+            successMessage={`Copied citation for §${currentSection.number}`}
+            showPreview={false}
+            className="text-muted-foreground hover:text-foreground"
+          />
           <span>{currentSection.number}/{totalSections}</span>
           <ChevronIcon className="size-4" />
         </div>
@@ -363,6 +383,37 @@ export function ReadingProgress({ progress: externalProgress }: ReadingProgressP
 // SECTION COMPONENT
 // ============================================================================
 
+function truncateToWords(text: string, maxWords: number): string {
+  const normalized = text.replace(/\s+/g, " ").trim().replaceAll("\"", "'");
+  const words = normalized.split(/\s+/);
+  if (words.length <= maxWords) {
+    return normalized;
+  }
+  return words.slice(0, maxWords).join(" ") + "...";
+}
+
+function extractSectionQuote(section: TSection, maxWords: number = 150): string {
+  const brennerQuote = section.content.find((c) => c.type === "brenner-quote");
+  if (brennerQuote) {
+    return truncateToWords(brennerQuote.text, maxWords);
+  }
+
+  const allText = section.content.map((c) => c.text).join(" ");
+  return truncateToWords(allText, maxWords);
+}
+
+function buildSectionExcerptBlock(section: TSection): string {
+  const anchor = `§${section.number}`;
+  const quote = extractSectionQuote(section, 150);
+  const title = section.title.trim();
+
+  const lines = [`> **${anchor}**: "${quote}"`];
+  if (title) {
+    lines.push(`> — *${title}*`);
+  }
+  return lines.join("\n");
+}
+
 interface TranscriptSectionProps {
   section: TSection;
   isActive: boolean;
@@ -371,11 +422,15 @@ interface TranscriptSectionProps {
 }
 
 export function TranscriptSection({ section, isActive, isHighlighted, searchHighlights }: TranscriptSectionProps) {
+  const anchor = `§${section.number}`;
+  const citation = buildTranscriptSectionCitation(section);
+  const excerptBlock = useMemo(() => buildSectionExcerptBlock(section), [section]);
+
   return (
     <section
       id={`section-${section.number}`}
       className={`
-        scroll-mt-24 transition-all duration-500 relative
+        scroll-mt-24 transition-all duration-500 relative group/section
         ${isActive ? "opacity-100" : "opacity-90"}
         ${isHighlighted ? "animate-highlight-flash" : ""}
       `}
@@ -385,17 +440,39 @@ export function TranscriptSection({ section, isActive, isHighlighted, searchHigh
         <div className="absolute inset-0 -mx-4 rounded-2xl bg-primary/10 border-2 border-primary/40 pointer-events-none animate-highlight-fade" />
       )}
       {/* Section Header */}
-      <div className="flex items-start gap-4 mb-8">
-        <div className="flex-shrink-0 flex items-center justify-center size-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 text-primary font-bold text-xl">
-          {section.number}
-        </div>
-        <div>
-          <h2 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
-            {section.title}
-          </h2>
-          <div className="mt-1 text-sm text-muted-foreground">
-            Section {section.number} of the interview
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
+        <div className="flex items-start gap-4 min-w-0">
+          <div className="flex-shrink-0 flex items-center justify-center size-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 text-primary font-bold text-xl">
+            {section.number}
           </div>
+          <div className="min-w-0">
+            <h2 className="text-2xl lg:text-3xl font-bold text-foreground tracking-tight">
+              {section.title}
+            </h2>
+            <div className="mt-1 text-sm text-muted-foreground">
+              Section {section.number} of the interview
+            </div>
+          </div>
+        </div>
+
+        {/* Copy actions (always visible on mobile, hover-to-show on desktop) */}
+        <div className="flex flex-wrap items-center justify-end gap-2 pt-1 opacity-100 lg:opacity-0 lg:group-hover/section:opacity-100 lg:group-focus-within/section:opacity-100 transition-opacity">
+          <CopyButton
+            text={citation}
+            variant="badge"
+            size="sm"
+            label={anchor}
+            showPreview={false}
+            successMessage={`Copied citation for ${anchor}`}
+          />
+          <CopyButton
+            text={excerptBlock}
+            variant="badge"
+            size="sm"
+            label="Excerpt"
+            successMessage={`Copied ${anchor} excerpt`}
+            showPreview={false}
+          />
         </div>
       </div>
 

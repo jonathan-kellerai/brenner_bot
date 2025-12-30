@@ -828,6 +828,7 @@ Usage:
 Commands:
   version
   doctor [--json] [--manifest <path>] [--agent-mail] [--skip-ntm] [--skip-cass] [--skip-cm]
+  upgrade [--version <ver>]
   memory context <task> [--top <n>] [--history <n>] [--days <n>] [--workspace <path>] [--log-context] [--session <id>]
   excerpt build [--sections <A,B>] [--tags <A,B>] [--limit <n>] [--theme <s>] [--ordering <relevance|chronological>]
                [--max-total-words <n>] [--max-quote-words <n>] [--transcript-file <path>] [--quote-bank-file <path>] [--json]
@@ -894,6 +895,9 @@ Examples:
 
   # Build an excerpt (stdout -> file)
   ./brenner.ts excerpt build --sections "§12,§13" --ordering chronological > excerpt.md
+
+  # Upgrade (prints canonical installer commands)
+  ./brenner.ts upgrade
 
   # Start a session (role-specific prompts) + watch status
   ./brenner.ts session start --project-key "$PWD" --to PurplePond,PurpleCat \\
@@ -1122,6 +1126,61 @@ async function main(): Promise<void> {
     }
 
     process.exit(exitCode);
+  }
+
+  if (top === "upgrade") {
+    const rawRequestedVersion = asStringFlag(flags, "version")?.trim() ?? null;
+    const requestedSemver = rawRequestedVersion ? normalizeSemverTag(rawRequestedVersion) : null;
+    let requestedVersion = requestedSemver ?? rawRequestedVersion?.replace(/^v/, "") ?? null;
+    if (requestedVersion) {
+      const lowered = requestedVersion.toLowerCase();
+      if (lowered === "latest" || lowered === "main" || lowered === "master") requestedVersion = null;
+    }
+
+    const buildInfo = getBrennerBuildInfo();
+    const currentSemver = normalizeSemverTag(buildInfo.version);
+
+    const owner = "Dicklesworthstone";
+    const repo = "brenner_bot";
+
+    const suggestableCurrentVersion = currentSemver && !currentSemver.includes("dev") ? currentSemver : null;
+    const versionExample = requestedVersion ?? suggestableCurrentVersion;
+    const versionExampleSuffix = versionExample ? "" : " # example";
+    const resolvedVersionForDisplay = versionExample ?? "0.1.0";
+
+    const lines: string[] = [];
+    lines.push("Brenner Upgrade");
+    lines.push("==============");
+    lines.push("");
+    lines.push("This command does not modify your system.");
+    lines.push("It prints the canonical installer commands so you can review and run them.");
+    if (buildInfo.version) lines.push(`Installed brenner version: ${buildInfo.version}`);
+    lines.push("");
+    lines.push("Pinned release (recommended):");
+    lines.push(`  export VERSION="${resolvedVersionForDisplay}"${versionExampleSuffix}`);
+    lines.push(
+      `  curl -fsSL "https://raw.githubusercontent.com/${owner}/${repo}/v\${VERSION}/install.sh" | bash -s -- --version "\${VERSION}" --easy-mode --verify`
+    );
+    lines.push("");
+    lines.push("Latest from main (not pinned):");
+    lines.push(
+      `  curl -fsSL "https://raw.githubusercontent.com/${owner}/${repo}/main/install.sh" | bash -s -- --easy-mode --verify`
+    );
+    lines.push("");
+    lines.push("Windows (PowerShell):");
+    lines.push(`  $Version = "${resolvedVersionForDisplay}"${versionExampleSuffix}`);
+    lines.push(
+      `  iwr "https://raw.githubusercontent.com/${owner}/${repo}/v$Version/install.ps1" -OutFile install.ps1`
+    );
+    lines.push(`  pwsh -ExecutionPolicy Bypass -File .\\install.ps1 -Version $Version -EasyMode -Verify`);
+    lines.push("");
+    lines.push("Notes:");
+    lines.push("- Default install destination is `~/.local/bin` (or override with `--dest <path>` in the installer).");
+    lines.push("- Remove `--easy-mode` if you do not want PATH changes.");
+    lines.push("- Remove `--verify` if you only want installation (not recommended).");
+
+    console.log(lines.join("\n"));
+    process.exit(0);
   }
 
   if (top === "mail") {

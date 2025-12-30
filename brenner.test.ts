@@ -126,6 +126,7 @@ describe("help and usage", () => {
     expect(result.stdout).toContain("mail read");
     expect(result.stdout).toContain("mail ack");
     expect(result.stdout).toContain("mail thread");
+    expect(result.stdout).toContain("upgrade");
     expect(result.stdout).toContain("prompt compose");
     expect(result.stdout).toContain("memory context");
     expect(result.stdout).toContain("session start");
@@ -168,6 +169,27 @@ describe("version output", () => {
     const result = await runCli(["version"]);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("brenner");
+  });
+});
+
+// ============================================================================
+// Tests: Upgrade Command
+// ============================================================================
+
+describe("upgrade command", () => {
+  it("prints canonical installer commands", async () => {
+    const result = await runCli(["upgrade"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("Brenner Upgrade");
+    expect(result.stdout).toContain("install.sh");
+    expect(result.stdout).toContain("curl -fsSL");
+  });
+
+  it("uses the provided --version in the example snippet", async () => {
+    const result = await runCli(["upgrade", "--version", "0.1.0"]);
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain('export VERSION="0.1.0"');
+    expect(result.stdout).toContain('--version "${VERSION}"');
   });
 });
 

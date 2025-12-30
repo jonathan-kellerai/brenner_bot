@@ -13,6 +13,7 @@ import { parseTranscript } from "@/lib/transcript-parser";
 import { parseDistillation } from "@/lib/distillation-parser";
 import { parseQuoteBank } from "@/lib/quotebank-parser";
 import { parseMetaprompt } from "@/lib/metaprompt-parser";
+import { memo, useMemo } from "react";
 import { TranscriptViewer } from "@/components/transcript/TranscriptViewer";
 import { DistillationViewer } from "@/components/distillation/DistillationViewer";
 import { QuoteBankViewer } from "@/components/quotebank/QuoteBankViewer";
@@ -106,8 +107,35 @@ function DocumentError({ error }: { error: Error }) {
 // MAIN COMPONENT
 // ============================================================================
 
-export function DocumentContentClient({ docId }: DocumentContentClientProps) {
+export const DocumentContentClient = memo(function DocumentContentClient({ docId }: DocumentContentClientProps) {
   const { data, isLoading, error } = useCorpusDoc(docId);
+
+  const docType = getDocType(docId);
+  const readTime = getReadTime(docId);
+  const hasData = Boolean(data);
+  const content = data?.content ?? "";
+
+  const wordCount = useMemo(() => getWordCount(content), [content]);
+
+  const parsedTranscript = useMemo(() => {
+    if (!hasData || docType !== "transcript") return null;
+    return parseTranscript(content);
+  }, [content, docType, hasData]);
+
+  const parsedDistillation = useMemo(() => {
+    if (!hasData || docType !== "distillation") return null;
+    return parseDistillation(content, docId);
+  }, [content, docId, docType, hasData]);
+
+  const parsedQuoteBank = useMemo(() => {
+    if (!hasData || docType !== "quote-bank") return null;
+    return parseQuoteBank(content);
+  }, [content, docType, hasData]);
+
+  const parsedMetaprompt = useMemo(() => {
+    if (!hasData || docType !== "metaprompt") return null;
+    return parseMetaprompt(content);
+  }, [content, docType, hasData]);
 
   // Loading state - show skeleton
   if (isLoading) {
@@ -124,18 +152,11 @@ export function DocumentContentClient({ docId }: DocumentContentClientProps) {
     return <DocumentSkeleton />;
   }
 
-  // Render appropriate viewer based on document type
-  const { content } = data;
-  const docType = getDocType(docId);
-  const readTime = getReadTime(docId);
-  const wordCount = getWordCount(content);
-
   switch (docType) {
     case "transcript": {
-      const parsed = parseTranscript(content);
       return (
         <TranscriptViewer
-          data={parsed}
+          data={parsedTranscript!}
           estimatedReadTime={readTime}
           wordCount={wordCount}
         />
@@ -143,18 +164,17 @@ export function DocumentContentClient({ docId }: DocumentContentClientProps) {
     }
 
     case "distillation": {
-      const parsed = parseDistillation(content, docId);
-      return <DistillationViewer data={parsed} docId={docId} />;
+      return <DistillationViewer data={parsedDistillation!} docId={docId} />;
     }
 
     case "quote-bank": {
-      const parsed = parseQuoteBank(content);
-      return <QuoteBankViewer data={parsed} />;
+      return <QuoteBankViewer data={parsedQuoteBank!} />;
     }
 
     case "metaprompt": {
-      const parsed = parseMetaprompt(content);
-      return <MetapromptViewer data={parsed} />;
+      return <MetapromptViewer data={parsedMetaprompt!} />;
     }
   }
-}
+});
+
+DocumentContentClient.displayName = "DocumentContentClient";

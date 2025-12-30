@@ -4,6 +4,7 @@ import { QueryClient, HydrationBoundary, dehydrate } from "@tanstack/react-query
 import { readCorpusDoc, CORPUS_DOCS } from "@/lib/corpus";
 import { corpusDocKeys } from "@/hooks/queries/keys";
 import { DocumentContentClient } from "./DocumentContentClient";
+import { DocumentSwipeNavClient } from "./DocumentSwipeNavClient";
 import type { Metadata } from "next";
 
 export const runtime = "nodejs";
@@ -83,7 +84,13 @@ export default async function CorpusDocPage({
       {/* Document Content - hydrated from server prefetch, cached for navigation */}
       <HydrationBoundary state={dehydrate(queryClient)}>
         <div className="animate-fade-in-up">
-          <DocumentContentClient docId={docId} />
+          <DocumentSwipeNavClient
+            key={docId}
+            prev={prev ? { id: prev.id, title: prev.title } : null}
+            next={next ? { id: next.id, title: next.title } : null}
+          >
+            <DocumentContentClient docId={docId} />
+          </DocumentSwipeNavClient>
         </div>
       </HydrationBoundary>
 
