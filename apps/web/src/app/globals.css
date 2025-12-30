@@ -677,8 +677,8 @@ p, li, span, div {
 
   /* Container widths */
   --container-narrow: 42rem;
-  --container-default: 64rem;
-  --container-wide: 80rem;
+  --container-default: 88rem; /* Wider for better use of desktop space */
+  --container-wide: 100rem;
   --container-full: 100%;
 
   /* Prose - optimal reading width */

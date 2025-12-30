@@ -477,7 +477,7 @@ export function TranscriptSection({ section, isActive, isHighlighted, searchHigh
       </div>
 
       {/* Section Content */}
-      <div className="space-y-6 pl-0 lg:pl-[4.5rem]">
+      <div className="space-y-6 pl-0 lg:pl-[4.5rem] max-w-4xl">
         {section.content.map((content, i) => (
           <ContentBlock key={i} content={content} searchHighlights={searchHighlights} />
         ))}
