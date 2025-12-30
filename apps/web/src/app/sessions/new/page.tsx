@@ -168,7 +168,7 @@ function LockedState({ reason }: { reason: string }) {
             href="https://github.com/Dicklesworthstone/brenner_bot/blob/main/apps/web/.env.example"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-primary hover:underline"
+            className="text-primary hover:underline active:text-primary/80 transition-colors touch-manipulation"
           >
             Read the documentation
           </a>

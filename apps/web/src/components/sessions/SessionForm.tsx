@@ -406,7 +406,7 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
                 checked={field.state.value}
                 onChange={(e) => field.handleChange(e.target.checked)}
                 disabled={mutation.isPending}
-                className="size-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background disabled:opacity-50"
+                className="size-6 rounded border-border text-primary focus:ring-primary focus:ring-offset-background disabled:opacity-50"
               />
               <div>
                 <div className="font-medium text-foreground">Require acknowledgment</div>

@@ -44,6 +44,14 @@ function LockClosedIcon({ className }: { className?: string }) {
   );
 }
 
+function ChevronRightIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+  );
+}
+
 // ============================================================================
 // Phase styling
 // ============================================================================
@@ -60,11 +68,11 @@ const PHASE_LABELS: Record<SessionPhase, string> = {
 
 const PHASE_BADGE_CLASSES: Record<SessionPhase, string> = {
   not_started: "bg-muted text-muted-foreground border-border",
-  awaiting_responses: "bg-primary/15 text-primary border-primary/20",
+  awaiting_responses: "bg-primary/15 text-primary border-primary/20 animate-pulse-glow",
   partially_complete: "bg-info/15 text-info border-info/20",
-  awaiting_compilation: "bg-warning/15 text-warning border-warning/20",
+  awaiting_compilation: "bg-warning/15 text-warning border-warning/20 animate-pulse-glow",
   compiled: "bg-success/15 text-success border-success/20",
-  in_critique: "bg-purple-500/15 text-purple-600 border-purple-500/20",
+  in_critique: "bg-purple-500/15 text-purple-600 border-purple-500/20 animate-pulse-glow",
   closed: "bg-muted text-muted-foreground border-border",
 };
 
@@ -135,7 +143,7 @@ function LockedState({ reason }: { reason: string }) {
       </div>
 
       <div className="text-center">
-        <Link href="/sessions/new" className="text-primary hover:underline">
+        <Link href="/sessions/new" className="text-primary hover:underline active:text-primary/80 transition-colors touch-manipulation">
           Go to New Session
         </Link>
       </div>
@@ -145,18 +153,18 @@ function LockedState({ reason }: { reason: string }) {
 
 function EmptyState() {
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-2xl mx-auto animate-fade-in-up">
       <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-12 text-center">
-        <div className="flex items-center justify-center size-16 mx-auto mb-4 rounded-xl bg-muted/50">
+        <div className="flex items-center justify-center size-16 mx-auto mb-4 rounded-xl bg-muted/50 animate-float-slow">
           <InboxIcon className="size-8 text-muted-foreground" />
         </div>
         <h2 className="text-lg font-semibold text-foreground mb-2">No sessions yet</h2>
-        <p className="text-sm text-muted-foreground mb-6">
+        <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
           Start a new <Jargon term="brenner-loop">Brenner Loop</Jargon> research session to kick off a collaborative <Jargon term="discriminative-experiment">discriminative</Jargon> discussion.
         </p>
         <Link
           href="/sessions/new"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation"
         >
           <PlusIcon className="size-4" />
           New Session
@@ -166,22 +174,25 @@ function EmptyState() {
   );
 }
 
-function ThreadCard({ thread }: { thread: ThreadSummary }) {
+function ThreadCard({ thread, index }: { thread: ThreadSummary; index: number }) {
+  // Calculate stagger class (max 10)
+  const staggerClass = `stagger-${Math.min(index + 1, 10)}`;
+
   return (
     <Link
       href={`/sessions/${thread.threadId}`}
-      className="group block rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:bg-muted/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] transition-all touch-manipulation"
+      className={`group block rounded-xl border border-border bg-card p-5 hover:border-primary/30 hover:bg-muted/30 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-primary/5 active:translate-y-0 active:scale-[0.99] transition-all duration-200 touch-manipulation animate-fade-in-up ${staggerClass}`}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-2 min-w-0 flex-1">
           {/* Thread ID */}
-          <div className="font-mono text-sm font-medium text-foreground truncate">
+          <div className="font-mono text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
             {thread.threadId}
           </div>
 
           {/* Badges */}
           <div className="flex flex-wrap gap-2">
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border ${PHASE_BADGE_CLASSES[thread.phase]}`}>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border transition-all ${PHASE_BADGE_CLASSES[thread.phase]}`}>
               {PHASE_LABELS[thread.phase]}
             </span>
             <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-muted text-foreground border border-border">
@@ -189,12 +200,12 @@ function ThreadCard({ thread }: { thread: ThreadSummary }) {
             </span>
             {thread.hasArtifact && (
               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-success/15 text-success border border-success/20">
-                compiled
+                ✓ compiled
               </span>
             )}
             {thread.pendingAcks > 0 && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning/15 text-warning border border-warning/20">
-                {thread.pendingAcks} pending acks
+              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-warning/15 text-warning border border-warning/20 animate-pulse-glow">
+                {thread.pendingAcks} pending
               </span>
             )}
           </div>
@@ -210,9 +221,12 @@ function ThreadCard({ thread }: { thread: ThreadSummary }) {
           )}
         </div>
 
-        {/* Timestamp */}
-        <div className="text-right shrink-0">
-          <div className="text-xs text-muted-foreground">{formatRelativeTs(thread.lastMessageTs)}</div>
+        {/* Right side: Timestamp + Arrow */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="text-right">
+            <div className="text-xs text-muted-foreground">{formatRelativeTs(thread.lastMessageTs)}</div>
+          </div>
+          <ChevronRightIcon className="size-4 text-muted-foreground opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200" />
         </div>
       </div>
     </Link>
@@ -298,7 +312,7 @@ export default async function SessionsListPage() {
           <RefreshControls />
           <Link
             href="/sessions/new"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation"
           >
             <PlusIcon className="size-4" />
             New Session
@@ -318,9 +332,9 @@ export default async function SessionsListPage() {
       {!loadError && threads.length === 0 ? (
         <EmptyState />
       ) : (
-        <div className="space-y-3 animate-fade-in-up">
-          {threads.map((thread) => (
-            <ThreadCard key={thread.threadId} thread={thread} />
+        <div className="space-y-3">
+          {threads.map((thread, index) => (
+            <ThreadCard key={thread.threadId} thread={thread} index={index} />
           ))}
         </div>
       )}
