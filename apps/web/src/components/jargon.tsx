@@ -348,6 +348,7 @@ export function Jargon({ term, children, className }: JargonProps) {
 
                 {/* Close button */}
                 <button
+                  type="button"
                   onClick={handleClose}
                   className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors active:bg-muted/80"
                   aria-label="Close"
