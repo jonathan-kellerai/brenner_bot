@@ -312,6 +312,56 @@ git ls-files apps/web/public/_corpus/ | wc -l  # Should show 17+ files
 
 ---
 
+## ⚠️ CRITICAL: Vercel Deployment Safety Rules
+
+**The production site (brennerbot.org) is publicly shared. Breaking it is UNACCEPTABLE.**
+
+### Never Do These Things
+
+1. **Never modify `vercel.json` without explicit user approval**
+   - The Vercel dashboard has "Root Directory" set to `apps/web`
+   - `vercel.json` overrides can conflict with dashboard settings in unpredictable ways
+   - If you think vercel.json needs changes, STOP and ask first
+
+2. **Never assume a 401/404 is "expected" on the public site**
+   - If the main page returns anything other than 200, the site is BROKEN
+   - This requires IMMEDIATE emergency action
+   - Do not rationalize errors - fix them
+
+3. **Never delete or modify middleware/proxy files without understanding the full impact**
+   - Next.js 16 uses `proxy.ts` (not `middleware.ts`) for edge middleware
+   - Any middleware must have a `matcher` config that excludes public routes
+   - Public routes (/, /corpus, /distillations, etc.) must NEVER be protected
+
+### Safe Deployment Practices
+
+1. **Before any deployment-related change:**
+   ```bash
+   vercel ls --limit 5   # Check current deployments
+   vercel inspect <url>  # Verify production status
+   ```
+
+2. **If something breaks:**
+   - User can rollback via Vercel dashboard instantly
+   - Do NOT make additional changes that might make things worse
+   - Wait for explicit instructions
+
+3. **The working deployment pattern:**
+   - Vercel dashboard: Root Directory = `apps/web`
+   - Dashboard detects Next.js automatically
+   - `bun install` and `bun run build` run from `apps/web`
+   - No vercel.json overrides needed for basic operation
+
+### Route Protection Architecture
+
+If route protection is needed (for admin areas, sessions, etc.):
+- Matcher must be EXPLICITLY scoped to protected paths only
+- Example: `matcher: ["/admin/:path*", "/sessions/:path*"]`
+- NEVER use catch-all patterns that might affect public pages
+- Test on preview deployments BEFORE merging to main
+
+---
+
 ## Landing the Plane (Session Completion)
 
 **When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
