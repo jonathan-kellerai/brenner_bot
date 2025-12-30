@@ -278,13 +278,15 @@ export function Jargon({ term, children, className }: JargonProps) {
       {isMounted && createPortal(
         <AnimatePresence>
           {isOpen && isMobile && (
-            <>
+            <motion.div
+              key="mobile-sheet-container"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
               {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.2 }}
+              <div
                 className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm"
                 style={{ touchAction: "none" }}
                 onClick={handleClose}
@@ -326,7 +328,7 @@ export function Jargon({ term, children, className }: JargonProps) {
                   <SheetContent term={jargonData} termKey={termKey} />
                 </div>
               </motion.div>
-            </>
+            </motion.div>
           )}
         </AnimatePresence>,
         document.body
