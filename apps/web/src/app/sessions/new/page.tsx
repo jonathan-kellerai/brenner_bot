@@ -166,7 +166,7 @@ function LockedState({ reason }: { reason: string }) {
         <p className="text-sm text-muted-foreground">
           Need help?{" "}
           <a
-            href="https://github.com/Dicklesworthstone/brenner_bot#lab-mode"
+            href="https://github.com/Dicklesworthstone/brenner_bot/blob/main/apps/web/.env.example"
             target="_blank"
             rel="noopener noreferrer"
             className="text-primary hover:underline"
