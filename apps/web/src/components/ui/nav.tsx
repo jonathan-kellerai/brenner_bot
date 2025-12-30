@@ -37,6 +37,12 @@ const GlossaryIcon = () => (
   </svg>
 )
 
+const TranscriptIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm-3 9.75h6m-6 3h3" />
+  </svg>
+)
+
 const OperatorsIcon = () => (
   <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
     <path
@@ -55,12 +61,28 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { href: "/", label: "Home", icon: <HomeIcon /> },
+  { href: "/corpus/transcript", label: "Transcript", icon: <TranscriptIcon /> },
   { href: "/corpus", label: "Corpus", icon: <BookIcon /> },
   { href: "/operators", label: "Operators", icon: <OperatorsIcon /> },
   { href: "/distillations", label: "Distillations", icon: <SparklesIcon /> },
   { href: "/glossary", label: "Glossary", icon: <GlossaryIcon /> },
   { href: "/method", label: "Method", icon: <BeakerIcon /> },
 ]
+
+// Helper to check if nav item is active (handles nested routes like /corpus vs /corpus/transcript)
+function isNavItemActive(pathname: string, itemHref: string): boolean {
+  if (pathname === itemHref) return true
+  if (pathname.startsWith(`${itemHref}/`)) {
+    // Check if another nav item is a more specific match
+    const moreSpecificMatch = navItems.some(
+      (other) => other.href !== itemHref &&
+                 other.href.startsWith(`${itemHref}/`) &&
+                 (pathname === other.href || pathname.startsWith(`${other.href}/`))
+    )
+    return !moreSpecificMatch
+  }
+  return false
+}
 
 // Desktop Header Navigation with animated indicator
 export function HeaderNav({ className }: { className?: string }) {
@@ -69,7 +91,7 @@ export function HeaderNav({ className }: { className?: string }) {
   return (
     <nav className={cn("hidden lg:flex items-center gap-1", className)}>
       {navItems.slice(1).map((item) => {
-        const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+        const isActive = isNavItemActive(pathname, item.href)
         return (
           <Link
             key={item.href}
@@ -108,9 +130,7 @@ export function BottomNav({ className }: { className?: string }) {
 
   // Calculate active index
   const activeIndex = React.useMemo(() => {
-    return navItems.findIndex((item) =>
-      pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
-    )
+    return navItems.findIndex((item) => isNavItemActive(pathname, item.href))
   }, [pathname])
 
   // Update indicator position when active index changes
@@ -158,7 +178,7 @@ export function BottomNav({ className }: { className?: string }) {
         )}
 
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (item.href !== "/" && pathname.startsWith(`${item.href}/`))
+          const isActive = isNavItemActive(pathname, item.href)
           return (
             <Link
               key={item.href}
