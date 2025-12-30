@@ -210,10 +210,22 @@ The GitHub Actions workflow (`.github/workflows/release.yml`) builds all platfor
     export BRENNER_GIT_SHA="${{ github.sha }}"
     export BRENNER_BUILD_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-    for target in linux-x64 linux-arm64 darwin-arm64 darwin-x64 win-x64; do
-      BRENNER_TARGET="$target" bun build --compile --minify --env=BRENNER_* \
-        --target="bun-${target/-baseline/}" \
-        --outfile "dist/brenner-${target}" ./brenner.ts
+    # Build each platform (note: Bun target names differ from output names)
+    declare -A targets=(
+      ["linux-x64"]="bun-linux-x64-baseline"
+      ["linux-arm64"]="bun-linux-arm64"
+      ["darwin-arm64"]="bun-darwin-arm64"
+      ["darwin-x64"]="bun-darwin-x64"
+      ["win-x64"]="bun-windows-x64-baseline"
+    )
+
+    for name in "${!targets[@]}"; do
+      bun_target="${targets[$name]}"
+      outfile="dist/brenner-${name}"
+      [[ "$name" == win-* ]] && outfile="${outfile}.exe"
+
+      BRENNER_TARGET="$name" bun build --compile --minify --env=BRENNER_* \
+        --target="$bun_target" --outfile "$outfile" ./brenner.ts
     done
 ```
 
