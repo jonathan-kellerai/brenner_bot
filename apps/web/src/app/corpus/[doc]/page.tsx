@@ -61,14 +61,30 @@ export default async function CorpusDocPage({
 
   if (!doc) notFound();
 
-  // Prefetch document for client hydration (enables navigation caching)
-  const queryClient = new QueryClient();
-  await queryClient.prefetchQuery({
-    queryKey: corpusDocKeys.detail(docId),
-    queryFn: () => readCorpusDoc(docId),
-  });
+  // Prefetch document for client hydration (enables navigation caching).
+  // The transcript is ~473KB; dehydrating it into HTML can hurt mobile page load.
+  const shouldHydrateDoc = docId !== "transcript";
+  const queryClient = shouldHydrateDoc ? new QueryClient() : null;
+  if (queryClient) {
+    await queryClient.prefetchQuery({
+      queryKey: corpusDocKeys.detail(docId),
+      queryFn: () => readCorpusDoc(docId),
+    });
+  }
 
   const { prev, next } = getNavLinks(docId);
+
+  const content = (
+    <div className="animate-fade-in-up">
+      <DocumentSwipeNavClient
+        key={docId}
+        prev={prev ? { id: prev.id, title: prev.title } : null}
+        next={next ? { id: next.id, title: next.title } : null}
+      >
+        <DocumentContentClient docId={docId} />
+      </DocumentSwipeNavClient>
+    </div>
+  );
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -82,17 +98,7 @@ export default async function CorpusDocPage({
       </nav>
 
       {/* Document Content - hydrated from server prefetch, cached for navigation */}
-      <HydrationBoundary state={dehydrate(queryClient)}>
-        <div className="animate-fade-in-up">
-          <DocumentSwipeNavClient
-            key={docId}
-            prev={prev ? { id: prev.id, title: prev.title } : null}
-            next={next ? { id: next.id, title: next.title } : null}
-          >
-            <DocumentContentClient docId={docId} />
-          </DocumentSwipeNavClient>
-        </div>
-      </HydrationBoundary>
+      {queryClient ? <HydrationBoundary state={dehydrate(queryClient)}>{content}</HydrationBoundary> : content}
 
       {/* Navigation */}
       <nav className="mt-20 pt-10 border-t border-border animate-fade-in-up">
