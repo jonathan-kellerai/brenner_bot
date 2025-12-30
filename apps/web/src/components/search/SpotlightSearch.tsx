@@ -132,7 +132,12 @@ export function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProps) {
   }, [selectedIndex]);
 
   const navigateToResult = (hit: GlobalSearchHit) => {
-    router.push(hit.url);
+    // Include query param for back-to-search and multi-match navigation
+    const url = new URL(hit.url, window.location.origin);
+    if (query.trim()) {
+      url.searchParams.set("q", query.trim());
+    }
+    router.push(url.pathname + url.search + url.hash);
     onClose();
   };
 

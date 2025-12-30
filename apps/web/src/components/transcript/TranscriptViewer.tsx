@@ -5,7 +5,8 @@ import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ParsedTranscript, TranscriptSection as TSection, TranscriptContent } from "@/lib/transcript-parser";
 import { CopyButton } from "@/components/ui/copy-button";
 import { useReadingPosition } from "@/hooks/useReadingPosition";
-import { useSearch } from "@/lib/search";
+import { useSearch as useLocalSearch } from "@/lib/search";
+import { useSearch as useGlobalSearch } from "@/components/search";
 
 // ============================================================================
 // TRANSCRIPT HERO
@@ -150,7 +151,7 @@ interface TranscriptSearchProps {
 }
 
 export function TranscriptSearch({ sections, onResultClick, onSearchChange }: TranscriptSearchProps) {
-  const { query, results, isSearching, search, clearSearch, setScope } = useSearch({ limit: 20 });
+  const { query, results, isSearching, search, clearSearch, setScope } = useLocalSearch({ limit: 20 });
   const inputRef = useRef<HTMLInputElement>(null);
   const [isOpen, setIsOpen] = useState(false);
 
@@ -315,18 +316,24 @@ export function ReadingProgress({ progress: externalProgress }: ReadingProgressP
 interface TranscriptSectionProps {
   section: TSection;
   isActive: boolean;
+  isHighlighted?: boolean;
   searchHighlights?: string[];
 }
 
-export function TranscriptSection({ section, isActive, searchHighlights }: TranscriptSectionProps) {
+export function TranscriptSection({ section, isActive, isHighlighted, searchHighlights }: TranscriptSectionProps) {
   return (
     <section
       id={`section-${section.number}`}
       className={`
-        scroll-mt-24 transition-all duration-500
+        scroll-mt-24 transition-all duration-500 relative
         ${isActive ? "opacity-100" : "opacity-90"}
+        ${isHighlighted ? "animate-highlight-flash" : ""}
       `}
     >
+      {/* Flash highlight overlay */}
+      {isHighlighted && (
+        <div className="absolute inset-0 -mx-4 rounded-2xl bg-primary/10 border-2 border-primary/40 pointer-events-none animate-highlight-fade" />
+      )}
       {/* Section Header */}
       <div className="flex items-start gap-4 mb-8">
         <div className="flex-shrink-0 flex items-center justify-center size-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 text-primary font-bold text-xl">
@@ -547,7 +554,12 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   const [activeSection, setActiveSection] = useState(0);
   const [readingProgress, setReadingProgress] = useState(0);
   const [searchQuery, setSearchQuery] = useState("");
+  const [highlightedSection, setHighlightedSection] = useState<number | null>(null);
+  const [searchNavQuery, setSearchNavQuery] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Global search context for opening search modal
+  const { open: openGlobalSearch } = useGlobalSearch();
 
   // Reading position persistence
   const { position, save: savePosition, canRestore, markRestored } = useReadingPosition("transcript", {
@@ -617,6 +629,15 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
     if (typeof window === "undefined") return;
 
     const hash = window.location.hash;
+    const urlParams = new URLSearchParams(window.location.search);
+    const queryParam = urlParams.get("q");
+
+    // Store query param for back-to-search and highlighting
+    if (queryParam) {
+      setSearchNavQuery(queryParam);
+      // Also set as search query for text highlighting
+      setSearchQuery(queryParam);
+    }
 
     // URL hash takes priority over saved position
     if (hash.startsWith("#section-")) {
@@ -627,6 +648,10 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         // Delay to ensure virtualizer is initialized
         setTimeout(() => {
           virtualizer.scrollToIndex(sectionIndex, { align: "start", behavior: "smooth" });
+          // Set flash highlight on the target section
+          setHighlightedSection(sectionIndex);
+          // Clear highlight after 3 seconds
+          setTimeout(() => setHighlightedSection(null), 3000);
         }, 100);
         return;
       }
@@ -729,6 +754,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
                     <TranscriptSection
                       section={section}
                       isActive={activeSection === virtualRow.index}
+                      isHighlighted={highlightedSection === virtualRow.index}
                       searchHighlights={searchHighlights}
                     />
                   </div>
@@ -744,6 +770,22 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
       ) : null}
 
       <BackToTop />
+
+      {/* Back to Search - floating button when coming from search */}
+      {searchNavQuery && (
+        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-40 animate-fade-in-up">
+          <button
+            onClick={openGlobalSearch}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all hover:scale-105"
+          >
+            <BackToSearchIcon />
+            <span className="font-medium">Back to Search</span>
+            <kbd className="px-1.5 py-0.5 rounded bg-primary-foreground/20 text-xs font-mono">
+              ⌘K
+            </kbd>
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -751,6 +793,14 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
 // ============================================================================
 // ICONS
 // ============================================================================
+
+function BackToSearchIcon() {
+  return (
+    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+    </svg>
+  );
+}
 
 function SectionIcon() {
   return (
