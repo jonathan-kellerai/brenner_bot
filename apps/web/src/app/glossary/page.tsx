@@ -353,7 +353,7 @@ export default function GlossaryPage() {
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+              className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted active:scale-90 transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
               aria-label="Clear search"
             >
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -367,10 +367,10 @@ export default function GlossaryPage() {
         <div className="flex flex-wrap gap-2">
           <button
             onClick={() => setActiveCategory("all")}
-            className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+            className={`px-3 py-1.5 text-sm rounded-full border transition-all touch-manipulation active:scale-[0.97] ${
               activeCategory === "all"
                 ? "bg-primary text-primary-foreground border-primary"
-                : "border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:border-border"
+                : "border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:border-border active:bg-muted/50"
             }`}
           >
             All ({totalCount})
@@ -379,10 +379,10 @@ export default function GlossaryPage() {
             <button
               key={category}
               onClick={() => setActiveCategory(category)}
-              className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
+              className={`px-3 py-1.5 text-sm rounded-full border transition-all touch-manipulation active:scale-[0.97] ${
                 activeCategory === category
                   ? "bg-primary text-primary-foreground border-primary"
-                  : "border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:border-border"
+                  : "border-border/60 bg-muted/30 text-muted-foreground hover:text-foreground hover:border-border active:bg-muted/50"
               }`}
             >
               {CATEGORY_LABELS[category]} ({count})

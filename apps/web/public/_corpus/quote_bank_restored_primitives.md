@@ -640,6 +640,306 @@ Tags: `integrative`, `open-the-box`, `machine-language`
 
 > These worlds are lost except through this and I suppose as one gets older one wants to try and preserve something.
 
-Why it matters: “Preservation” is part of the research ecosystem: keeping institutional memory and the lived context that makes methods transferable.
+Why it matters: "Preservation" is part of the research ecosystem: keeping institutional memory and the lived context that makes methods transferable.
 
 Tags: `preservation`, `context`, `epistemic-hygiene`
+
+---
+
+## §9 — Grades vs capability (the second-class test)
+
+> Even if a student comes to me with a first class degree, he has to prove to me he could have got a second class degree if he'd tried.
+
+Why it matters: Academic performance measures conformity to curricula, not intellectual capability. The best researchers often show controlled underperformance in irrelevant areas because they were busy thinking about what matters.
+
+Tags: `talent-spotting`, `anti-credential`, `problem-choice`
+
+---
+
+## §11 — Self-directed learning (books over courses)
+
+> If you want to learn a new subject, I get a book and I start doing it... knowledge is out there; it's available. If you can't buy the book you can always go to the public library and steal it if necessary.
+
+Why it matters: The barrier to learning is not access—it's initiative. Formal instruction is a convenience, not a requirement. Autodidacts often outperform because they're driven by genuine curiosity rather than credential acquisition.
+
+Tags: `autodidact`, `initiative`, `anti-credential`
+
+---
+
+## §34 — Wordplay as cognitive tool
+
+> Wordplay is just alternative interpretations of the same thing, and I think that that's a lot of... a lot of science involves that: of... of taking... looking at the thing on the surface and see that there... there's more than one way of looking at it and see there's more than one way of extracting something from it.
+
+Why it matters: Puns and linguistic inversions train the mind to see multiple valid interpretations of the same data—exactly the skill needed for paradigm shifts. The cognitive flexibility required for wordplay is the same flexibility required for reconceptualization.
+
+Tags: `reframe`, `representation-change`, `cognitive-tools`
+
+---
+
+## §42 — Imagination guarded by experiment
+
+> Let the imagination go, guarding it by judgement and principle, but holding it in and directing it by experiment... **you've got to really find out**.
+
+Why it matters: Speculation is cheap; empirical grounding is expensive but essential. Brenner's scribbled Faraday quote in his copy of Schrödinger's "What Is Life?" captures the tension: wild theorizing must eventually submit to experimental discipline.
+
+Tags: `imagination-experiment`, `empirical-grounding`, `epistemic-hygiene`
+
+---
+
+## §45 — Schrödinger's fundamental error (description vs means)
+
+> **Schrödinger says the chromosomes contain the information to specify the future organism and the means to execute it and that's not true. The chromosomes contain the information to specify the future organisation and a description of the means to implement, but not the means themselves.**
+
+Why it matters: This is the deepest insight about biological information: genes encode instructions for building the machinery that reads the instructions, not the machinery itself. Von Neumann got this right; Schrödinger got it wrong. The distinction between program and interpreter is fundamental.
+
+Tags: `program-vs-interpreter`, `von-neumann`, `information-theory`, `level-split`
+
+---
+
+## §49 — Biology doesn't allow relaxing baths
+
+> Leó Szilárd used to tell me that the one thing that happened when he went into biology is he couldn't take a nice bath. When he was a physicist, he could go into a bath and he could lie there for three hours and he could think about physics, but he said when he went into biology, no sooner did he get in the bath then he'd have to get out and look up another fact.
+
+Why it matters: Physics permits armchair reasoning; biology is relentlessly particular. Theories must constantly answer to facts. The physicists who entered biology (Delbrück, Schrödinger, Crick) had to learn this the hard way.
+
+Tags: `theory-vs-facts`, `specificity`, `empirical-grounding`
+
+---
+
+## §51 — No magic in doing science
+
+> This is something you can always do... it's open to you. **There's no magic in this** and I think the whole of the philosophy that says unless you've gone through this way, if you're an old chap of 25, you can't do it. What you have to be is 18 and naive and go to a course and learn how to do it. This is just absolutely untrue.
+
+Why it matters: Credentialism is gatekeeping dressed as quality control. Brenner walked into the Dyson Perrins chemistry lab as an "intruder," synthesized what he needed, and left. Science is about solving problems, not having the right background.
+
+Tags: `anti-credential`, `autodidact`, `initiative`
+
+---
+
+## §55 — The curtain lifted (seeing the DNA model)
+
+> That's when I saw that this was it. **In a flash you could just see that everything... you know, this was the fundamental... the curtain had been lifted and everything was now clear what to do.** ... This was really the beginning of molecular biology. This was it.
+
+Why it matters: The best theories create clarity rather than complexity. When you see the right framework, the path forward becomes obvious. The Watson-Crick model didn't just explain—it opened an entire research program.
+
+Tags: `paradigm-moment`, `clarity`, `research-program`
+
+---
+
+## §157 — Émigrés make the best discoveries
+
+> I've always found that **the best people to push a science forward are in fact those who come from outside it**. Maybe that's the same in culture as well. The **émigrés are always the best people to make the new discoveries**.
+
+Why it matters: Insiders are captured by their field's assumptions. Outsiders bring fresh perspectives and don't know what's "impossible." Cross-domain transfer is a feature, not a bug.
+
+Tags: `cross-domain`, `outsider-advantage`, `fresh-eyes`
+
+---
+
+## §158 — Computers as servants, not masters
+
+> **Computers should be servants and not masters.** In fact, that's when I invented something called *ad hoc* for a style of computing. When someone said what did *ad hoc* stand for, I said it stood for **hands-on computing**.
+
+Why it matters: Tools should serve the problem, not dictate it. When the computing center demanded shift schedules and operators, Brenner demanded a machine they could touch directly. Control over your instruments is control over your thinking.
+
+Tags: `tooling`, `autonomy`, `infrastructure`
+
+---
+
+## §160 — If you can't compute it you can't understand it
+
+> **If you can't compute it you can't understand it.** ... I've been much more interested in the way the genomes work, because of course in our brains there's something called consciousness lurking around, but of course **in genomes are completely unconscious and that seems to me to offer a much more challenging way of doing things**.
+
+Why it matters: Understanding means being able to reconstruct. Verbal descriptions that can't be made precise enough to simulate are probably concealing confusion. The genome offers a cleaner test case than the brain because there's no ghost in the machine.
+
+Tags: `computability`, `simulation`, `precision`
+
+---
+
+## §163 — Learning under total ignorance
+
+> It learns by being totally ignorant, which is the cheapest way. Which it says, **if it works do it, if it doesn't work forget about it**. And so I mean, it is learning under the regime of total ignorance that distinguishes the antibody system from what we might speculate as learning.
+
+Why it matters: Evolution and immune systems don't need to understand—they just try things and select what works. This is often faster and more robust than top-down design. Selective retention beats rational planning in complex spaces.
+
+Tags: `selection`, `ignorance`, `evolution`, `generate-and-test`
+
+---
+
+## §164 — Theories logical but not natural
+
+> **Many theories are correct in a logical sense but they're untrue because they don't refer to the natural thing we're all interested in.**
+
+Why it matters: Internal consistency is not enough. A theory can be perfectly coherent yet have no contact with reality. Biological plausibility must constrain theoretical possibilities.
+
+Tags: `biological-plausibility`, `grounding`, `theory-kill`
+
+---
+
+## §165 — Easy analogies are dangerous
+
+> **We should suspect these easy analogies because they are likely to be wrong, because these analogies operate in our conscious minds which are very restricted.** You know, we like to think of the nervous system as something like a general sending commands to an army... But this may not be the way organisms actually operate.
+
+Why it matters: Our intuitions are shaped by social experience and conscious thought, neither of which are good guides to how cells, molecules, or nervous systems actually work. Metaphors that feel right are often systematically misleading.
+
+Tags: `anti-analogy`, `intuition-failure`, `cognitive-bias`
+
+---
+
+## §166 — Mutual ignorance is the best way
+
+> So **we both departed in great mutual ignorance, which is the best way**.
+
+Why it matters: Sometimes the most honest outcome of a consultation is recognizing that nobody knows the answer. Pretending otherwise wastes resources and creates false confidence.
+
+Tags: `honesty`, `epistemic-humility`, `ignorance`
+
+---
+
+## §167 — Conversation and the 50% wrong rule
+
+> This kind of ongoing conversation is so important to science. It's important because I'm not the sort of person that likes to think in isolation... **an idea usually forms in my mind, it's at least 50% wrong the first time it appears**. There's something wrong with it. And it's only in playing with it... that you can refine it.
+
+Why it matters: First drafts of ideas are almost always flawed. The iterative process of articulation, critique, and refinement through conversation is how raw intuition becomes rigorous insight. Isolation breeds blind spots.
+
+Tags: `conversation`, `iteration`, `collaboration`, `refinement`
+
+---
+
+## §168 — Freedom from short-term justification
+
+> **Being able to work without this endless justification that is common today**... the endless thing just saying... which I feel is completely stifling to creative work in science... I think made that subject.
+
+Why it matters: Novel research can't be justified in advance because you don't know where it's going. The C. elegans project took decades to mature. Demanding quarterly milestones kills exactly the kind of work that produces breakthroughs.
+
+Tags: `long-term`, `freedom`, `anti-justification`, `research-environment`
+
+---
+
+## §192 — The value of ignorance and changing subjects
+
+> I am a strong believer in **the value of ignorance**... And also, when you get to the age of 60, it's very useful, you begin to forget things... I think **people should change their subjects very frequently**, and why I think the best scientists do that.
+
+Why it matters: Expertise ossifies. Forgetting clears space for fresh approaches. The same person can bring outsider advantages to serial fields by deliberately moving on before becoming captured by a paradigm.
+
+Tags: `ignorance`, `fresh-eyes`, `problem-choice`, `reinvention`
+
+---
+
+## §193 — Avoiding "project research"
+
+> **That we thought we didn't want to do**, although our laboratory... had all the capability of doing it. If you like, **that was a kind of project research** in which you could... a general could, so to speak, plan a campaign and then just get... the cavalry to do this and the artillery to do that. And **that didn't seem to me to be what one wants to do in science**.
+
+Why it matters: Some problems can be solved by throwing resources at them; those aren't the interesting ones. The deep problems require insight, not campaigns. Organizing science like an army produces incremental results, not breakthroughs.
+
+Tags: `problem-choice`, `anti-project`, `insight-over-resources`
+
+---
+
+## §199 — Reading rots the mind / but doing counts
+
+> **Reading is not enough.** I agreed with him. Reading's not enough. But **sometimes thinking isn't enough either**, as well, because in the end **it's doing what counts**.
+
+Why it matters: The three modes of scientific work—reading, thinking, doing—are each necessary but insufficient. Reading informs, thinking connects, but only doing tests. Brenner balanced all three while keeping experimental work primary.
+
+Tags: `doing`, `experimentation`, `balance`, `epistemic-hygiene`
+
+---
+
+## §200 — Three classes of papers
+
+> I now divide papers into three classes: **those that give me information, those that have no effect, and those that remove information from my head**. And the latter is in this class and I'm... I've got very little left and I'm not going to give it over to rubbish like this.
+
+Why it matters: Reading bad papers actively harms your thinking. Memory is limited; every confused framework that enters your head takes space from clear ones. Be ruthless about what you let in.
+
+Tags: `information-hygiene`, `reading`, `filter`, `memory`
+
+---
+
+## §201 — A modicum of ignorance is essential
+
+> **A modicum of ignorance is... is absolutely essential.** Because otherwise you don't try anything. And that's why I think in any line of research people can get saturated very quickly because they just know everything. And when a student comes and says, 'Why don't we try this?' you tend to say 'Oh, don't be silly, you know, that'll never work'.
+
+Why it matters: Experts know all the reasons things won't work—and are therefore paralyzed. The naive student who doesn't know it's impossible sometimes succeeds precisely because of that ignorance. Knowledge is dangerous to discovery.
+
+Tags: `ignorance`, `naivety`, `anti-expertise`, `discovery`
+
+---
+
+## §202 — Teaching yourself through reading
+
+> The whole idea of learning by yourself now is absent... I find no, **I have to start with chapter seven, then go back and read the first half of chapter one, then go back, then go and read the second half of chapter 10**. And in that way I create my own path through this. And I think that is very important, because **it's the way you construct your own knowledge which is important to you**.
+
+Why it matters: Textbooks present knowledge in a pedagogical order that may not match how your mind works. Creating your own path through material builds deeper understanding than following someone else's sequence. Self-directed learning is active construction.
+
+Tags: `autodidact`, `self-directed`, `construction`, `learning`
+
+---
+
+## §205 — The nervous system as an organ
+
+> **The nervous system is an organ.** It's an organ built out of cells... **The connection between genes and behaviour must go through the construction and performance of a nervous system.** ... **Gradients would be the analogue way of doing it, and lineage would be the digital way of doing it.**
+
+Why it matters: You can't skip levels. Genes → proteins → cells → nervous system → behavior. Each level has its own logic that must be understood on its own terms before connecting to adjacent levels.
+
+Tags: `levels`, `nervous-system`, `development`, `digital-vs-analogue`
+
+---
+
+## §206 — Computing a mouse from DNA
+
+> **One day people will be able to compute a mouse from the DNA sequences alone**... We would understand the algorithm of how the mouse is built, because we could build it. **It's an essential argument... to realise as to the nature of explanation in biology.**
+
+Why it matters: This defines what "understanding" means in biology: being able to reconstruct the phenomenon from first principles. If you can't simulate it, you don't really understand it. This is the ultimate test of biological theory.
+
+Tags: `computability`, `simulation`, `understanding`, `explanation`
+
+---
+
+## §207 — The oldest biological observation
+
+> **Like produces like is the oldest biological observation.** And of course what science has accomplished is to tell us that this happens because organisms contain genes... And **somehow is what we have to explain. We have to say not somehow, but how.**
+
+Why it matters: "Somehow" is not an explanation—it's a placeholder for ignorance. The history of biology is replacing "somehow" with mechanism. Every "somehow" in your theory is a confession of incomplete understanding.
+
+Tags: `mechanism`, `explanation`, `precision`, `anti-handwaving`
+
+---
+
+## §208 — The machine language of the object
+
+> It should be in **the machine language of the thing being simulated**... **the machine language of development is in terms of cells and the recognition proteins they carry on them**... So **the machine language of the object is important** and it is, if you like, the task of experimental biologists to define that.
+
+Why it matters: Explanations must be in the vocabulary of the system being explained. Describing worm behavior with trigonometry or development with differential equations may be mathematically elegant but biologically meaningless. Find the native language.
+
+Tags: `machine-language`, `native-vocabulary`, `explanation`, `levels`
+
+---
+
+## §209 — The integrative task remains
+
+> Many people working in experimental biology simply think that when they've got it all... they've got the long list of components... that there will be a blinding insight... **the real task of biology will yet remain to be done, which is the integrative aspect**.
+
+Why it matters: Parts lists are not understanding. The genome project gave us all the genes; we still can't compute a mouse. Integration—how the parts work together—is the hard problem that remains after enumeration.
+
+Tags: `integration`, `parts-vs-whole`, `systems`, `open-problem`
+
+---
+
+## §210 — The heroic and classical periods
+
+> Science goes from the heroic... its **heroic period into its classical period**... **being an early Christian must have been exciting, but to be one later is boring, because everybody's converted**. The only thing of being an old Jesuit in the church is you know what's wrong with the church basically.
+
+Why it matters: Fields have life cycles. The heroic phase is when foundational discoveries are made by a few visionaries; the classical phase is when armies of workers fill in details. Know which phase your field is in—and consider leaving for a new heroic phase elsewhere.
+
+Tags: `field-cycles`, `problem-choice`, `timing`, `heroic-period`
+
+---
+
+## §211 — Competition and the Talleyrand principle
+
+> **If you're always doing new things there's always very little competition.** ... **My people should feel that they're out there alone** and they can actually give the problem their big attention... **That's the great morale builder in a lab.** ... Talleyrand: '**Never do for yourself that which you can get other people to do for you**'.
+
+Why it matters: Competition signals you're working on the wrong problems—the ones everyone knows about. The best problems are so new nobody else is working on them. And once you've opened a field, let others populate it while you move on.
+
+Tags: `competition`, `problem-choice`, `originality`, `delegation`
