@@ -88,11 +88,11 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
           <button
             onClick={() => onTagSelect(null)}
             className={`
-              flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+              flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
               ${
                 selectedTag === null
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-95"
+                  : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
               }
             `}
           >
@@ -103,11 +103,11 @@ function TagCloud({ tags, selectedTag, onTagSelect, quoteCounts }: TagCloudProps
               key={tag}
               onClick={() => onTagSelect(tag === selectedTag ? null : tag)}
               className={`
-                group flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
+                group flex-shrink-0 snap-start px-4 py-2 sm:px-3 sm:py-1.5 rounded-lg text-sm font-medium transition-all touch-manipulation active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring
                 ${
                   selectedTag === tag
                     ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
-                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 active:scale-95"
+                    : "bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80"
                 }
               `}
             >
