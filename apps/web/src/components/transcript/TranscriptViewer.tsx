@@ -29,6 +29,7 @@ interface TranscriptHeroProps {
   totalSections: number;
   estimatedReadTime: string;
   wordCount: string;
+  isCollapsed?: boolean;
 }
 
 export function TranscriptHero({
@@ -37,9 +38,17 @@ export function TranscriptHero({
   totalSections,
   estimatedReadTime,
   wordCount,
+  isCollapsed = false,
 }: TranscriptHeroProps) {
   return (
-    <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 mb-8 sm:mb-12">
+    <div
+      className={`
+        relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/20 mb-8 sm:mb-12
+        transition-all duration-500 ease-out origin-top
+        ${isCollapsed ? "max-h-0 opacity-0 scale-y-0 mb-0 border-transparent" : "max-h-[600px] opacity-100 scale-y-100"}
+      `}
+      aria-hidden={isCollapsed}
+    >
       {/* Decorative elements */}
       <div className="absolute top-0 right-0 w-48 sm:w-96 h-48 sm:h-96 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
       <div className="absolute bottom-0 left-0 w-40 sm:w-64 h-40 sm:h-64 bg-amber-500/5 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
@@ -649,6 +658,9 @@ interface TranscriptViewerProps {
 const MOBILE_INITIAL_SECTIONS = 8;
 const MOBILE_LOAD_INCREMENT = 8;
 
+// Threshold in pixels before hero collapses
+const HERO_COLLAPSE_THRESHOLD = 80;
+
 export function TranscriptViewer({ data, estimatedReadTime, wordCount }: TranscriptViewerProps) {
   const [activeSection, setActiveSection] = useState(0);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -657,6 +669,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   const [searchNavQuery, setSearchNavQuery] = useState<string | null>(null);
   const [isMobileTocOpen, setIsMobileTocOpen] = useState(false);
   const [mobileSectionsLoaded, setMobileSectionsLoaded] = useState(MOBILE_INITIAL_SECTIONS);
+  const [isHeroCollapsed, setIsHeroCollapsed] = useState(false);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
   const initialScrollHandledRef = useRef(false);
@@ -795,6 +808,40 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
       container?.removeEventListener("scroll", handleDesktopScroll);
     };
   }, [virtualizer, savePosition, data.sections]);
+
+  // Hero collapse effect - tracks scroll position on both mobile and desktop
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const isMobile = () => window.innerWidth < 1024;
+    const container = scrollContainerRef.current;
+
+    const checkHeroCollapse = () => {
+      let scrollTop: number;
+
+      if (isMobile()) {
+        scrollTop = window.scrollY;
+      } else if (container) {
+        scrollTop = container.scrollTop;
+      } else {
+        return;
+      }
+
+      setIsHeroCollapsed(scrollTop > HERO_COLLAPSE_THRESHOLD);
+    };
+
+    // Listen to both window and container scroll
+    window.addEventListener("scroll", checkHeroCollapse, { passive: true });
+    container?.addEventListener("scroll", checkHeroCollapse, { passive: true });
+
+    // Check initial state
+    checkHeroCollapse();
+
+    return () => {
+      window.removeEventListener("scroll", checkHeroCollapse);
+      container?.removeEventListener("scroll", checkHeroCollapse);
+    };
+  }, []);
 
   // Progressive loading: IntersectionObserver to load more sections on mobile
   useEffect(() => {
@@ -1010,6 +1057,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         totalSections={data.totalSections}
         estimatedReadTime={estimatedReadTime}
         wordCount={wordCount}
+        isCollapsed={isHeroCollapsed}
       />
 
       {data.sections.length > 0 ? (
