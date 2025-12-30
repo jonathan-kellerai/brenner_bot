@@ -239,12 +239,10 @@ for (const [key, term] of allEntries) {
 // 6. Transcript section references (§n format)
 // --------------------------------------------------------------------------
 
-const sectionRefPattern = /§(\d+)/g;
-
 for (const [key, term] of allEntries) {
   const whyText = term.why || "";
-  let match;
-  while ((match = sectionRefPattern.exec(whyText)) !== null) {
+  // Use matchAll to avoid lastIndex state issues with global regex
+  for (const match of whyText.matchAll(/§(\d+)/g)) {
     const sectionNum = parseInt(match[1], 10);
     if (sectionNum < SECTION_REF_MIN || sectionNum > SECTION_REF_MAX) {
       addIssue(
