@@ -77,7 +77,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "The operator ⊘ separates a problem into levels (e.g., atoms → molecules → cells → organisms). Each level has its own rules. Confusion arises when you mix levels or try to explain one level purely in terms of another. Distinguish program from interpreter, message from machine, specification from execution.",
     analogy:
-      "Think of it like separating a building into floors. Plumbing problems on floor 3 don't require knowing every brick in the foundation.",
+      "Separate a building into floors. Plumbing problems on floor 3 don't require knowing every brick in the foundation.",
     why:
       "Brenner emphasizes that biology operates across multiple levels. Failing to level-split leads to confused explanations. Transcript anchors: §45-46 (Von Neumann insight), §50 (chastity vs impotence), §59 (logic vs machinery), §105 (message vs machine), §147 (proper vs improper simulation), §205 (construction vs performance).",
     related: ["recode", "scale-prison", "object-transpose"],
@@ -1223,23 +1223,23 @@ export const jargonDictionary: Record<string, JargonTerm> = {
   },
   "generative-grammar": {
     term: "Generative Grammar",
-    short: "The discoverable causal rules that produce phenomena—reality's 'source code.'",
+    short: "The discoverable causal rules that produce phenomena, reality's 'source code.'",
     long:
-      "Brenner's first axiom: the world is not merely patterns and correlations but is produced by causal machinery operating according to discoverable rules. Biology is literally computation—DNA is source code, development is execution, mutation is debugging, evolution is version control. Science is reverse-engineering these production rules.",
+      "Brenner's first axiom: the world is not merely patterns and correlations but is produced by causal machinery operating according to discoverable rules. Biology is literally computation: DNA is source code, development is execution, mutation is debugging, evolution is version control. Science is reverse-engineering these production rules.",
     analogy:
-      "Like the grammar of a language that generates infinite sentences from finite rules—or like source code that compiles into a running program.",
+      "A grammar generates infinite sentences from finite rules. Source code compiles into a running program. Reality has structure, not just pattern.",
     why:
-      "This ontology—learned from Von Neumann's work on self-reproducing automata—underlies Brenner's entire approach. 'The moment I saw the DNA molecule, then I knew it.' Transcript anchors: §23-36 (DNA as information), §126 (gedanken mouse), §147 (proper simulation).",
+      "This ontology, learned from Von Neumann's work on self-reproducing automata, underlies Brenner's entire approach. 'The moment I saw the DNA molecule, then I knew it.' Transcript anchors: §23-36 (DNA as information), §126 (gedanken mouse), §147 (proper simulation).",
     related: ["two-axioms", "machine-language", "level-split", "recode"],
     category: "brenner",
   },
   "house-of-cards": {
     term: "House of Cards",
-    short: "Theory architecture where all components mutually constrain—all or nothing.",
+    short: "Theory architecture where all components mutually constrain: all or nothing.",
     long:
       "Build theories where every prediction depends on others. You can't accept one part and reject the rest. If N independent predictions each have probability p of being true by chance, the whole theory has probability p^N. This makes theories fragile in principle but extremely well-confirmed when they survive testing.",
     analogy:
-      "Like a jigsaw puzzle where every piece interlocks—you can't remove one piece and claim the rest still work.",
+      "A jigsaw puzzle where every piece interlocks. You can't remove one piece and claim the rest still work.",
     why:
       "The genetic code theory was 'the real house of cards theory; you had to buy everything... it was all or nothing theory' (§111). Attack any part and the whole falls. This architecture multiplies evidential weight exponentially.",
     related: ["exception-quarantine", "occams-broom", "forbidden-pattern", "assumption-ledger"],
@@ -1251,7 +1251,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "Same null result, fundamentally different reasons. A chaste experiment correctly shows an effect doesn't exist. An impotent experiment fails to detect an effect that exists. Before interpreting negative results, verify your intervention actually worked (potency check). The outcome is the same; the reasons are fundamentally different.",
     analogy:
-      "Like the difference between 'the suspect has an alibi' (chaste—truly innocent) and 'we couldn't reach the witness' (impotent—can't tell).",
+      "'The suspect has an alibi' (chaste, truly innocent) versus 'we couldn't reach the witness' (impotent, uninformative).",
     why:
       "Brenner's wordplay crystallizes a fundamental experimental distinction (§50). Science must distinguish true negatives from false negatives. Many failed replications are impotent, not chaste.",
     related: ["potency-check", "potency", "exclusion-test", "decision-experiment"],
@@ -1261,9 +1261,9 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Cheap Loop",
     short: "Minimize time between hypothesis and test; optimize for iteration speed.",
     long:
-      "Research productivity depends on loop time—how fast you can propose, test, and update. Bureaucracy, expensive equipment, and slow assays are taxes on discrimination. Choose systems where experiments are cheap and fast. The 'quickie' is a cheap loop strategy.",
+      "Research productivity depends on loop time: how fast you can propose, test, and update. Bureaucracy, expensive equipment, and slow assays are taxes on discrimination. Choose systems where experiments are cheap and fast. The 'quickie' is a cheap loop strategy.",
     analogy:
-      "Like preferring a whiteboard over a formal proposal process—speed of iteration beats perfection of planning.",
+      "Prefer a whiteboard over a formal proposal process. Speed of iteration beats perfection of planning.",
     why:
       "Brenner valued arriving at a lab and doing an experiment immediately (§80). 'What was so interesting in those times was you could arrive at a lab and do an experiment.' The quickie (§99) exemplifies cheap loop thinking.",
     related: ["quickie", "hal", "diy", "materialize", "brenner-loop"],
@@ -1273,9 +1273,9 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Two Axioms",
     short: "Brenner's foundational commitments: reality has grammar, understanding = reconstruction.",
     long:
-      "Everything in Brenner's method derives from two axioms. Axiom 1: Reality has a generative grammar—phenomena are produced by causal machinery operating according to discoverable rules. Axiom 2: To understand is to be able to reconstruct—you haven't explained something until you can specify how to build it from primitives (the Gedanken Organism Standard).",
+      "Everything in Brenner's method derives from two axioms. Axiom 1: Reality has a generative grammar, with phenomena produced by causal machinery operating according to discoverable rules. Axiom 2: To understand is to be able to reconstruct; you haven't explained something until you can specify how to build it from primitives (the Gedanken Organism Standard).",
     analogy:
-      "Like Euclid's axioms generating all of geometry—from these two commitments, the entire Brenner method unfolds with logical necessity.",
+      "Euclid's axioms generate all of geometry. From these two commitments, the entire Brenner method unfolds with logical necessity.",
     why:
       "These axioms are the generative core from which all Brenner operators and strategies derive. Understand them and the rest follows as corollary.",
     related: ["generative-grammar", "gedanken-organism", "machine-language", "level-split"],
@@ -1295,13 +1295,13 @@ export const jargonDictionary: Record<string, JargonTerm> = {
   },
   "imprisoned-imagination": {
     term: "Imprisoned Imagination",
-    short: "Constrain theorizing by physical reality—calculate before speculating.",
+    short: "Constrain theorizing by physical reality: calculate before speculating.",
     long:
       "Stay 'imprisoned within the physical context of everything.' Before theorizing, get the scale right. The DNA in a bacterium is 1mm long, folded up a thousand times in a 1μ cell. Ribosomes are packed so tightly that messengers thread through them 'like hysterical snakes.' Pictures showing a bacterium with 'a little circle in it' are ridiculous.",
     analogy:
-      "Like an architect who can't just draw pretty pictures but must specify actual materials and loads—imagination constrained by physics becomes powerful.",
+      "An architect must specify actual materials and loads, not just draw pretty pictures. Imagination constrained by physics becomes powerful.",
     why:
-      "This 'imprisonment' is actually liberation—it prevents theorizing that can't possibly work physically. Brenner and Crick 'tried very hard to stay imprisoned within the physical context of everything' (§229).",
+      "This 'imprisonment' is actually liberation: it prevents theorizing that can't possibly work physically. Brenner and Crick 'tried very hard to stay imprisoned within the physical context of everything' (§229).",
     related: ["scale-prison", "materialize", "gedanken-organism"],
     category: "brenner",
   },
@@ -1339,19 +1339,19 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "A technique that 'took electron microscopy out of the hands of the elite and gave it to the people.' Instead of staining the object, you surround it with dense stain so it appears light against a dark background. Brenner recognized this from medical training (viewing syphilis spirochetes) and applied it to electron microscopy.",
     analogy:
-      "Think of it like seeing a shadow—you don't illuminate the object, you illuminate everything around it so the object stands out as an absence.",
+      "See the shadow, not the object. Illuminate everything around it so the object stands out as an absence.",
     why:
-      "'Now anybody could do it' (§86). This exemplifies the democratize operator—breaking infrastructure monopolies by turning elite craft into cheap, teachable procedures via cross-domain pattern recognition.",
+      "'Now anybody could do it' (§86). This exemplifies the democratize operator: breaking infrastructure monopolies by turning elite craft into cheap, teachable procedures via cross-domain pattern recognition.",
     related: ["democratize", "cross-domain-import", "diy", "cheap-loop"],
     category: "method",
   },
   "opening-game": {
     term: "Opening Game",
-    short: "Early research phase with maximum freedom—develop position before committing.",
+    short: "Early research phase with maximum freedom: develop position before committing.",
     long:
       "The operator ∿ means working half a wavelength ahead or behind the crowd. Avoid crowded priors and industrialized midgames. The 'opening game' has tremendous freedom of choice.",
     analogy:
-      "Think of it like the opening in chess—you develop pieces and control space before launching a specific attack.",
+      "In chess, the opening develops pieces and controls space before launching a specific attack. Research has openings too.",
     why:
       "'The opening game... tremendous freedom of choice' (§192). Brenner warned against jumping into crowded competitions. Work 'out of phase' with fashion to find open territory.",
     related: ["dephase", "productive-ignorance", "cheap-loop"],
@@ -1361,11 +1361,11 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Co-linearity",
     short: "The correspondence between gene sequence and protein sequence order.",
     long:
-      "The principle that the order of mutations in a gene corresponds to the order of amino acid changes in its protein. Proving co-linearity was a major goal—it established that genes encode proteins in a simple sequential mapping, not a scrambled or overlapping code.",
+      "The principle that the order of mutations in a gene corresponds to the order of amino acid changes in its protein. Proving co-linearity was a major goal: it established that genes encode proteins in a simple sequential mapping, not a scrambled or overlapping code.",
     analogy:
-      "Like proving that the order of words in a telegram corresponds to the order they appear in the original message—no scrambling, no codes within codes.",
+      "The order of words in a telegram corresponds to the order in the original message. No scrambling, no codes within codes.",
     why:
-      "'We could give a topological proof of co-linearity—we wouldn't have to do any protein sequencing' (§134). This was a key bridge between genetics and biochemistry, proven by clever genetic logic before sequencing was available.",
+      "'We could give a topological proof of co-linearity; we wouldn't have to do any protein sequencing' (§134). This was a key bridge between genetics and biochemistry, proven by clever genetic logic before sequencing was available.",
     related: ["genetic-code", "reading-frame", "recode", "digital-handle"],
     category: "biology",
   },
@@ -1373,9 +1373,9 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     term: "Reading Frame",
     short: "The triplet grouping that determines how DNA is decoded into protein.",
     long:
-      "DNA is read in non-overlapping triplets (codons), and the 'frame' is which nucleotide you start counting from. Shift the frame by one or two bases and you get a completely different (usually nonsense) protein. The reading frame is a discrete, integer quantity—not continuous.",
+      "DNA is read in non-overlapping triplets (codons), and the 'frame' is which nucleotide you start counting from. Shift the frame by one or two bases and you get a completely different (usually nonsense) protein. The reading frame is a discrete, integer quantity, not continuous.",
     analogy:
-      "Like the difference between 'THE CAT ATE' and 'HEC ATA TE'—same letters, completely different meaning depending on where you start grouping.",
+      "'THE CAT ATE' versus 'HEC ATA TE': same letters, completely different meaning depending on where you start grouping.",
     why:
       "Brenner's frameshift experiments (§109) proved the code was triplet and non-overlapping by showing that +1 and -1 frameshifts could cancel out and restore function.",
     related: ["frameshift", "genetic-code", "mutation", "codon"],
@@ -1387,7 +1387,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "An insertion or deletion of nucleotides (not multiples of 3) shifts the reading frame, causing all subsequent codons to be misread. The result is usually a completely non-functional protein. Crucially, two frameshifts in opposite directions can cancel out and restore function.",
     analogy:
-      "Like accidentally deleting one space in a sentence—everything after the deletion becomes gibberish until you add another space to 'fix' the frame.",
+      "Deleting one space in a sentence makes everything after it gibberish, until you add another space to restore the frame.",
     why:
       "Frameshift analysis was central to proving the triplet code (§90). Though ultimately superseded by direct methods, it exemplifies the Brenner approach of extracting maximum information from pattern.",
     related: ["reading-frame", "genetic-code", "mutation", "codon"],
@@ -1395,11 +1395,11 @@ export const jargonDictionary: Record<string, JargonTerm> = {
   },
   "anatomical-dissection": {
     term: "Anatomical Dissection",
-    short: "Isolate gross parts first before fine purification—chunk before fractionate.",
+    short: "Isolate gross parts first before fine purification: chunk before fractionate.",
     long:
       "Instead of treating a complex structure as 'a mixture of proteins to go on columns and separate,' first isolate gross anatomical chunks. Make structure legible before investing in 'proper' purification. Brenner could isolate bacteriophage parts by simple pH tricks before others could by column chromatography.",
     analogy:
-      "Think of it like separating a car into engine, chassis, and body before analyzing individual bolts—gross structure guides fine analysis.",
+      "Separate a car into engine, chassis, and body before analyzing individual bolts. Gross structure guides fine analysis.",
     why:
       "'The whole idea that you could actually isolate chunks as a preliminary was something no one accepted at the time' (§85). This prototype-first approach enabled faster progress with simpler tools.",
     related: ["diy", "cheap-loop", "level-split"],
@@ -1411,7 +1411,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "Use a spectrum (pattern over many mutants) to type causal mechanisms. If a chemical mutagen changes G to A, observing which amino acids change constrains the genetic code. The dream: 'we'd actually decode the protein this way' by correlating mutagen chemistry with amino acid changes.",
     analogy:
-      "Like using the pattern of errors from a broken typewriter to deduce which key is stuck—the spectrum of mistakes reveals the mechanism.",
+      "Use the pattern of errors from a broken typewriter to deduce which key is stuck. The spectrum of mistakes reveals the mechanism.",
     why:
       "This was an attempt to crack the genetic code through mutagen logic rather than sequencing (§90). Though ultimately superseded by direct methods, it exemplifies the Brenner approach of extracting maximum information from pattern.",
     related: ["genetic-code", "mutation", "forbidden-pattern", "digital-handle"],
@@ -1433,7 +1433,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
   },
   transcript: {
     term: "Transcript",
-    short: "The raw 236-section Brenner interview—the primary source material.",
+    short: "The raw 236-section Brenner interview: the primary source material.",
     long:
       "The complete transcript of Sydney Brenner's oral history interviews, organized into 236 numbered sections. This is the authoritative source from which all distillations, operators, and quote-bank entries derive. Section references use the §n format (e.g., §57, §86).",
     why:
@@ -1447,7 +1447,7 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     long:
       "The transcript is divided into numbered sections (§1 through §236). Each section typically covers a single topic, story, or methodological point. Section references (§57, §86, §109, etc.) provide precise attribution for Brenner quotes and concepts.",
     analogy:
-      "Like verse numbers in a sacred text—allowing precise citation and cross-referencing regardless of page layout or edition.",
+      "Verse numbers in a sacred text: precise citation and cross-referencing regardless of page layout or edition.",
     why:
       "Section numbers enable granular references that survive reformatting. When a definition cites '§57,' you can locate the exact passage in the transcript.",
     related: ["transcript", "anchor", "quote-bank"],
