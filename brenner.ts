@@ -55,6 +55,35 @@ function parseEnsureProjectSlug(result: Json): string | undefined {
   return undefined;
 }
 
+function parseAgentNameFromToolResult(result: Json): string | undefined {
+  if (!isRecord(result)) return undefined;
+
+  const structuredContent = result.structuredContent;
+  if (isRecord(structuredContent)) {
+    const name = structuredContent.name;
+    if (typeof name === "string" && name.length > 0) return name;
+  }
+
+  const content = result.content;
+  if (Array.isArray(content) && content.length > 0) {
+    const first = content[0];
+    if (isRecord(first) && typeof first.text === "string") {
+      try {
+        const parsed = JSON.parse(first.text) as Json;
+        if (isRecord(parsed) && typeof parsed.name === "string" && parsed.name.length > 0) return parsed.name;
+      } catch {
+        return undefined;
+      }
+    }
+  }
+
+  return undefined;
+}
+
+function isToolError(result: Json): boolean {
+  return isRecord(result) && result.isError === true;
+}
+
 type ParsedArgs = {
   positional: string[];
   flags: Record<string, string | boolean>;
@@ -596,7 +625,7 @@ async function main(): Promise<void> {
     }
 
     if (sub === "send") {
-      const sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
+      let sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
       if (!sender) throw new Error("Missing --sender (or set AGENT_NAME).");
       const to = splitCsv(asStringFlag(flags, "to"));
       if (to.length === 0) throw new Error("Missing --to <A,B>.");
@@ -608,6 +637,31 @@ async function main(): Promise<void> {
       const threadId = asStringFlag(flags, "thread-id");
       const ackRequired = asBoolFlag(flags, "ack-required");
 
+      if (projectKey.startsWith("/")) {
+        await client.toolsCall("ensure_project", { human_key: projectKey });
+      }
+
+      const whoisResult = await client.toolsCall("whois", {
+        project_key: projectKey,
+        agent_name: sender,
+        include_recent_commits: false,
+      });
+
+      if (isToolError(whoisResult)) {
+        const registerResult = await client.toolsCall("register_agent", {
+          project_key: projectKey,
+          name: sender,
+          program: "brenner-cli",
+          model: "orchestrator",
+          task_description: threadId ? `Brenner CLI mail send: ${threadId}` : "Brenner CLI mail send",
+        });
+        const actualName = parseAgentNameFromToolResult(registerResult);
+        if (actualName && actualName !== sender) {
+          console.error(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
+          sender = actualName;
+        }
+      }
+
       const result = await client.toolsCall("send_message", {
         project_key: projectKey,
         sender_name: sender,
@@ -617,6 +671,10 @@ async function main(): Promise<void> {
         thread_id: threadId ?? null,
         ack_required: ackRequired,
       });
+      if (isToolError(result)) {
+        console.error(JSON.stringify(result, null, 2));
+        process.exit(1);
+      }
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);
     }
@@ -821,7 +879,7 @@ async function main(): Promise<void> {
   if (normalizedTop === "session" && sub === "start") {
     const client = new AgentMailClient();
     const projectKey = asStringFlag(flags, "project-key") ?? process.cwd();
-    const sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
+    let sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
     if (!sender) throw new Error("Missing --sender (or set AGENT_NAME).");
     const to = splitCsv(asStringFlag(flags, "to"));
     if (to.length === 0) throw new Error("Missing --to <A,B>.");
@@ -840,13 +898,18 @@ async function main(): Promise<void> {
 
     // Ensure project + sender identity exist
     await client.toolsCall("ensure_project", { human_key: projectKey });
-    await client.toolsCall("register_agent", {
+    const registerResult = await client.toolsCall("register_agent", {
       project_key: projectKey,
       name: sender,
       program: "brenner-cli",
       model: "orchestrator",
       task_description: `Brenner Protocol session: ${threadId}`,
     });
+    const actualName = parseAgentNameFromToolResult(registerResult);
+    if (actualName && actualName !== sender) {
+      console.error(`Agent Mail assigned sender name "${actualName}" (requested "${sender}").`);
+      sender = actualName;
+    }
 
     // Compose kickoff configuration
     const kickoffConfig: KickoffConfig = {
