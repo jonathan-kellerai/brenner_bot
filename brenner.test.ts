@@ -142,6 +142,45 @@ describe("version output", () => {
 });
 
 // ============================================================================
+// Tests: Doctor Command
+// ============================================================================
+
+describe("doctor command", () => {
+  it("doctor --json works without requiring external tools when skipped", async () => {
+    const result = await runCli([
+      "doctor",
+      "--json",
+      "--skip-ntm",
+      "--skip-cass",
+      "--skip-cm",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+
+    let parsed: {
+      status: string;
+      checks: Record<string, { status: string }>;
+    };
+
+    try {
+      parsed = JSON.parse(result.stdout) as {
+        status: string;
+        checks: Record<string, { status: string }>;
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected brenner doctor --json output. Parse failed: ${msg}\n\nstdout:\n${result.stdout}`);
+    }
+
+    expect(parsed.status).toBe("ok");
+    expect(parsed.checks.ntm.status).toBe("skipped");
+    expect(parsed.checks.cass.status).toBe("skipped");
+    expect(parsed.checks.cm.status).toBe("skipped");
+    expect(parsed.checks.agentMail.status).toBe("skipped");
+  });
+});
+
+// ============================================================================
 // Tests: Unknown Commands
 // ============================================================================
 

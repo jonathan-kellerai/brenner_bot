@@ -129,6 +129,18 @@ type BrennerBuildInfo = {
   platformTarget: string;
 };
 
+type DoctorCheckStatus = "ok" | "missing" | "error" | "skipped";
+
+type DoctorCheck = {
+  status: DoctorCheckStatus;
+  path: string | null;
+  verifyCommand: string | null;
+  exitCode: number | null;
+  notes?: string | null;
+  stdout?: string;
+  stderr?: string;
+};
+
 function normalizeSemverTag(tag: string): string | null {
   const trimmed = tag.trim();
   const withoutV = trimmed.startsWith("v") ? trimmed.slice(1) : trimmed;
@@ -190,6 +202,92 @@ function formatBrennerVersionText(info: BrennerBuildInfo): string {
   ].join("\n");
 }
 
+function splitCommand(command: string): string[] {
+  const tokens: string[] = [];
+  let current = "";
+  let quote: '"' | "'" | null = null;
+
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i] ?? "";
+
+    if (quote) {
+      if (ch === quote) {
+        quote = null;
+      } else {
+        current += ch;
+      }
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+
+    if (/\s/.test(ch)) {
+      if (current.length > 0) {
+        tokens.push(current);
+        current = "";
+      }
+      continue;
+    }
+
+    current += ch;
+  }
+
+  if (current.length > 0) tokens.push(current);
+  return tokens;
+}
+
+function runCommand(command: string): { exitCode: number; stdout: string; stderr: string } {
+  const argv = splitCommand(command);
+  if (argv.length === 0) return { exitCode: 1, stdout: "", stderr: "Empty command" };
+
+  try {
+    const proc = Bun.spawnSync(argv, { stdout: "pipe", stderr: "pipe" });
+    return {
+      exitCode: proc.exitCode ?? 1,
+      stdout: proc.stdout.toString(),
+      stderr: proc.stderr.toString(),
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return { exitCode: 1, stdout: "", stderr: msg };
+  }
+}
+
+function formatDoctorHuman(summary: {
+  brenner: BrennerBuildInfo;
+  checks: Record<string, DoctorCheck>;
+  warnings: string[];
+}): string {
+  const lines: string[] = [];
+  lines.push("Brenner Doctor");
+  lines.push("=============");
+  lines.push("");
+  lines.push(formatBrennerVersionText(summary.brenner));
+  lines.push("");
+
+  const order = ["ntm", "cass", "cm", "agentMail"];
+  for (const key of order) {
+    const check = summary.checks[key];
+    if (!check) continue;
+    const label = key === "agentMail" ? "agent_mail" : key;
+    lines.push(`${label}: ${check.status}${check.path ? ` (${check.path})` : ""}`);
+    if (check.verifyCommand) lines.push(`  verify: ${check.verifyCommand}`);
+    if (check.notes) lines.push(`  notes: ${check.notes}`);
+    if (check.status === "error" && check.stderr) lines.push(`  error: ${check.stderr.trim()}`);
+  }
+
+  if (summary.warnings.length > 0) {
+    lines.push("");
+    lines.push("Warnings:");
+    for (const w of summary.warnings) lines.push(`- ${w}`);
+  }
+
+  return lines.join("\n");
+}
+
 function usage(): string {
   return `
 Usage:
@@ -198,6 +296,7 @@ Usage:
 
 Commands:
   version
+  doctor [--json] [--manifest <path>] [--agent-mail] [--skip-ntm] [--skip-cass] [--skip-cm]
   mail health
   mail tools
   mail agents --project-key <abs-path>
@@ -244,6 +343,7 @@ Examples:
   ./brenner.ts mail inbox --project-key "$PWD" --agent GreenCastle --threads
   ./brenner.ts mail ack --project-key "$PWD" --agent GreenCastle --message-id 123
   ./brenner.ts --version
+  ./brenner.ts doctor --json --skip-ntm --skip-cass --skip-cm
   ./brenner.ts toolchain plan
   ./brenner.ts toolchain plan --platform darwin-arm64 --json
   ./brenner.ts prompt compose --template metaprompt_by_gpt_52.md --excerpt-file excerpt.md --theme "problem choice"
@@ -304,6 +404,158 @@ async function main(): Promise<void> {
   if (top === "version") {
     console.log(formatBrennerVersionText(getBrennerBuildInfo()));
     process.exit(0);
+  }
+
+  if (top === "doctor") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const checkAgentMail = asBoolFlag(flags, "agent-mail");
+    const manifestPath = asStringFlag(flags, "manifest");
+
+    const skipNtm = asBoolFlag(flags, "skip-ntm");
+    const skipCass = asBoolFlag(flags, "skip-cass");
+    const skipCm = asBoolFlag(flags, "skip-cm");
+
+    const buildInfo = getBrennerBuildInfo();
+    const warnings: string[] = [];
+
+    // Resolve tool checks (default commands if manifest unavailable)
+    const defaultVerify: Record<string, string> = {
+      ntm: "ntm version",
+      cass: "cass health",
+      cm: "cm --version",
+    };
+
+    let manifestTools: Record<string, { verifyCommand?: string; notes?: string }> | null = null;
+
+    // If a manifest path is provided (or the default exists), prefer it for platform-aware notes/commands.
+    const resolvedManifestPath = resolve(manifestPath ?? "specs/toolchain.manifest.json");
+    try {
+      const rawManifest = readTextFile(resolvedManifestPath);
+      const parsed = parseManifest(rawManifest);
+      if (!parsed.ok) {
+        console.error(parsed.error);
+        process.exit(1);
+      }
+      const platform = detectPlatform() ?? undefined;
+      if (!platform) {
+        warnings.push(
+          `Unsupported platform for toolchain manifest: ${process.platform}/${process.arch}. ` +
+            `Falling back to presence-only checks.`
+        );
+      } else {
+        const plan = generateInstallPlan(parsed.manifest, platform);
+        manifestTools = {};
+        for (const t of plan.targets) {
+          manifestTools[t.tool] = { verifyCommand: t.verifyCommand ?? undefined, notes: t.notes ?? undefined };
+        }
+        for (const skipped of plan.skipped) {
+          manifestTools[skipped.tool] = { notes: skipped.reason };
+        }
+      }
+    } catch (e) {
+      if (manifestPath) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error(`Failed to read manifest: ${msg}`);
+        process.exit(1);
+      }
+    }
+
+    const checks: Record<string, DoctorCheck> = {};
+
+    const checkTool = (tool: "ntm" | "cass" | "cm", opts: { skip: boolean; required: boolean }): void => {
+      const meta = manifestTools?.[tool];
+      const verifyCommand = meta?.verifyCommand ?? defaultVerify[tool] ?? null;
+
+      if (opts.skip) {
+        checks[tool] = { status: "skipped", path: null, verifyCommand, exitCode: null };
+        return;
+      }
+
+      const binPath = Bun.which(tool);
+      if (!binPath) {
+        checks[tool] = {
+          status: "missing",
+          path: null,
+          verifyCommand,
+          exitCode: null,
+          notes: opts.required ? null : "Optional tool",
+        };
+        return;
+      }
+
+      const result = runCommand(verifyCommand);
+      checks[tool] = {
+        status: result.exitCode === 0 ? "ok" : "error",
+        path: binPath,
+        verifyCommand,
+        exitCode: result.exitCode,
+        ...(result.exitCode === 0 ? {} : { stderr: result.stderr }),
+      };
+    };
+
+    // Required by default except ntm on Windows.
+    const isWindows = process.platform === "win32";
+    checkTool("ntm", { skip: skipNtm || isWindows, required: !isWindows });
+    checkTool("cass", { skip: skipCass, required: true });
+    checkTool("cm", { skip: skipCm, required: true });
+
+    if (checkAgentMail) {
+      const baseUrl = (process.env.AGENT_MAIL_BASE_URL ?? "http://127.0.0.1:8765").replace(/\/+$/, "");
+      const headers: Record<string, string> = {};
+      if (process.env.AGENT_MAIL_BEARER_TOKEN) headers.Authorization = `Bearer ${process.env.AGENT_MAIL_BEARER_TOKEN}`;
+      try {
+        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
+        if (res.ok) {
+          checks.agentMail = { status: "ok", path: baseUrl, verifyCommand: "GET /health/readiness", exitCode: 0 };
+        } else {
+          checks.agentMail = {
+            status: "error",
+            path: baseUrl,
+            verifyCommand: "GET /health/readiness",
+            exitCode: res.status,
+            notes: `HTTP ${res.status}`,
+          };
+        }
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        checks.agentMail = {
+          status: "error",
+          path: baseUrl,
+          verifyCommand: "GET /health/readiness",
+          exitCode: 1,
+          notes: msg,
+        };
+      }
+    } else {
+      checks.agentMail = { status: "skipped", path: null, verifyCommand: null, exitCode: null };
+    }
+
+    const missingRequired = Object.entries(checks).some(([key, check]) => {
+      if (key === "agentMail") return false;
+      const required = key !== "ntm" || process.platform !== "win32";
+      if (!required) return false;
+      if (check.status === "skipped") return false;
+      return check.status !== "ok";
+    });
+
+    const exitCode = missingRequired ? 1 : 0;
+
+    if (jsonMode) {
+      const payload = {
+        status: exitCode === 0 ? "ok" : "error",
+        version: buildInfo.version,
+        gitSha: buildInfo.gitSha,
+        buildDate: buildInfo.buildDate,
+        platformTarget: buildInfo.platformTarget,
+        checks,
+        warnings,
+      };
+      console.log(JSON.stringify(payload, null, 2));
+    } else {
+      console.log(formatDoctorHuman({ brenner: buildInfo, checks, warnings }));
+    }
+
+    process.exit(exitCode);
   }
 
   if (top === "mail") {

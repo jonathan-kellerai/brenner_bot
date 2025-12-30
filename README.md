@@ -299,6 +299,7 @@ Status legend:
 | Command | Purpose | Status |
 |---|---|---|
 | `--version` / `version` | Print brenner version + build metadata | ✅ |
+| `doctor [--json]` | Verify local toolchain health (for installers/CI) | ✅ |
 | `mail health` | Check Agent Mail readiness | ✅ |
 | `mail tools` | List Agent Mail MCP tools | ✅ |
 | `mail agents --project-key <abs-path>` | List known agents for a project | ✅ |
