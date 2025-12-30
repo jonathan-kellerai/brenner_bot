@@ -8,6 +8,7 @@ Copy `apps/web/.env.example` to `apps/web/.env.local` and set:
 - `AGENT_MAIL_BASE_URL` (default `http://127.0.0.1:8765`)
 - `AGENT_MAIL_PATH` (default `/mcp/`)
 - `AGENT_MAIL_BEARER_TOKEN` (if auth is enabled)
+- `BRENNER_LAB_MODE=1` (required to enable `/sessions/new` orchestration; fail-closed by default)
 
 ### 2) Run the development server
 

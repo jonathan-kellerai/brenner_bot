@@ -1,6 +1,9 @@
 import Link from "next/link";
 
 export default function Home() {
+  const labModeValue = (process.env.BRENNER_LAB_MODE ?? "").trim().toLowerCase();
+  const labModeEnabled = labModeValue === "1" || labModeValue === "true";
+
   return (
     <div className="space-y-8">
       <section className="space-y-4">
@@ -22,16 +25,18 @@ export default function Home() {
           </div>
         </Link>
 
-        <Link
-          href="/sessions/new"
-          className="rounded-xl border border-black/10 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-white/10 dark:bg-zinc-950"
-        >
-          <div className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Run</div>
-          <div className="mt-1 text-lg font-semibold">New Session</div>
-          <div className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
-            Compose a Brenner Loop kickoff prompt and send it to agents via Agent Mail.
-          </div>
-        </Link>
+        {labModeEnabled ? (
+          <Link
+            href="/sessions/new"
+            className="rounded-xl border border-black/10 bg-white p-5 shadow-sm transition hover:shadow-md dark:border-white/10 dark:bg-zinc-950"
+          >
+            <div className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Run</div>
+            <div className="mt-1 text-lg font-semibold">New Session</div>
+            <div className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">
+              Compose a Brenner Loop kickoff prompt and send it to agents via Agent Mail.
+            </div>
+          </Link>
+        ) : null}
       </section>
     </div>
   );

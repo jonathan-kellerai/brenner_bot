@@ -1,4 +1,4 @@
-import { readFile } from "node:fs/promises";
+import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 
 export type ComposePromptInput = {
@@ -9,13 +9,33 @@ export type ComposePromptInput = {
   question?: string;
 };
 
-function repoRootFromWebCwd(): string {
-  return resolve(process.cwd(), "../..");
+async function fileExists(path: string): Promise<boolean> {
+  try {
+    await access(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function resolveTemplatePath(filename: string): Promise<string> {
+  // First try public/corpus/ (Vercel deployment)
+  const publicPath = resolve(process.cwd(), "public/corpus", filename);
+  if (await fileExists(publicPath)) {
+    return publicPath;
+  }
+
+  // Fall back to repo root (local dev)
+  const repoRootPath = resolve(process.cwd(), "../..", filename);
+  if (await fileExists(repoRootPath)) {
+    return repoRootPath;
+  }
+
+  throw new Error(`Template file not found: ${filename}`);
 }
 
 export async function composePrompt(input: ComposePromptInput): Promise<string> {
-  const repoRoot = repoRootFromWebCwd();
-  const templatePath = resolve(repoRoot, input.templatePathFromRepoRoot);
+  const templatePath = await resolveTemplatePath(input.templatePathFromRepoRoot);
   const template = await readFile(templatePath, "utf8");
 
   const chunks: string[] = [];

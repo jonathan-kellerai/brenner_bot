@@ -1,9 +1,10 @@
 import { resolve } from "node:path";
-import { redirect } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { AgentMailClient } from "@/lib/agentMail";
 import { composePrompt } from "@/lib/prompts";
 
 export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
 
 type AgentDirectory = {
   project?: { slug?: string; human_key?: string };
@@ -14,8 +15,36 @@ function repoRootFromWebCwd(): string {
   return resolve(process.cwd(), "../..");
 }
 
+function isLabModeEnabled(): boolean {
+  const value = (process.env.BRENNER_LAB_MODE ?? "").trim().toLowerCase();
+  return value === "1" || value === "true";
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseEnsureProjectSlug(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+
+  const structuredContent = result.structuredContent;
+  if (isRecord(structuredContent) && typeof structuredContent.slug === "string") return structuredContent.slug;
+
+  const maybeContent = result.content;
+  if (Array.isArray(maybeContent) && maybeContent.length > 0) {
+    const first = maybeContent[0];
+    const text = isRecord(first) && typeof first.text === "string" ? first.text : undefined;
+    if (text) {
+      try {
+        const parsed = JSON.parse(text) as unknown;
+        return isRecord(parsed) && typeof parsed.slug === "string" ? parsed.slug : null;
+      } catch {
+        return null;
+      }
+    }
+  }
+
+  return null;
 }
 
 function parseAgentsResult(result: unknown): AgentDirectory | null {
@@ -47,6 +76,8 @@ function splitCsv(raw: string): string[] {
 async function sendKickoff(formData: FormData): Promise<void> {
   "use server";
 
+  if (!isLabModeEnabled()) notFound();
+
   const projectKey = String(formData.get("projectKey") || repoRootFromWebCwd());
   const sender = String(formData.get("sender") || "").trim();
   const recipients = splitCsv(String(formData.get("to") || ""));
@@ -75,16 +106,22 @@ async function sendKickoff(formData: FormData): Promise<void> {
     question,
   });
 
-  await client.toolsCall("ensure_project", { human_key: projectKey });
+  let projectSlug = projectKey;
+  if (projectKey.startsWith("/")) {
+    const ensured = await client.toolsCall("ensure_project", { human_key: projectKey });
+    const ensuredSlug = parseEnsureProjectSlug(ensured);
+    if (!ensuredSlug) throw new Error("Agent Mail: ensure_project did not return a project slug.");
+    projectSlug = ensuredSlug;
+  }
   await client.toolsCall("register_agent", {
-    project_key: projectKey,
+    project_key: projectSlug,
     name: sender,
     program: "brenner-web",
     model: "nextjs",
     task_description: `Brenner Bot session: ${threadId}`,
   });
   await client.toolsCall("send_message", {
-    project_key: projectKey,
+    project_key: projectSlug,
     sender_name: sender,
     to: recipients,
     subject,
@@ -101,6 +138,8 @@ export default async function NewSessionPage({
 }: {
   searchParams: Promise<{ sent?: string; thread?: string }>;
 }) {
+  if (!isLabModeEnabled()) notFound();
+
   const repoRoot = repoRootFromWebCwd();
   const { sent, thread } = await searchParams;
 
@@ -112,7 +151,12 @@ export default async function NewSessionPage({
   let agentNames: string[] = [];
   try {
     const client = new AgentMailClient();
-    const result = await client.resourcesRead(`resource://agents/${projectKeyDefault}`);
+    const projectSlug = projectKeyDefault.startsWith("/")
+      ? parseEnsureProjectSlug(await client.toolsCall("ensure_project", { human_key: projectKeyDefault }))
+      : projectKeyDefault;
+    if (!projectSlug) throw new Error("Agent Mail: could not resolve project slug.");
+
+    const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
     const directory = parseAgentsResult(result);
     if (directory?.agents?.length) {
       agentNames = directory.agents

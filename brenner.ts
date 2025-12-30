@@ -14,6 +14,35 @@ import { resolve } from "node:path";
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
 
+function isRecord(value: Json): value is { [key: string]: Json } {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function parseEnsureProjectSlug(result: Json): string | undefined {
+  if (!isRecord(result)) return undefined;
+
+  const structuredContent = result.structuredContent;
+  if (isRecord(structuredContent)) {
+    const slug = structuredContent.slug;
+    if (typeof slug === "string" && slug.length > 0) return slug;
+  }
+
+  const content = result.content;
+  if (Array.isArray(content) && content.length > 0) {
+    const first = content[0];
+    if (isRecord(first) && typeof first.text === "string") {
+      try {
+        const parsed = JSON.parse(first.text) as Json;
+        if (isRecord(parsed) && typeof parsed.slug === "string" && parsed.slug.length > 0) return parsed.slug;
+      } catch {
+        return undefined;
+      }
+    }
+  }
+
+  return undefined;
+}
+
 type ParsedArgs = {
   positional: string[];
   flags: Record<string, string | boolean>;
@@ -234,7 +263,11 @@ async function main(): Promise<void> {
 
     if (sub === "agents") {
       const projectKey = asStringFlag(flags, "project-key") ?? process.cwd();
-      const result = await client.resourcesRead(`resource://agents/${projectKey}`);
+      const projectSlug = projectKey.startsWith("/")
+        ? parseEnsureProjectSlug(await client.toolsCall("ensure_project", { human_key: projectKey }))
+        : projectKey;
+      if (!projectSlug) throw new Error("Agent Mail ensure_project did not return a project slug.");
+      const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);
     }
@@ -344,4 +377,3 @@ main().catch((err) => {
   console.error(message);
   process.exit(1);
 });
-
