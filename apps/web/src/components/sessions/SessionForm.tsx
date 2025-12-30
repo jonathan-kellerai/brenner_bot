@@ -398,6 +398,16 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
         </div>
       </div>
 
+      {/* Operator Selection (Prompt Builder) */}
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold text-foreground">Operator Selection</h2>
+        <OperatorSelector
+          value={operatorSelection}
+          onChange={setOperatorSelection}
+          disabled={mutation.isPending}
+        />
+      </div>
+
       {/* Options */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Options</h2>
