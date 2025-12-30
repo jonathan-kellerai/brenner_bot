@@ -7,10 +7,21 @@
    MOBILE OVERFLOW PROTECTION
    Prevents horizontal scrolling on mobile devices
    ============================================================================ */
-html,
+html {
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+}
+
 body {
-  overflow-x: hidden;
-  max-width: 100vw;
+  overflow-x: clip;
+  overscroll-behavior-x: none;
+  max-width: 100%;
+  position: relative;
+}
+
+/* Contain elements that use negative margins to extend to full width */
+main {
+  overflow-x: clip;
 }
 
 /* Ensure long text wraps properly */

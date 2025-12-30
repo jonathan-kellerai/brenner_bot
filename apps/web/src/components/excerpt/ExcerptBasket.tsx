@@ -31,7 +31,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   Plus,
-  GripVertical,
   X,
   Clipboard,
   ClipboardCheck,
@@ -62,6 +61,13 @@ interface ExcerptBasketProps {
   theme?: string;
   /** Class name for container */
   className?: string;
+  /**
+   * Controlled mode: items managed externally (e.g., by ExcerptBasketProvider).
+   * When provided, the component won't use localStorage.
+   */
+  items?: BasketItem[];
+  /** Callback when items change in controlled mode */
+  onItemsChange?: (items: BasketItem[]) => void;
 }
 
 // ============================================================================
@@ -110,8 +116,33 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 // Main Component
 // ============================================================================
 
-export function ExcerptBasket({ onExport, theme, className }: ExcerptBasketProps) {
-  const [items, setItems] = useLocalStorage<BasketItem[]>(STORAGE_KEY, []);
+export function ExcerptBasket({
+  onExport,
+  theme,
+  className,
+  items: controlledItems,
+  onItemsChange,
+}: ExcerptBasketProps) {
+  // Uncontrolled mode: use localStorage
+  const [localItems, setLocalItems] = useLocalStorage<BasketItem[]>(STORAGE_KEY, []);
+
+  // Determine if we're in controlled mode
+  const isControlled = controlledItems !== undefined;
+  const items = isControlled ? controlledItems : localItems;
+
+  // Unified setter that works for both modes
+  const setItems = React.useCallback(
+    (updater: BasketItem[] | ((prev: BasketItem[]) => BasketItem[])) => {
+      if (isControlled) {
+        const newItems = typeof updater === "function" ? updater(controlledItems) : updater;
+        onItemsChange?.(newItems);
+      } else {
+        setLocalItems(updater);
+      }
+    },
+    [isControlled, controlledItems, onItemsChange, setLocalItems]
+  );
+
   const [excerptTheme, setExcerptTheme] = React.useState(theme ?? "");
   const [copied, setCopied] = React.useState(false);
   const [isExpanded, setIsExpanded] = React.useState(true);
@@ -139,30 +170,26 @@ export function ExcerptBasket({ onExport, theme, className }: ExcerptBasketProps
     setComposed(result);
   }, [items, excerptTheme]);
 
-  // Add item to basket
-  const addItem = React.useCallback((item: Omit<BasketItem, "id" | "addedAt">) => {
-    const newItem: BasketItem = {
-      ...item,
-      id: `${item.anchor}-${Date.now()}`,
-      addedAt: Date.now(),
-    };
-    setItems((prev) => [...prev, newItem]);
-  }, [setItems]);
-
   // Remove item from basket
-  const removeItem = React.useCallback((id: string) => {
-    setItems((prev) => prev.filter((item) => item.id !== id));
-  }, [setItems]);
+  const removeItem = React.useCallback(
+    (id: string) => {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+    },
+    [setItems]
+  );
 
   // Reorder items
-  const moveItem = React.useCallback((fromIndex: number, toIndex: number) => {
-    setItems((prev) => {
-      const newItems = [...prev];
-      const [removed] = newItems.splice(fromIndex, 1);
-      newItems.splice(toIndex, 0, removed);
-      return newItems;
-    });
-  }, [setItems]);
+  const moveItem = React.useCallback(
+    (fromIndex: number, toIndex: number) => {
+      setItems((prev) => {
+        const newItems = [...prev];
+        const [removed] = newItems.splice(fromIndex, 1);
+        newItems.splice(toIndex, 0, removed);
+        return newItems;
+      });
+    },
+    [setItems]
+  );
 
   // Clear all items
   const clearBasket = React.useCallback(() => {
