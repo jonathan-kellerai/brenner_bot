@@ -205,6 +205,16 @@ flowchart TB
 - Artifact file path → where outputs are persisted
 - Beads issue ID → what work this relates to
 
+**Thread ID formats** (see `specs/thread_subject_conventions_v0.1.md`):
+- **Engineering work**: Use the bead ID directly (e.g., `brenner_bot-5so.3.4.2`)
+- **Research sessions**: Use `RS-{YYYYMMDD}-{slug}` format (e.g., `RS-20251230-cell-fate`)
+
+**Example mappings:**
+| Work type | Thread ID | ntm session | Artifact path |
+|-----------|-----------|-------------|---------------|
+| Engineering | `brenner_bot-5so.3.4.2` | `brenner_bot-5so.3.4.2` | `artifacts/brenner_bot-5so.3.4.2.md` |
+| Research | `RS-20251230-cell-fate` | `RS-20251230-cell-fate` | `artifacts/RS-20251230-cell-fate.md` |
+
 This means: given a thread ID, you can find the conversation, the tmux session, and the compiled artifacts without guessing.
 
 ### The Agent Mail connection
@@ -402,7 +412,10 @@ Required flags (today’s implementation):
 ```bash
 ./brenner.ts mail tools
 ./brenner.ts prompt compose --template metaprompt_by_gpt_52.md --excerpt-file excerpt.md
-./brenner.ts session start --project-key "$PWD" --sender GreenCastle --to BlueMountain,RedForest --thread-id FEAT-123 --excerpt-file excerpt.md
+# Engineering work: use bead ID as thread-id
+./brenner.ts session start --project-key "$PWD" --sender GreenCastle --to BlueMountain,RedForest --thread-id brenner_bot-5so.3.4.2 --excerpt-file excerpt.md
+# Research session: use RS-{YYYYMMDD}-{slug} format
+./brenner.ts session start --project-key "$PWD" --sender GreenCastle --to BlueMountain,RedForest --thread-id RS-20251230-cell-fate --excerpt-file excerpt.md
 ```
 
 ### Run a multi-agent session (the cockpit workflow)
