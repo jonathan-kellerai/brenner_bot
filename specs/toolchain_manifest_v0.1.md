@@ -48,7 +48,7 @@ specs/toolchain.manifest.json
       "checksum_url_template": "https://github.com/Dicklesworthstone/brenner_bot/releases/download/v${VERSION}/brenner-${OS}-${ARCH}.sha256",
       "verify_command": "brenner doctor --json",
       "verify_success": "exit_code_zero",
-      "platforms": ["linux-x64", "darwin-arm64", "darwin-x64", "win-x64"]
+      "platforms": ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64", "win-x64"]
     },
     "ntm": {
       "version": "0.3.0",
@@ -57,7 +57,8 @@ specs/toolchain.manifest.json
       "install_args": "--version 0.3.0",
       "verify_command": "ntm version",
       "verify_success": "exit_code_zero",
-      "platforms": ["linux-x64", "darwin-arm64", "darwin-x64"]
+      "platforms": ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64"],
+      "notes": "Not available on Windows (requires tmux)"
     },
     "cass": {
       "version": "0.4.0",
@@ -66,7 +67,7 @@ specs/toolchain.manifest.json
       "install_args": "--easy-mode --verify",
       "verify_command": "cass health",
       "verify_success": "exit_code_zero",
-      "platforms": ["linux-x64", "darwin-arm64", "darwin-x64", "win-x64"]
+      "platforms": ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64", "win-x64"]
     },
     "cm": {
       "version": "0.2.0",
@@ -75,7 +76,17 @@ specs/toolchain.manifest.json
       "install_args": "--easy-mode --verify",
       "verify_command": "cm --version",
       "verify_success": "exit_code_zero",
-      "platforms": ["linux-x64", "darwin-arm64", "darwin-x64", "win-x64"]
+      "platforms": ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64", "win-x64"]
+    },
+    "bun": {
+      "version": "1.1.38",
+      "install_strategy": "upstream_installer",
+      "install_url": "https://bun.sh/install",
+      "install_args": "",
+      "verify_command": "bun --version",
+      "verify_success": "exit_code_zero",
+      "platforms": ["linux-x64", "linux-arm64", "darwin-arm64", "darwin-x64", "win-x64"],
+      "notes": "Required runtime for brenner CLI"
     }
   }
 }
@@ -106,12 +117,14 @@ specs/toolchain.manifest.json
 | `verify_command` | string | Command to run for verification |
 | `verify_success` | enum | `exit_code_zero` (more options later) |
 | `platforms` | array | Supported platform strings |
+| `notes` | string | Optional human-readable notes |
 
 ### Platform Strings
 
 | String | OS | Architecture |
 |--------|-----|--------------|
 | `linux-x64` | Linux | x86_64 |
+| `linux-arm64` | Linux | ARM64 (Graviton, etc.) |
 | `darwin-arm64` | macOS | Apple Silicon |
 | `darwin-x64` | macOS | Intel |
 | `win-x64` | Windows | x86_64 |
@@ -123,6 +136,8 @@ specs/toolchain.manifest.json
 | `${VERSION}` | Tool version (no 'v' prefix) | `0.1.0` |
 | `${OS}` | Operating system | `linux`, `darwin`, `win` |
 | `${ARCH}` | Architecture | `x64`, `arm64` |
+
+**Note on Windows**: The URL template generates `brenner-win-x64` but the actual Windows artifact is `brenner-win-x64.exe`. The installer must append `.exe` when `${OS}` is `win`. Similarly for checksums: `brenner-win-x64.exe.sha256`.
 
 ---
 
@@ -181,6 +196,7 @@ Each tool must define a `verify_command` that:
 | `ntm` | `ntm version` | Exit 0, outputs version string |
 | `cass` | `cass health` | Exit 0, outputs health status |
 | `cm` | `cm --version` | Exit 0, outputs version string |
+| `bun` | `bun --version` | Exit 0, outputs version string |
 
 ### Future: Structured Verification
 
@@ -294,10 +310,11 @@ const ManifestSchema = z.object({
 
 | Tool | Windows | Note |
 |------|---------|------|
+| `brenner` | Yes | |
 | `ntm` | No | tmux not available on Windows |
 | `cass` | Yes | |
 | `cm` | Yes | |
-| `brenner` | Yes | |
+| `bun` | Yes | Required runtime for brenner CLI |
 
 The installer should skip `ntm` on Windows and document this limitation.
 

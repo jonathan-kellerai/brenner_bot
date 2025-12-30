@@ -150,10 +150,20 @@ Useful for batch verification but not required if per-file checksums exist.
 https://github.com/Dicklesworthstone/brenner_bot/releases/download/v${VERSION}/brenner-${OS}-${ARCH}
 ```
 
+**Windows exception**: Append `.exe` for Windows binaries:
+```
+https://github.com/Dicklesworthstone/brenner_bot/releases/download/v${VERSION}/brenner-win-x64.exe
+```
+
 ### Checksum Download
 
 ```
 https://github.com/Dicklesworthstone/brenner_bot/releases/download/v${VERSION}/brenner-${OS}-${ARCH}.sha256
+```
+
+**Windows exception**: Include `.exe` in checksum filename:
+```
+https://github.com/Dicklesworthstone/brenner_bot/releases/download/v${VERSION}/brenner-win-x64.exe.sha256
 ```
 
 ### Platform Detection
