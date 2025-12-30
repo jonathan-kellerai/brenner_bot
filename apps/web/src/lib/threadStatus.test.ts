@@ -440,3 +440,130 @@ describe("getPendingRoles", () => {
     expect(pending).not.toContain("hypothesis_generator");
   });
 });
+
+// ============================================================================
+// Thread-Level Convenience Function Tests
+// ============================================================================
+
+import {
+  computeThreadStatusFromThread,
+  computeThreadStatusSummary,
+  isWaitingForRole,
+  getAgentsWithPendingAcks,
+  getPendingAgents,
+} from "./threadStatus";
+
+describe("computeThreadStatusFromThread", () => {
+  it("computes status from AgentMailThread object", () => {
+    const thread = {
+      project: "/test/project",
+      thread_id: "RS-test",
+      messages: [
+        createMessage({
+          subject: "KICKOFF: Test session",
+          from: "Operator",
+          thread_id: "RS-test",
+        }),
+        createMessage({
+          subject: "DELTA[gpt]: Hypotheses",
+          from: "CodexAgent",
+          thread_id: "RS-test",
+        }),
+      ],
+    };
+
+    const status = computeThreadStatusFromThread(thread);
+    expect(status.threadId).toBe("RS-test");
+    expect(status.roles.hypothesis_generator.completed).toBe(true);
+  });
+});
+
+describe("computeThreadStatusSummary", () => {
+  it("returns minimal summary for list views", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({
+        subject: "KICKOFF: Test session",
+        from: "Operator",
+        thread_id: "RS-test",
+      }),
+      createMessage({
+        subject: "DELTA[gpt]: Hypotheses",
+        from: "CodexAgent",
+        thread_id: "RS-test",
+      }),
+    ];
+
+    const summary = computeThreadStatusSummary(messages);
+    expect(summary.threadId).toBe("RS-test");
+    expect(summary.phase).toBe("partially_complete");
+    expect(summary.respondedRoleCount).toBe(1);
+    expect(summary.totalRoleCount).toBe(3);
+    expect(summary.isComplete).toBe(false);
+    expect(summary.summary).toContain("1/3 roles");
+  });
+});
+
+describe("isWaitingForRole", () => {
+  it("returns true when role has not responded", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({
+        subject: "KICKOFF: Test",
+        from: "Operator",
+      }),
+      createMessage({
+        subject: "DELTA[gpt]: Hypotheses",
+        from: "CodexAgent",
+      }),
+    ];
+
+    expect(isWaitingForRole(messages, "hypothesis_generator")).toBe(false);
+    expect(isWaitingForRole(messages, "test_designer")).toBe(true);
+    expect(isWaitingForRole(messages, "adversarial_critic")).toBe(true);
+  });
+});
+
+describe("getAgentsWithPendingAcks", () => {
+  it("returns agents who have not acknowledged", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({
+        subject: "KICKOFF: Test",
+        from: "Operator",
+        to: ["AgentA", "AgentB"],
+        ack_required: true,
+      }),
+      createMessage({
+        subject: "ACK: Received",
+        from: "AgentA",
+      }),
+    ];
+
+    const pending = getAgentsWithPendingAcks(messages);
+    expect(pending).toContain("AgentB");
+    expect(pending).not.toContain("AgentA");
+  });
+});
+
+describe("getPendingAgents", () => {
+  it("returns agents who have not submitted DELTA", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({
+        subject: "KICKOFF: Test",
+        from: "Operator",
+      }),
+      createMessage({
+        subject: "DELTA[gpt]: Hypotheses",
+        from: "AgentA",
+      }),
+      createMessage({
+        subject: "ACK: Received",
+        from: "AgentB",
+      }),
+    ];
+
+    const pending = getPendingAgents(messages);
+    // Operator and AgentB haven't submitted DELTA
+    expect(pending).toContain("Operator");
+    expect(pending).toContain("AgentB");
+    expect(pending).not.toContain("AgentA");
+  });
+});

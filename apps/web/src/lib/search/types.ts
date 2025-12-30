@@ -5,11 +5,9 @@
  * @see brenner_bot-3vc
  */
 
-import type { DocCategory } from "../corpus";
-
 /**
  * Document category type for client-side use.
- * Must stay in sync with DocCategory in corpus.ts
+ * Must stay in sync with DocCategory in corpus.ts (which uses Node.js APIs).
  */
 export type SearchDocCategory = "transcript" | "quote-bank" | "distillation" | "metaprompt" | "raw-response";
 

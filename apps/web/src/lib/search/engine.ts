@@ -22,8 +22,6 @@ import type {
 
 const INDEX_URL = "/search/index.json";
 const DEFAULT_LIMIT = 20;
-const SNIPPET_LENGTH = 150;
-const SNIPPET_CONTEXT = 40;
 
 // Map scopes to categories for filtering
 const SCOPE_TO_CATEGORIES: Record<SearchScope, SearchDocCategory[] | null> = {
@@ -34,15 +32,15 @@ const SCOPE_TO_CATEGORIES: Record<SearchScope, SearchDocCategory[] | null> = {
   metaprompt: ["metaprompt"],
 };
 
-// Map doc IDs to their URL paths
+// Map doc IDs to their URL paths (must match Next.js routes in app/)
 const DOC_ID_TO_PATH: Record<string, string> = {
-  transcript: "/docs/transcript",
-  "quote-bank": "/docs/quote-bank",
-  metaprompt: "/docs/metaprompt",
-  "initial-metaprompt": "/docs/initial-metaprompt",
-  "distillation-gpt-52": "/docs/distillation-gpt-52",
-  "distillation-opus-45": "/docs/distillation-opus-45",
-  "distillation-gemini-3": "/docs/distillation-gemini-3",
+  transcript: "/corpus/transcript",
+  "quote-bank": "/corpus/quote-bank",
+  metaprompt: "/corpus/metaprompt",
+  "initial-metaprompt": "/corpus/initial-metaprompt",
+  "distillation-gpt-52": "/corpus/distillation-gpt-52",
+  "distillation-opus-45": "/corpus/distillation-opus-45",
+  "distillation-gemini-3": "/corpus/distillation-gemini-3",
 };
 
 // ============================================================================
@@ -55,7 +53,6 @@ const DOC_ID_TO_PATH: Record<string, string> = {
 class SearchEngine {
   private miniSearch: MiniSearch<StoredSearchEntry> | null = null;
   private loadPromise: Promise<void> | null = null;
-  private indexContent: Map<string, string> = new Map();
   private loadError: Error | null = null;
 
   /**
@@ -166,15 +163,11 @@ class SearchEngine {
         match: Record<string, string[]>;
       };
 
-      // Generate snippet and match positions
-      const { snippet, matchPositions } = this.generateSnippet(
-        stored.id,
-        query,
-        stored.match
-      );
+      // Generate snippet and match positions from stored metadata
+      const { snippet, matchPositions } = this.generateSnippet(stored, query);
 
-      // Build URL
-      const basePath = DOC_ID_TO_PATH[stored.docId] ?? `/docs/${stored.docId}`;
+      // Build URL (fallback to /corpus/ path if not in map)
+      const basePath = DOC_ID_TO_PATH[stored.docId] ?? `/corpus/${stored.docId}`;
       const url = stored.anchor ? `${basePath}${stored.anchor}` : basePath;
 
       return {
@@ -198,40 +191,41 @@ class SearchEngine {
 
   /**
    * Generate a text snippet with match positions for highlighting.
+   *
+   * Note: Since MiniSearch doesn't store the original content (only metadata),
+   * we generate a contextual snippet from the stored fields. For full content
+   * snippets, use the server-side globalSearch which has access to the corpus.
    */
   private generateSnippet(
-    _docId: string,
-    query: string,
-    _matchInfo: Record<string, string[]>
+    stored: StoredSearchEntry,
+    query: string
   ): { snippet: string; matchPositions: Array<[number, number]> } {
-    // Since MiniSearch doesn't store the original content in a way we can access,
-    // and we only store metadata fields, we'll generate a contextual snippet
-    // based on the matched terms
-
-    // For now, create a simple snippet from available data
-    // In a more complete implementation, we'd need to either:
-    // 1. Store content in a separate map during indexing
-    // 2. Re-fetch the content from the corpus
-    // 3. Store a summary in the index
-
     const queryTerms = query.toLowerCase().split(/\s+/).filter(Boolean);
     const matchPositions: Array<[number, number]> = [];
 
-    // Create a placeholder snippet that indicates the match
-    // The actual content would come from the corpus if we stored it
-    let snippet = "Match found for: " + queryTerms.join(", ");
+    // Build a meaningful snippet from stored metadata
+    const parts: string[] = [];
+    if (stored.sectionTitle) {
+      parts.push(stored.sectionTitle);
+    }
+    if (stored.reference) {
+      parts.push(`(${stored.reference})`);
+    }
+    parts.push(`in ${stored.docTitle}`);
+
+    const snippet = parts.join(" ");
 
     // Find positions of query terms in the snippet for highlighting
+    const lowerSnippet = snippet.toLowerCase();
     for (const term of queryTerms) {
       let pos = 0;
-      const lowerSnippet = snippet.toLowerCase();
       while ((pos = lowerSnippet.indexOf(term, pos)) !== -1) {
         matchPositions.push([pos, pos + term.length]);
         pos += term.length;
       }
     }
 
-    // Sort and merge overlapping positions
+    // Sort positions by start index
     matchPositions.sort((a, b) => a[0] - b[0]);
 
     return { snippet, matchPositions };
@@ -243,7 +237,6 @@ class SearchEngine {
   clear(): void {
     this.miniSearch = null;
     this.loadPromise = null;
-    this.indexContent.clear();
     this.loadError = null;
   }
 }
