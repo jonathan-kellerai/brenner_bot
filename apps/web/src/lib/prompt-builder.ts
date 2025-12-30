@@ -94,7 +94,7 @@ ${failuresList}
 function generateRolePrompt(
   role: "codex" | "opus" | "gemini",
   operators: BrennerOperatorPaletteEntry[],
-  allOperators: BrennerOperatorPaletteEntry[]
+  _allOperators: BrennerOperatorPaletteEntry[]
 ): string {
   const roleName = ROLE_NAMES[role];
   const primaryOps = operators.filter(

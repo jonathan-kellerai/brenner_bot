@@ -42,17 +42,27 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               "transition-all duration-200 ease-out",
               "placeholder:text-muted-foreground/70",
               // Enhanced focus state with glow effect
-              "focus:outline-none focus:border-primary",
-              "focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
-              "focus:shadow-[0_0_0_3px_oklch(0.58_0.19_195_/_0.1),_0_0_20px_oklch(0.58_0.19_195_/_0.1)]",
-              "dark:focus:shadow-[0_0_0_3px_oklch(0.72_0.18_195_/_0.15),_0_0_20px_oklch(0.72_0.18_195_/_0.15)]",
+              "focus:outline-none",
+              "focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-offset-background",
+              // Default focus styles (only when not in error state)
+              !error && [
+                "focus:border-primary",
+                "focus-visible:ring-ring/50",
+                "focus:shadow-[0_0_0_3px_oklch(0.58_0.19_195_/_0.1),_0_0_20px_oklch(0.58_0.19_195_/_0.1)]",
+                "dark:focus:shadow-[0_0_0_3px_oklch(0.72_0.18_195_/_0.15),_0_0_20px_oklch(0.72_0.18_195_/_0.15)]",
+              ],
+              // Error state with red glow
+              error && [
+                "border-destructive",
+                "focus:border-destructive",
+                "focus-visible:ring-destructive/50",
+                "focus:shadow-[0_0_0_3px_oklch(0.60_0.22_25_/_0.1),_0_0_20px_oklch(0.60_0.22_25_/_0.1)]",
+              ],
               "disabled:cursor-not-allowed disabled:opacity-50 disabled:bg-muted/50",
               "file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-primary",
               // Icon padding
               hasIcon && iconPosition === "left" && "pl-10",
               hasIcon && iconPosition === "right" && "pr-10",
-              // Error state with red glow
-              error && "border-destructive focus:ring-destructive/50 focus:shadow-[0_0_0_3px_oklch(0.60_0.22_25_/_0.1),_0_0_20px_oklch(0.60_0.22_25_/_0.1)]",
               className
             )}
             ref={ref}

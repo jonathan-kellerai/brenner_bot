@@ -2418,7 +2418,7 @@ p, li, span, div {
     box-shadow: var(--elevation-lg), var(--glow-soft);
   }
 
-  /* Inner gradient overlay on hover */
+  /* Inner gradient overlay on hover - z-index: 0 keeps it below positioned content */
   .feature-card::before {
     content: "";
     position: absolute;
@@ -2432,7 +2432,7 @@ p, li, span, div {
       oklch(0.80 0.14 75 / 0.04) 100%
     );
     pointer-events: none;
-    z-index: 1;
+    z-index: 0;
   }
 
   .feature-card:hover::before {

@@ -47,9 +47,9 @@ function parseQuoteSection(content: string): Omit<Quote, "sectionId" | "title"> 
     .replace(/\*([^*]+)\*/g, "$1")
     .replace(/`([^`]+)`/g, "$1");
 
-  // Extract "Why it matters"
-  const whyMatch = content.match(/Why it matters:\s*([\s\S]*?)(?:\n\s*Tags:|$)/);
-  const context = whyMatch?.[1]?.trim().replace(/\s+/g, " ") ?? "";
+  // Extract "Takeaway" or "Why it matters" (both formats exist in the corpus)
+  const takeawayMatch = content.match(/(?:Takeaway|Why it matters):\s*([\s\S]*?)(?:\n\s*Tags:|$)/);
+  const context = takeawayMatch?.[1]?.trim().replace(/\s+/g, " ") ?? "";
 
   // Extract tags
   const tags: string[] = [];

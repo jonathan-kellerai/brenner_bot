@@ -4,7 +4,6 @@ import {
   formatForPlaybook,
   formatForReview,
   type ArtifactInput,
-  type MemoryExport,
 } from './artifact-to-memory';
 import validArtifact from './__fixtures__/linter/valid-artifact.json';
 

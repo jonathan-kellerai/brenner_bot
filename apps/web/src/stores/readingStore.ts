@@ -119,7 +119,7 @@ export function getReadingPosition(docId: string): ReadingPosition | null {
 
 export function clearReadingPosition(docId: string): void {
   readingStore.setState((state) => {
-    const { [docId]: _, ...rest } = state.positions;
+    const { [docId]: _removed, ...rest } = state.positions;
     return { positions: rest };
   });
 }

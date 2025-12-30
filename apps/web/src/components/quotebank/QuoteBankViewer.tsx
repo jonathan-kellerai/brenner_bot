@@ -283,8 +283,8 @@ function QuoteCard({ quote, isHighlighted, onTagClick }: QuoteCardProps) {
       </div>
 
       <div className="p-4 pl-5 sm:p-6 sm:pl-7 lg:p-8 lg:pl-9">
-        {/* Title */}
-        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground mb-3 sm:mb-4 pr-12 sm:pr-16 group-hover:text-primary transition-colors duration-200 leading-snug">
+        {/* Title - increased right padding to prevent overlap with copy button */}
+        <h3 className="text-base sm:text-lg lg:text-xl font-semibold text-foreground mb-3 sm:mb-4 pr-16 sm:pr-20 lg:pr-24 group-hover:text-primary transition-colors duration-200 leading-snug">
           {quote.title}
         </h3>
 
@@ -322,7 +322,7 @@ function QuoteCard({ quote, isHighlighted, onTagClick }: QuoteCardProps) {
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-[10px] sm:text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1.5">
-                  Why it matters
+                  Takeaway
                 </div>
                 <p className="text-sm sm:text-[15px] text-foreground/80 leading-relaxed">
                   <JargonText>{quote.context}</JargonText>
