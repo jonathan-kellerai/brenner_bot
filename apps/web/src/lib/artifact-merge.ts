@@ -19,13 +19,7 @@
  * ```
  */
 
-import {
-  type ValidDelta,
-  type DeltaSection,
-  type DeltaOperation,
-  SECTION_ID_PREFIXES,
-  generateNextId,
-} from "./delta-parser";
+import { type ValidDelta, type DeltaSection, generateNextId } from "./delta-parser";
 
 // ============================================================================
 // Types
