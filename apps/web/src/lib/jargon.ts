@@ -2131,6 +2131,224 @@ export const jargonDictionary: Record<string, JargonTerm> = {
     related: ["c-elegans", "connectome", "cell-lineage", "invariant-cell-number"],
     category: "brenner",
   },
+
+  // -------------------------------------------------------------------------
+  // Genetic Code: Additional Concepts
+  // -------------------------------------------------------------------------
+  degeneracy: {
+    term: "Degeneracy",
+    short: "Multiple codons specifying the same amino acid.",
+    long:
+      "The genetic code is degenerate: most amino acids are encoded by more than one codon. Leucine has six codons; methionine has only one. Degeneracy means you cannot deduce the DNA sequence from a protein sequence alone, only the reverse.",
+    why:
+      "Crick and Brenner realized the code must be degenerate because there are 64 codons but only 20 amino acids. 'We can't deduce it from first principles. We just have to go and find out what it is.' Transcript anchor: §82.",
+    related: ["genetic-code", "codon", "amino-acid", "wobble"],
+    category: "biology",
+  },
+  wobble: {
+    term: "Wobble",
+    short: "Flexible base-pairing at the third codon position allowing one tRNA to read multiple codons.",
+    long:
+      "Wobble (Crick, 1966) explains how fewer than 61 tRNAs can read all 61 sense codons. The third position of the codon pairs loosely, allowing G-U and other non-Watson-Crick pairs. This accounts for degeneracy without requiring 61 different tRNAs.",
+    why:
+      "Wobble explained a puzzle: how could 20-40 tRNA species read 61 codons? The relaxed pairing at position 3 was both the answer and a constraint on code evolution.",
+    related: ["degeneracy", "codon", "genetic-code", "trna"],
+    category: "biology",
+  },
+  trna: {
+    term: "tRNA",
+    short: "Transfer RNA: the adaptor molecule that brings amino acids to the ribosome.",
+    long:
+      "Transfer RNA (tRNA) molecules are the physical realization of Crick's adaptor hypothesis. Each tRNA has an anticodon that recognizes mRNA codons and carries the corresponding amino acid. Suppressor mutations are often tRNA mutations that misread stop codons.",
+    why:
+      "Brenner's work on suppressor mutations revealed that suppressors were often tRNA mutations. 'The simplest idea of genetic suppression was that they were mutations of transfer RNA.' Transcript anchor: §112.",
+    related: ["adaptor-hypothesis", "ribosome", "suppressor-mutation", "genetic-code"],
+    category: "biology",
+  },
+  "adaptor-hypothesis": {
+    term: "Adaptor Hypothesis",
+    short: "Crick's prediction that small molecules would link codons to amino acids.",
+    long:
+      "The adaptor hypothesis (Crick, 1955) predicted that amino acids do not directly recognize codons. Instead, small adaptor molecules would carry amino acids and recognize codons via complementary base-pairing. Transfer RNA turned out to be these adaptors.",
+    why:
+      "The adaptor hypothesis was a theoretical prediction later confirmed experimentally. It exemplifies how theoretical reasoning can guide experimental discovery.",
+    related: ["trna", "genetic-code", "francis-crick", "ribosome"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Key Collaborators
+  // -------------------------------------------------------------------------
+  "john-sulston": {
+    term: "John Sulston",
+    short: "Brenner's colleague who traced the complete C. elegans cell lineage.",
+    long:
+      "John Sulston joined Brenner's lab and made two transformative contributions: tracing the complete cell lineage of C. elegans (every cell division from egg to adult) and later leading the C. elegans genome sequencing project. He shared the 2002 Nobel Prize with Brenner.",
+    why:
+      "Sulston's lineage work provided the 'complete description' Brenner sought. His freezing method for storing worm strains was also essential infrastructure. Transcript anchors: §151, §191.",
+    related: ["c-elegans", "cell-lineage", "complete-description", "mrc-lab"],
+    category: "biology",
+  },
+  "john-white": {
+    term: "John White",
+    short: "Reconstructed the C. elegans nervous system from serial sections.",
+    long:
+      "John White led the heroic effort to reconstruct the complete C. elegans nervous system from serial electron micrograph sections. This produced the first connectome: the complete wiring diagram of a nervous system.",
+    why:
+      "White's reconstruction was essential for understanding how neural circuits produce behavior. The connectome became a foundation for C. elegans neurobiology. Transcript anchor: §157.",
+    related: ["connectome", "serial-section", "c-elegans", "electron-microscopy"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Later Brenner Projects
+  // -------------------------------------------------------------------------
+  fugu: {
+    term: "Fugu",
+    short: "The pufferfish with a compact genome; Brenner's 'discount genome' project.",
+    long:
+      "Fugu rubripes (Japanese pufferfish) has a genome one-eighth the size of the human genome but similar gene content. Brenner championed Fugu as a model for finding human genes efficiently: 'the discount genome, because you get 90% discount on sequencing.'",
+    why:
+      "Fugu exemplifies Brenner's principle of choosing the right organism. By selecting a compact genome, you get the same information with less sequencing. 'I've fulfilled the great technical requirement just by choosing the right organism.' Transcript anchors: §221-222.",
+    related: ["model-organism", "gedanken-organism", "genome-project"],
+    category: "biology",
+  },
+  "genome-project": {
+    term: "Genome Project",
+    short: "Large-scale effort to sequence an organism's complete DNA.",
+    long:
+      "A genome project aims to determine the complete DNA sequence of an organism. The C. elegans genome project, which Brenner initiated, was the first animal genome completed (1998). It demonstrated that systematic sequencing was feasible for complex organisms.",
+    why:
+      "Brenner saw genome sequencing as the ultimate 'complete description': knowing every base of DNA. The C. elegans project proved the approach and led to the Human Genome Project. Transcript anchors: §191, §219.",
+    related: ["c-elegans", "sanger-sequencing", "fugu", "complete-description"],
+    category: "method",
+  },
+  intron: {
+    term: "Intron",
+    short: "Non-coding sequences within genes that are spliced out of mRNA.",
+    long:
+      "Introns are sequences within genes that are transcribed but removed (spliced out) before translation. Their discovery (1977) surprised molecular biologists who expected genes to be continuous. Introns explain why eukaryotic genes are much larger than their protein products.",
+    why:
+      "Brenner noted that introns would have blocked early gene transfer experiments: 'that experiment wouldn't had a hope in hell of working... these nematode genes have introns in them.' Transcript anchor: §174.",
+    related: ["gene", "mrna", "transcription", "splicing"],
+    category: "biology",
+  },
+  splicing: {
+    term: "Splicing",
+    short: "Removing introns from pre-mRNA to produce mature mRNA.",
+    long:
+      "Splicing is the process that removes introns from precursor mRNA and joins exons together. Alternative splicing can produce different proteins from the same gene by including or excluding different exons.",
+    related: ["intron", "mrna", "gene", "transcription"],
+    category: "biology",
+  },
+  isogenic: {
+    term: "Isogenic",
+    short: "Genetically identical individuals, like a clone.",
+    long:
+      "Isogenic organisms have identical genomes. C. elegans hermaphrodites self-fertilize, producing isogenic offspring. This eliminates genetic variation as a confound, making phenotypic differences attributable to specific mutations.",
+    why:
+      "Brenner valued C. elegans being 'completely isogenic, because each animal would have a uniform genetic constitution.' This simplified genetic analysis. Transcript anchor: §150.",
+    related: ["c-elegans", "hermaphrodite", "wild-type", "n2"],
+    category: "biology",
+  },
+  transgenic: {
+    term: "Transgenic",
+    short: "An organism carrying foreign DNA inserted into its genome.",
+    long:
+      "A transgenic organism has had DNA from another source integrated into its genome. This enables testing gene function by adding genes, expressing reporters, or creating disease models. Brenner noted that 'a transgenic animal is just a cross of a genome with a gene.'",
+    why:
+      "Transgenic technology transformed genetics from loss-of-function (mutations) to gain-of-function experiments. You can add genes, not just break them. Transcript anchor: §229.",
+    related: ["gene", "mutation", "c-elegans", "forward-genetics"],
+    category: "method",
+  },
+  "molecular-cloning": {
+    term: "Molecular Cloning",
+    short: "Isolating and copying a specific DNA fragment in bacteria.",
+    long:
+      "Molecular cloning uses restriction enzymes and plasmid vectors to isolate specific DNA fragments and amplify them in bacteria. This enables studying individual genes, sequencing them, and manipulating them. Cloning 'opened up large areas of biology to everybody.'",
+    why:
+      "Brenner recognized that cloning transformed biology: 'now it's banal. Everybody can do it, they can clone a gene, they can sequence it.' This democratized molecular biology. Transcript anchor: §190.",
+    related: ["gene", "dna", "sanger-sequencing", "positional-cloning"],
+    category: "method",
+  },
+
+  // -------------------------------------------------------------------------
+  // Methodological Concepts
+  // -------------------------------------------------------------------------
+  "future-proofing": {
+    term: "Future-Proofing",
+    short: "Choosing problems and methods that will remain relevant as technology advances.",
+    long:
+      "Future-proofing means selecting research directions that will benefit from, rather than be obsoleted by, technological progress. Brenner's choice of C. elegans was future-proof: its small genome meant sequencing would eventually be feasible.",
+    why:
+      "Brenner explicitly sought 'future-proof sciences' when choosing his research direction. The choice of C. elegans was validated when genome sequencing became possible. Transcript anchor: §44.",
+    related: ["gedanken-organism", "model-organism", "opening-game"],
+    category: "brenner",
+  },
+  "exhaustive-enumeration": {
+    term: "Exhaustive Enumeration",
+    short: "Systematically listing all possibilities before testing them.",
+    long:
+      "Exhaustive enumeration means considering all logical possibilities before designing experiments. For the mRNA experiment, Brenner and colleagues proposed three models and designed tests to distinguish them. The danger: forgetting that 'both could be wrong.'",
+    why:
+      "Brenner's approach to the genetic code and mRNA involved systematically enumerating possibilities and eliminating them. But he warns against false confidence: always remember the third alternative. Transcript anchor: §102.",
+    related: ["third-alternative", "exclusion-test", "decision-experiment"],
+    category: "brenner",
+  },
+  "kitchen-table-science": {
+    term: "Kitchen Table Science",
+    short: "Science that can be done with minimal equipment and resources.",
+    long:
+      "Kitchen table science means research achievable without massive infrastructure. Brenner aspired to make genomics accessible: 'someone could make a map of a higher organism on the kitchen table.' This democratizes science beyond wealthy institutions.",
+    why:
+      "Brenner valued methods that didn't require expensive equipment or large teams. His early work used simple genetic crosses, and he sought genomic methods that would be broadly accessible. Transcript anchor: §191.",
+    related: ["democratize", "diy", "cheap-loop"],
+    category: "brenner",
+  },
+  protoplast: {
+    term: "Protoplast",
+    short: "A bacterial cell with its cell wall removed.",
+    long:
+      "Protoplasts are bacteria stripped of their rigid cell wall, leaving only the cell membrane. They were used to study what happens inside cells without the barrier of the wall. Brenner showed protoplasts could continue producing phage.",
+    why:
+      "Protoplast experiments represented an early attempt at subcellular systems: 'the first steps to a sub-cellular system on which you could do biochemistry.' Transcript anchor: §80.",
+    related: ["bacteriophage", "anatomical-dissection"],
+    category: "biology",
+  },
+
+  // -------------------------------------------------------------------------
+  // Philosophy of Science
+  // -------------------------------------------------------------------------
+  "flash-of-insight": {
+    term: "Flash of Insight",
+    short: "The moment when a solution becomes suddenly obvious.",
+    long:
+      "A flash of insight is the experience of sudden understanding, when confusion resolves into clarity. Brenner described seeing the DNA model: 'In a flash you could just see that everything... this was the fundamental... the curtain had been lifted.'",
+    why:
+      "Brenner's description of seeing the DNA model captures how good science should feel: obvious in retrospect. If a solution requires elaborate justification, it may be wrong. Transcript anchor: §55.",
+    related: ["decision-experiment", "materialize"],
+    category: "brenner",
+  },
+  "table-of-transformation": {
+    term: "Table of Transformation",
+    short: "The genetic code as a lookup table from codons to amino acids.",
+    long:
+      "The genetic code is a table of transformation: given a codon (three nucleotides), look up the corresponding amino acid. Brenner emphasized this is what 'code' really means, not the genome sequence itself. The table is universal across life.",
+    why:
+      "Brenner noted confusion about what 'code' means: 'most people will still talk about the complete apparatus of the genome as the genetic code for an organism, and that is wrong. It's the table of transformation.' Transcript anchor: §72.",
+    related: ["genetic-code", "codon", "amino-acid"],
+    category: "biology",
+  },
+  "testing-ground": {
+    term: "Testing Ground",
+    short: "The intellectual center where scientists prove themselves against the best.",
+    long:
+      "The testing ground is where you measure yourself against international competition. Brenner left South Africa because 'the testing ground is at the centre... you've got to go to the metropolis, and you've got to test yourself at the international level.'",
+    why:
+      "Brenner believed you cannot know if you're good without competing at the highest level. Provincial success means nothing if you haven't faced the best. Transcript anchor: §83.",
+    related: ["mrc-lab", "cold-spring-harbor", "phage-group"],
+    category: "brenner",
+  },
 };
 
 // ============================================================================

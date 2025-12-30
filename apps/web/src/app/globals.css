@@ -2637,7 +2637,9 @@ p, li, span, div {
      ======================================================================== */
 
   .toc {
-    @apply sticky top-24 max-h-[calc(100dvh-8rem)] overflow-y-auto;
+    @apply sticky top-24 overflow-y-auto;
+    max-height: calc(100vh - 8rem);
+    max-height: calc(100dvh - 8rem);
     scrollbar-width: thin;
     -webkit-overflow-scrolling: touch;
   }
@@ -3141,6 +3143,7 @@ p, li, span, div {
 
   .comparison-pane {
     @apply rounded-xl border bg-card overflow-hidden;
+    max-height: calc(100vh - 12rem);
     max-height: calc(100dvh - 12rem);
   }
 
@@ -3150,8 +3153,42 @@ p, li, span, div {
 
   .comparison-content {
     @apply p-4 overflow-y-auto;
+    max-height: calc(100vh - 16rem);
     max-height: calc(100dvh - 16rem);
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* QuoteBank scroll container - CSS cascade provides dvh fallback */
+  .quotebank-scroll {
+    height: calc(100vh - 400px);
+    height: calc(100dvh - 400px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Transcript scroll container - CSS cascade provides dvh fallback */
+  .transcript-scroll {
+    height: calc(100vh - 200px);
+    height: calc(100dvh - 200px);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* TOC-style nav with dvh fallback (for components not using .toc class) */
+  .toc-nav-scroll {
+    max-height: calc(100vh - 8rem);
+    max-height: calc(100dvh - 8rem);
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Responsive version: only applies max-height on lg+ screens */
+  .lg\:toc-nav-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  @media (min-width: 1024px) {
+    .lg\:toc-nav-scroll {
+      max-height: calc(100vh - 8rem);
+      max-height: calc(100dvh - 8rem);
+    }
   }
 
   .comparison-sync-indicator {

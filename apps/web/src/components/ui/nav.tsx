@@ -130,9 +130,18 @@ export function BottomNav({ className }: { className?: string }) {
   const [indicatorStyle, setIndicatorStyle] = React.useState({ left: 0, width: 0 })
 
   // iOS Safari visual viewport fix - adjusts for address bar animation
+  // Only runs on iOS Safari where the dynamic address bar causes fixed elements to detach
   React.useEffect(() => {
+    // Detect iOS Safari specifically - we don't want this running on desktop browsers
+    // where it could cause issues with zoom or on Android which handles this differently
+    const isIOSSafari = typeof navigator !== "undefined" &&
+      /iPad|iPhone|iPod/.test(navigator.userAgent) &&
+      !("MSStream" in window)
+
+    if (!isIOSSafari) return
+
     const nav = containerRef.current
-    const vv = typeof window !== "undefined" ? window.visualViewport : null
+    const vv = window.visualViewport
     if (!vv || !nav) return
 
     let ticking = false
@@ -158,6 +167,8 @@ export function BottomNav({ className }: { className?: string }) {
     return () => {
       vv.removeEventListener("resize", handleViewportChange)
       vv.removeEventListener("scroll", handleViewportChange)
+      // Reset to CSS default on cleanup
+      nav.style.bottom = ""
     }
   }, [])
 
