@@ -152,7 +152,7 @@ function EmptyState() {
         </div>
         <h2 className="text-lg font-semibold text-foreground mb-2">No sessions yet</h2>
         <p className="text-sm text-muted-foreground mb-6">
-          Start a new research session to kick off a collaborative discussion.
+          Start a new <Jargon term="brenner-loop">Brenner Loop</Jargon> research session to kick off a collaborative <Jargon term="discriminative-experiment">discriminative</Jargon> discussion.
         </p>
         <Link
           href="/sessions/new"
@@ -291,7 +291,7 @@ export default async function SessionsListPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Browse and monitor research sessions
+            Browse and monitor <Jargon term="brenner-loop">Brenner Loop</Jargon> research sessions
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">

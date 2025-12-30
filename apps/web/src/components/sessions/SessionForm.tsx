@@ -24,6 +24,7 @@ import {
   getSessionErrorMessage,
 } from "@/hooks/mutations/useSessionMutation";
 import { sessionFormSchema, sessionFieldValidators } from "@/lib/schemas/session";
+import { Jargon } from "@/components/jargon";
 
 // ============================================================================
 // Icons
@@ -447,7 +448,7 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
         <p className="text-sm text-muted-foreground">
           {mutation.isPending
             ? "Composing prompt and sending to Agent Mail..."
-            : "This will compose and send a Brenner Loop prompt to the specified agents."}
+            : <>This will compose and send a <Jargon term="brenner-loop">Brenner Loop</Jargon> prompt to the specified agents.</>}
         </p>
       </div>
     </form>

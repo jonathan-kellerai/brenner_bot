@@ -3,6 +3,7 @@ import { cookies, headers } from "next/headers";
 import { AgentMailClient } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
 import { SessionForm } from "@/components/sessions";
+import { Jargon } from "@/components/jargon";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -292,7 +293,7 @@ export default async function NewSessionPage({
           <div>
             <h1 className="text-2xl font-bold tracking-tight">New Session</h1>
             <p className="text-muted-foreground">
-              Start a Brenner Loop research session via Agent Mail
+              Start a <Jargon term="brenner-loop">Brenner Loop</Jargon> research session via <Jargon term="agent-mail">Agent Mail</Jargon>
             </p>
           </div>
         </div>

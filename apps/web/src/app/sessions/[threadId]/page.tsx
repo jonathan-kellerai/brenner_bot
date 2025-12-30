@@ -7,6 +7,7 @@ import rehypeHighlight from "rehype-highlight";
 import { RefreshControls, SessionActions } from "@/components/sessions";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
+import { Jargon } from "@/components/jargon";
 import {
   createEmptyArtifact,
   formatLintReportHuman,
@@ -479,7 +480,7 @@ export default async function SessionDetailPage({
       {/* Compiled Artifact */}
       <section className="space-y-3 animate-fade-in-up stagger-2">
         <div className="flex items-baseline justify-between gap-4">
-          <h2 className="text-lg font-semibold tracking-tight">Compiled Artifact</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Compiled <Jargon term="artifact">Artifact</Jargon></h2>
           <span className="text-xs text-muted-foreground">From latest <span className="font-mono">COMPILED:</span> message</span>
         </div>
 
@@ -560,7 +561,7 @@ export default async function SessionDetailPage({
 
       {/* Parsed Deltas */}
       <section className="space-y-4 animate-fade-in-up stagger-3">
-        <h2 className="text-lg font-semibold tracking-tight">Parsed Deltas</h2>
+        <h2 className="text-lg font-semibold tracking-tight">Parsed <Jargon term="delta">Deltas</Jargon></h2>
         {deltaMessages.length === 0 ? (
           <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
             No <span className="font-mono">DELTA[...]</span> messages yet.
