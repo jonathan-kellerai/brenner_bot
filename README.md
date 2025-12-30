@@ -290,6 +290,13 @@ The CLI is the terminal equivalent of the web “lab” flow. It is **Bun-only**
 - `./brenner.ts ...` (script)
 - `bun build --compile --outfile brenner ./brenner.ts` (single executable)
 
+#### Quick install (recommended)
+
+```bash
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh" \
+  | bash -s -- --easy-mode --verify
+```
+
 #### Install from a pinned release (recommended)
 
 For a safer, reproducible install, pin to a tag (avoid installing from `main`):
@@ -297,7 +304,16 @@ For a safer, reproducible install, pin to a tag (avoid installing from `main`):
 ```bash
 export VERSION="0.1.0" # example
 curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/v${VERSION}/install.sh" \
-  | bash -s -- --version "${VERSION}" --verify
+  | bash -s -- --version "${VERSION}" --easy-mode --verify
+```
+
+#### Verify your toolchain
+
+```bash
+brenner doctor
+ntm deps -v
+cass health
+cm onboard status
 ```
 
 #### CLI command map (contract)
@@ -322,7 +338,7 @@ Status legend:
 | `session status --thread-id <id> [--watch]` | Show per-role session status (and optionally wait until complete) | ✅ |
 | `mail inbox` / `mail ack` / `mail thread` | Inbox + acknowledgement + thread tooling | ✅ |
 | `session compile` / `session publish` | Compile agent deltas into a canonical artifact + publish back to thread | 🧭 (see `brenner_bot-5so.5.3`, `brenner_bot-5so.3.4`) |
-| `corpus search` | Corpus search | 🧭 (see `brenner_bot-5so.5.4.1`) |
+| `corpus search <query>` | Corpus search (ranked hits + anchors + snippets) | ✅ |
 
 #### Config precedence (contract)
 

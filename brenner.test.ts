@@ -90,6 +90,7 @@ describe("help and usage", () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("Usage:");
     expect(result.stdout).toContain("Commands:");
+    expect(result.stdout).toContain("corpus");
     expect(result.stdout).toContain("excerpt");
     expect(result.stdout).toContain("memory");
     expect(result.stdout).toContain("mail");
@@ -118,6 +119,7 @@ describe("help and usage", () => {
   it("usage includes all main commands", async () => {
     const result = await runCli(["--help"]);
     expect(result.stdout).toContain("version");
+    expect(result.stdout).toContain("corpus search");
     expect(result.stdout).toContain("excerpt build");
     expect(result.stdout).toContain("mail health");
     expect(result.stdout).toContain("mail tools");
@@ -169,6 +171,42 @@ describe("version output", () => {
     const result = await runCli(["version"]);
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain("brenner");
+  });
+});
+
+// ============================================================================
+// Tests: Corpus Search Command
+// ============================================================================
+
+describe("corpus search command", () => {
+  it("returns ranked hits with anchors (json mode)", async () => {
+    const result = await runCli(
+      ["corpus", "search", "Brenner", "--docs", "transcript", "--limit", "3", "--json"],
+      { timeout: 30000 }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    let parsed: { hits: Array<{ docId: string; anchor?: string }>; filters?: { docIds?: string[] } };
+    try {
+      parsed = JSON.parse(result.stdout) as { hits: Array<{ docId: string; anchor?: string }>; filters?: { docIds?: string[] } };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected corpus search --json output. Parse failed: ${msg}\n\nstdout:\n${result.stdout}`);
+    }
+
+    expect(parsed.hits.length).toBeGreaterThan(0);
+    expect(parsed.hits.length).toBeLessThanOrEqual(3);
+    for (const hit of parsed.hits) {
+      expect(hit.docId).toBe("transcript");
+      expect(hit.anchor ?? "").toMatch(/^§\d+/);
+    }
+  });
+
+  it("requires a query", async () => {
+    const result = await runCli(["corpus", "search"], { timeout: 10000 });
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Missing query");
   });
 });
 

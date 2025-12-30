@@ -16,6 +16,8 @@ import { isAbsolute, join, resolve } from "node:path";
 // Shared modules from web lib (bundled by Bun)
 import { AgentMailClient } from "./apps/web/src/lib/agentMail";
 import { buildExcerptFromSections, composeExcerpt, type ComposedExcerpt, type ExcerptSection } from "./apps/web/src/lib/excerpt-builder";
+import { CORPUS_DOCS } from "./apps/web/src/lib/corpus";
+import { globalSearch, type SearchCategory } from "./apps/web/src/lib/globalSearch";
 import type { Json } from "./apps/web/src/lib/json";
 import { parseQuoteBank } from "./apps/web/src/lib/quotebank-parser";
 import { composeKickoffMessages, type KickoffConfig } from "./apps/web/src/lib/session-kickoff";
@@ -153,6 +155,33 @@ function splitCsv(value: string | undefined): string[] {
 
 function readTextFile(path: string): string {
   return readFileSync(path, "utf8");
+}
+
+async function withWorkingDirectory<T>(cwd: string, fn: () => Promise<T>): Promise<T> {
+  const previous = process.cwd();
+  process.chdir(cwd);
+  try {
+    return await fn();
+  } finally {
+    process.chdir(previous);
+  }
+}
+
+function resolveWebAppCwd(projectKey: string): string {
+  const absoluteProjectKey = resolve(projectKey);
+
+  const repoRootCandidate = resolve(absoluteProjectKey, "apps", "web");
+  if (existsSync(join(repoRootCandidate, "package.json"))) return repoRootCandidate;
+
+  const webAppMarkerFiles = ["package.json", "next.config.ts"];
+  if (webAppMarkerFiles.every((f) => existsSync(join(absoluteProjectKey, f)))) return absoluteProjectKey;
+
+  throw new Error(
+    `Could not locate apps/web for project key: ${absoluteProjectKey}\n` +
+      `Expected either:\n` +
+      `- Repo root containing apps/web (${repoRootCandidate})\n` +
+      `- Web app root (apps/web) containing package.json (${absoluteProjectKey})`
+  );
 }
 
 function nonEmptyString(value: unknown): string | undefined {
@@ -832,6 +861,7 @@ Commands:
   memory context <task> [--top <n>] [--history <n>] [--days <n>] [--workspace <path>] [--log-context] [--session <id>]
   excerpt build [--sections <A,B>] [--tags <A,B>] [--limit <n>] [--theme <s>] [--ordering <relevance|chronological>]
                [--max-total-words <n>] [--max-quote-words <n>] [--transcript-file <path>] [--quote-bank-file <path>] [--json]
+  corpus search <query> [--limit <n>] [--docs <A,B>] [--category <s>] [--model <s>] [--project-key <abs-path>] [--json]
   mail health
   mail tools
   mail agents [--project-key <abs-path>]
@@ -898,6 +928,9 @@ Examples:
 
   # Upgrade (prints canonical installer commands)
   ./brenner.ts upgrade
+
+  # Search corpus (ranked hits with anchors + snippets)
+  ./brenner.ts corpus search "ribosome" --docs transcript --limit 5
 
   # Start a session (role-specific prompts) + watch status
   ./brenner.ts session start --project-key "$PWD" --to PurplePond,PurpleCat \\
@@ -1545,6 +1578,98 @@ async function main(): Promise<void> {
     }
 
     process.exit(0);
+  }
+
+  if (top === "corpus" && sub === "search") {
+    const jsonMode = asBoolFlag(flags, "json");
+
+    const positionalQuery = positional.slice(2).join(" ").trim();
+    const query = positionalQuery || asStringFlag(flags, "query");
+    if (!query) throw new Error("Missing query. Usage: ./brenner.ts corpus search \"...\" (or --query \"...\").");
+
+    const limit = asIntFlag(flags, "limit") ?? 20;
+    if (limit <= 0) throw new Error(`Invalid --limit: expected > 0, got ${limit}`);
+
+    const docIds = splitCsv(asStringFlag(flags, "docs") ?? asStringFlag(flags, "doc"));
+    if (docIds.length > 0) {
+      const known = new Set(CORPUS_DOCS.map((d) => d.id));
+      const unknown = docIds.filter((id) => !known.has(id));
+      if (unknown.length > 0) {
+        throw new Error(
+          `Unknown doc id(s): ${unknown.join(", ")}\n` +
+            `Known docs:\n` +
+            CORPUS_DOCS.map((d) => `- ${d.id}${d.title ? `: ${d.title}` : ""}`).join("\n")
+        );
+      }
+    }
+
+    const categoryRaw = asStringFlag(flags, "category");
+    const allowedCategories: SearchCategory[] = [
+      "all",
+      "transcript",
+      "quote-bank",
+      "distillation",
+      "metaprompt",
+      "raw-response",
+    ];
+    const category = (categoryRaw ?? "all") as SearchCategory;
+    if (categoryRaw && !allowedCategories.includes(category)) {
+      throw new Error(`Invalid --category: expected one of ${allowedCategories.join(", ")}, got "${categoryRaw}"`);
+    }
+
+    const modelRaw = asStringFlag(flags, "model");
+    const model = modelRaw ? (modelRaw as "gpt" | "opus" | "gemini") : undefined;
+    if (modelRaw && model !== "gpt" && model !== "opus" && model !== "gemini") {
+      throw new Error(`Invalid --model: expected "gpt", "opus", or "gemini", got "${modelRaw}"`);
+    }
+
+    const projectKey = resolve(asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey);
+    const webCwd = resolveWebAppCwd(projectKey);
+
+    const result = await withWorkingDirectory(webCwd, async () =>
+      globalSearch(query, {
+        limit,
+        category,
+        model,
+        ...(docIds.length > 0 ? { docIds } : {}),
+      })
+    );
+
+    if (jsonMode) {
+      console.log(
+        JSON.stringify(
+          {
+            ...result,
+            filters: { limit, category, model: model ?? null, docIds },
+          },
+          null,
+          2
+        )
+      );
+      process.exit(0);
+    }
+
+    const lines: string[] = [];
+    lines.push(`Query: ${query}`);
+    if (docIds.length > 0) lines.push(`Docs: ${docIds.join(", ")}`);
+    if (category !== "all") lines.push(`Category: ${category}`);
+    if (model) lines.push(`Model: ${model}`);
+    lines.push(`Matches: ${result.totalMatches} (showing ${result.hits.length}) in ${result.searchTimeMs}ms`);
+
+    for (const [i, hit] of result.hits.entries()) {
+      lines.push("");
+      const where = [hit.docId, hit.anchor].filter(Boolean).join(" ");
+      lines.push(`${i + 1}. ${where} — ${hit.title}`);
+      lines.push(`   ${hit.snippet}`);
+      lines.push(`   ${hit.url}`);
+    }
+
+    console.log(lines.join("\n").trim());
+    process.exit(0);
+  }
+
+  if (top === "corpus") {
+    throw new Error(`Unknown corpus command: ${[sub, action].filter(Boolean).join(" ") || "(missing subcommand)"}`);
   }
 
   if (top === "prompt" && sub === "compose") {

@@ -325,9 +325,10 @@ export async function globalSearch(
     limit?: number;
     category?: SearchCategory;
     model?: "gpt" | "opus" | "gemini";
+    docIds?: string[];
   } = {}
 ): Promise<GlobalSearchResult> {
-  const { limit = 20, category = "all", model } = options;
+  const { limit = 20, category = "all", model, docIds } = options;
   const startTime = performance.now();
 
   const normalizedQuery = query.trim().toLowerCase();
@@ -373,6 +374,12 @@ export async function globalSearch(
   }
   if (model) {
     candidates = candidates.filter((c) => c.model === model);
+  }
+  if (docIds) {
+    const allowed = new Set(docIds.map((id) => id.trim()).filter(Boolean));
+    if (allowed.size > 0) {
+      candidates = candidates.filter((c) => allowed.has(c.docId));
+    }
   }
 
   // Search and score
