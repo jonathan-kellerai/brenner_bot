@@ -271,7 +271,7 @@ function resolveBrennerRuntimeConfig(loaded: BrennerLoadedConfig): BrennerRuntim
   const bearerToken = envNonEmpty("AGENT_MAIL_BEARER_TOKEN") ?? fileAgentMail?.bearerToken;
 
   const fileDefaults = loaded.config.defaults;
-  const defaultProjectKey = fileDefaults?.projectKey ?? process.cwd();
+  const defaultProjectKey = resolve(fileDefaults?.projectKey ?? process.cwd());
   const defaultTemplate = fileDefaults?.template ?? "metaprompt_by_gpt_52.md";
 
   return {
@@ -1042,12 +1042,12 @@ async function main(): Promise<void> {
     checkTool("cass", { skip: skipCass, required: true });
     checkTool("cm", { skip: skipCm, required: true });
 
-	    if (checkAgentMail) {
-	      const baseUrl = runtimeConfig.agentMail.baseUrl;
-	      const headers: Record<string, string> = {};
-	      if (runtimeConfig.agentMail.bearerToken) headers.Authorization = `Bearer ${runtimeConfig.agentMail.bearerToken}`;
-	      try {
-	        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
+    if (checkAgentMail) {
+      const baseUrl = runtimeConfig.agentMail.baseUrl;
+      const headers: Record<string, string> = {};
+      if (runtimeConfig.agentMail.bearerToken) headers.Authorization = `Bearer ${runtimeConfig.agentMail.bearerToken}`;
+      try {
+        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
         if (res.ok) {
           checks.agentMail = { status: "ok", path: baseUrl, verifyCommand: "GET /health/readiness", exitCode: 0 };
         } else {
@@ -1101,18 +1101,18 @@ async function main(): Promise<void> {
     process.exit(exitCode);
   }
 
-	  if (top === "mail") {
-	    const client = new AgentMailClient(runtimeConfig.agentMail);
-	    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+  if (top === "mail") {
+    const client = new AgentMailClient(runtimeConfig.agentMail);
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
 
-	    if (sub === "health") {
-	      // Prefer the FastAPI health endpoint when reachable; fall back to MCP tool.
-	      const baseUrl = runtimeConfig.agentMail.baseUrl;
-	      const headers: Record<string, string> = {};
-	      if (runtimeConfig.agentMail.bearerToken) headers.Authorization = `Bearer ${runtimeConfig.agentMail.bearerToken}`;
-	      try {
-	        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
-	        const json = await res.json().catch(() => ({}));
+    if (sub === "health") {
+      // Prefer the FastAPI health endpoint when reachable; fall back to MCP tool.
+      const baseUrl = runtimeConfig.agentMail.baseUrl;
+      const headers: Record<string, string> = {};
+      if (runtimeConfig.agentMail.bearerToken) headers.Authorization = `Bearer ${runtimeConfig.agentMail.bearerToken}`;
+      try {
+        const res = await fetch(`${baseUrl}/health/readiness`, { headers });
+        const json = await res.json().catch(() => ({}));
         console.log(JSON.stringify({ ok: res.ok, status: res.status, readiness: json }, null, 2));
         process.exit(res.ok ? 0 : 1);
       } catch {
@@ -1128,12 +1128,12 @@ async function main(): Promise<void> {
       process.exit(0);
     }
 
-	    if (sub === "agents") {
-	      const projectSlug = isAbsolute(projectKey)
-	        ? parseEnsureProjectSlug(await client.toolsCall("ensure_project", { human_key: projectKey }))
-	        : projectKey;
-	      if (!projectSlug) throw new Error("Agent Mail ensure_project did not return a project slug.");
-	      const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
+    if (sub === "agents") {
+      const projectSlug = isAbsolute(projectKey)
+        ? parseEnsureProjectSlug(await client.toolsCall("ensure_project", { human_key: projectKey }))
+        : projectKey;
+      if (!projectSlug) throw new Error("Agent Mail ensure_project did not return a project slug.");
+      const result = await client.resourcesRead(`resource://agents/${projectSlug}`);
       console.log(JSON.stringify(result, null, 2));
       process.exit(0);
     }
@@ -1151,9 +1151,9 @@ async function main(): Promise<void> {
       const threadId = asStringFlag(flags, "thread-id");
       const ackRequired = asBoolFlag(flags, "ack-required");
 
-	      if (isAbsolute(projectKey)) {
-	        await client.toolsCall("ensure_project", { human_key: projectKey });
-	      }
+      if (isAbsolute(projectKey)) {
+        await client.toolsCall("ensure_project", { human_key: projectKey });
+      }
 
       const whoisResult = await client.toolsCall("whois", {
         project_key: projectKey,
@@ -1460,11 +1460,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-	  if (top === "prompt" && sub === "compose") {
-	    const templatePath = resolve(asStringFlag(flags, "template") ?? runtimeConfig.defaults.template);
-	    const excerptFile = asStringFlag(flags, "excerpt-file");
-	    if (!excerptFile) throw new Error("Missing --excerpt-file.");
-	    const excerpt = readTextFile(resolve(excerptFile));
+  if (top === "prompt" && sub === "compose") {
+    const templatePath = resolve(asStringFlag(flags, "template") ?? runtimeConfig.defaults.template);
+    const excerptFile = asStringFlag(flags, "excerpt-file");
+    if (!excerptFile) throw new Error("Missing --excerpt-file.");
+    const excerpt = readTextFile(resolve(excerptFile));
 
     const out = composePrompt({
       templatePath,
@@ -1497,12 +1497,12 @@ async function main(): Promise<void> {
 
   const normalizedTop = top === "orchestrate" ? "session" : top;
 
-	  if (normalizedTop === "session" && sub === "start") {
-	    const client = new AgentMailClient(runtimeConfig.agentMail);
-	    const projectKey = resolve(asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey);
-	    let sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
-	    if (!sender) throw new Error("Missing --sender (or set AGENT_NAME).");
-	    const to = splitCsv(asStringFlag(flags, "to"));
+  if (normalizedTop === "session" && sub === "start") {
+    const client = new AgentMailClient(runtimeConfig.agentMail);
+    const projectKey = resolve(asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey);
+    let sender = asStringFlag(flags, "sender") ?? process.env.AGENT_NAME;
+    if (!sender) throw new Error("Missing --sender (or set AGENT_NAME).");
+    const to = splitCsv(asStringFlag(flags, "to"));
     if (to.length === 0) throw new Error("Missing --to <A,B>.");
     const threadId = asStringFlag(flags, "thread-id");
     if (!threadId) throw new Error("Missing --thread-id.");
@@ -1567,12 +1567,12 @@ async function main(): Promise<void> {
       }
     }
 
-	    if (unified) {
-	      // Legacy mode: send same message to all recipients
-	      const templatePath = resolve(asStringFlag(flags, "template") ?? runtimeConfig.defaults.template);
-	      const body = composePrompt({
-	        templatePath,
-	        excerpt,
+    if (unified) {
+      // Legacy mode: send same message to all recipients
+      const templatePath = resolve(asStringFlag(flags, "template") ?? runtimeConfig.defaults.template);
+      const body = composePrompt({
+        templatePath,
+        excerpt,
         memoryContext: kickoffConfig.memoryContext,
         theme: asStringFlag(flags, "theme"),
         domain: asStringFlag(flags, "domain"),
@@ -1616,11 +1616,11 @@ async function main(): Promise<void> {
     process.exit(0);
   }
 
-	  if (normalizedTop === "session" && sub === "status") {
-	    const client = new AgentMailClient(runtimeConfig.agentMail);
-	    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
-	    const threadId = asStringFlag(flags, "thread-id");
-	    if (!threadId) throw new Error("Missing --thread-id.");
+  if (normalizedTop === "session" && sub === "status") {
+    const client = new AgentMailClient(runtimeConfig.agentMail);
+    const projectKey = resolve(asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey);
+    const threadId = asStringFlag(flags, "thread-id");
+    if (!threadId) throw new Error("Missing --thread-id.");
 
     const watch = asBoolFlag(flags, "watch");
     const timeoutSeconds = asIntFlag(flags, "timeout") ?? 900;
