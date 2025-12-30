@@ -1,0 +1,540 @@
+/**
+ * Global Search Service
+ *
+ * Provides comprehensive full-text search across all corpus documents:
+ * - Transcript sections (236 segments)
+ * - Quote bank entries
+ * - Final distillations (GPT, Opus, Gemini)
+ * - Raw model responses
+ * - Metaprompts
+ *
+ * Features:
+ * - In-memory caching for blazing-fast repeated searches
+ * - Intelligent relevance scoring with multiple signals
+ * - Match highlighting with context extraction
+ * - Category filtering
+ * - Debounce-friendly (returns quickly for partial queries)
+ *
+ * NOTE: This file uses Node.js APIs and must only be imported from server code.
+ * Client components should use the server action in globalSearchAction.ts instead.
+ */
+
+import { CORPUS_DOCS, type CorpusDoc, readCorpusDoc } from "./corpus";
+import { parseTranscript } from "./transcriptParser";
+import type {
+  DocCategory,
+  SearchCategory,
+  GlobalSearchHit,
+  GlobalSearchResult,
+} from "./globalSearchTypes";
+
+// Re-export types for server-side usage
+export type { DocCategory, SearchCategory, GlobalSearchHit, GlobalSearchResult };
+export { getCategoryInfo } from "./globalSearchTypes";
+
+interface IndexedChunk {
+  id: string;
+  docId: string;
+  docTitle: string;
+  category: DocCategory;
+  model?: "gpt" | "opus" | "gemini";
+  title: string;
+  content: string;
+  contentLower: string;
+  titleLower: string;
+  anchor?: string;
+  url: string;
+  wordCount: number;
+}
+
+// ============================================================================
+// Search Index Cache
+// ============================================================================
+
+let indexCache: IndexedChunk[] | null = null;
+let indexTimestamp: number | null = null;
+
+/**
+ * Build or retrieve the search index.
+ */
+async function getIndex(): Promise<IndexedChunk[]> {
+  if (indexCache) {
+    return indexCache;
+  }
+
+  const chunks: IndexedChunk[] = [];
+
+  for (const doc of CORPUS_DOCS) {
+    try {
+      const { content } = await readCorpusDoc(doc.id);
+
+      if (doc.id === "transcript") {
+        // Parse transcript into sections
+        const { sections } = parseTranscript(content);
+        for (const section of sections) {
+          chunks.push({
+            id: `${doc.id}:${section.anchor}`,
+            docId: doc.id,
+            docTitle: doc.title,
+            category: doc.category,
+            model: doc.model,
+            title: section.title,
+            content: section.plainText,
+            contentLower: section.plainText.toLowerCase(),
+            titleLower: section.title.toLowerCase(),
+            anchor: section.anchor,
+            url: `/corpus/transcript#${section.anchor}`,
+            wordCount: section.wordCount,
+          });
+        }
+      } else if (doc.id === "quote-bank") {
+        // Parse quote bank into individual quotes
+        const quoteChunks = parseQuoteBank(content, doc);
+        chunks.push(...quoteChunks);
+      } else {
+        // General document - parse into sections by headers
+        const docChunks = parseDocumentSections(content, doc);
+        chunks.push(...docChunks);
+      }
+    } catch (err) {
+      console.warn(`Failed to index ${doc.id}:`, err);
+    }
+  }
+
+  indexCache = chunks;
+  indexTimestamp = Date.now();
+  return chunks;
+}
+
+/**
+ * Parse quote bank into searchable chunks.
+ */
+function parseQuoteBank(content: string, doc: CorpusDoc): IndexedChunk[] {
+  const chunks: IndexedChunk[] = [];
+  const sectionRegex = /^##\s+(§\d+(?:-\d+)?)\s*[—–-]\s*(.+)$/gm;
+  const matches = [...content.matchAll(sectionRegex)];
+
+  for (let i = 0; i < matches.length; i++) {
+    const match = matches[i];
+    const anchor = match[1];
+    const title = match[2].trim();
+    const startIndex = match.index! + match[0].length;
+    const endIndex = matches[i + 1]?.index ?? content.length;
+    const sectionContent = content.slice(startIndex, endIndex).trim();
+
+    // Extract quote text (blockquotes)
+    const quoteMatch = sectionContent.match(/^>\s*([^]*?)(?:\n\n|$)/m);
+    const quoteText = quoteMatch
+      ? quoteMatch[1].replace(/^>\s*/gm, "").replace(/\*\*([^*]+)\*\*/g, "$1")
+      : sectionContent.slice(0, 500);
+
+    chunks.push({
+      id: `${doc.id}:${anchor}`,
+      docId: doc.id,
+      docTitle: doc.title,
+      category: doc.category,
+      model: doc.model,
+      title,
+      content: quoteText,
+      contentLower: quoteText.toLowerCase(),
+      titleLower: title.toLowerCase(),
+      anchor,
+      url: `/corpus/quote-bank#${anchor}`,
+      wordCount: quoteText.split(/\s+/).length,
+    });
+  }
+
+  return chunks;
+}
+
+/**
+ * Parse general markdown documents into sections by headers.
+ */
+function parseDocumentSections(content: string, doc: CorpusDoc): IndexedChunk[] {
+  const chunks: IndexedChunk[] = [];
+
+  // Split by ## headers
+  const sectionRegex = /^##\s+(.+)$/gm;
+  const matches = [...content.matchAll(sectionRegex)];
+
+  if (matches.length === 0) {
+    // No sections - treat whole doc as one chunk
+    const plainText = content
+      .replace(/^#\s+.+$/gm, "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .trim();
+
+    chunks.push({
+      id: `${doc.id}:main`,
+      docId: doc.id,
+      docTitle: doc.title,
+      category: doc.category,
+      model: doc.model,
+      title: doc.title,
+      content: plainText.slice(0, 5000), // Limit size
+      contentLower: plainText.slice(0, 5000).toLowerCase(),
+      titleLower: doc.title.toLowerCase(),
+      url: getDocUrl(doc),
+      wordCount: plainText.split(/\s+/).length,
+    });
+  } else {
+    for (let i = 0; i < matches.length; i++) {
+      const match = matches[i];
+      const title = match[1].trim();
+      const startIndex = match.index! + match[0].length;
+      const endIndex = matches[i + 1]?.index ?? content.length;
+      const sectionContent = content.slice(startIndex, endIndex).trim();
+
+      // Clean markdown
+      const plainText = sectionContent
+        .replace(/\*\*([^*]+)\*\*/g, "$1")
+        .replace(/\*([^*]+)\*/g, "$1")
+        .replace(/`([^`]+)`/g, "$1")
+        .slice(0, 3000);
+
+      const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
+      chunks.push({
+        id: `${doc.id}:${slug}`,
+        docId: doc.id,
+        docTitle: doc.title,
+        category: doc.category,
+        model: doc.model,
+        title,
+        content: plainText,
+        contentLower: plainText.toLowerCase(),
+        titleLower: title.toLowerCase(),
+        anchor: slug,
+        url: `${getDocUrl(doc)}#${slug}`,
+        wordCount: plainText.split(/\s+/).length,
+      });
+    }
+  }
+
+  return chunks;
+}
+
+/**
+ * Get the URL for a document.
+ */
+function getDocUrl(doc: CorpusDoc): string {
+  switch (doc.id) {
+    case "transcript":
+      return "/corpus/transcript";
+    case "quote-bank":
+      return "/corpus/quote-bank";
+    case "distillation-opus-45":
+      return "/corpus/distillation-opus-45";
+    case "distillation-gpt-52":
+      return "/corpus/distillation-gpt-52";
+    case "distillation-gemini-3":
+      return "/corpus/distillation-gemini-3";
+    default:
+      if (doc.id.startsWith("raw-")) {
+        // Link to corpus page for raw responses
+        return `/corpus/${doc.id}`;
+      }
+      return `/corpus/${doc.id}`;
+  }
+}
+
+// ============================================================================
+// Search Implementation
+// ============================================================================
+
+/**
+ * Perform a global search across all corpus documents.
+ */
+export async function globalSearch(
+  query: string,
+  options: {
+    limit?: number;
+    category?: SearchCategory;
+    model?: "gpt" | "opus" | "gemini";
+  } = {}
+): Promise<GlobalSearchResult> {
+  const { limit = 20, category = "all", model } = options;
+  const startTime = performance.now();
+
+  const normalizedQuery = query.trim().toLowerCase();
+  if (!normalizedQuery) {
+    return {
+      query,
+      hits: [],
+      totalMatches: 0,
+      searchTimeMs: 0,
+      categories: {
+        transcript: 0,
+        "quote-bank": 0,
+        distillation: 0,
+        metaprompt: 0,
+        "raw-response": 0,
+      },
+    };
+  }
+
+  const index = await getIndex();
+
+  // Filter by category and model
+  let candidates = index;
+  if (category !== "all") {
+    candidates = candidates.filter((c) => c.category === category);
+  }
+  if (model) {
+    candidates = candidates.filter((c) => c.model === model);
+  }
+
+  // Search and score
+  const scoredHits: Array<{ chunk: IndexedChunk; score: number; matchType: "title" | "body" | "both" }> = [];
+  const categoryCounts: Record<DocCategory, number> = {
+    transcript: 0,
+    "quote-bank": 0,
+    distillation: 0,
+    metaprompt: 0,
+    "raw-response": 0,
+  };
+
+  // Support multi-word queries
+  const queryTerms = normalizedQuery.split(/\s+/).filter((t) => t.length > 1);
+
+  for (const chunk of candidates) {
+    const inTitle = chunk.titleLower.includes(normalizedQuery) ||
+      queryTerms.every((term) => chunk.titleLower.includes(term));
+    const inBody = chunk.contentLower.includes(normalizedQuery) ||
+      queryTerms.every((term) => chunk.contentLower.includes(term));
+
+    if (!inTitle && !inBody) continue;
+
+    categoryCounts[chunk.category]++;
+
+    const score = computeScore(chunk, normalizedQuery, queryTerms, inTitle, inBody);
+    const matchType = inTitle && inBody ? "both" : inTitle ? "title" : "body";
+
+    scoredHits.push({ chunk, score, matchType });
+  }
+
+  // Sort by score
+  scoredHits.sort((a, b) => b.score - a.score);
+
+  // Build results
+  const hits: GlobalSearchHit[] = scoredHits.slice(0, limit).map(({ chunk, score, matchType }) => ({
+    id: chunk.id,
+    docId: chunk.docId,
+    docTitle: chunk.docTitle,
+    category: chunk.category,
+    model: chunk.model,
+    title: chunk.title,
+    snippet: extractSnippet(chunk.content, normalizedQuery, queryTerms),
+    score,
+    matchType,
+    anchor: chunk.anchor,
+    url: chunk.url,
+    highlights: extractHighlights(chunk.content, queryTerms),
+  }));
+
+  const endTime = performance.now();
+
+  return {
+    query,
+    hits,
+    totalMatches: scoredHits.length,
+    searchTimeMs: Math.round(endTime - startTime),
+    categories: categoryCounts,
+  };
+}
+
+/**
+ * Compute relevance score for a chunk.
+ */
+function computeScore(
+  chunk: IndexedChunk,
+  query: string,
+  terms: string[],
+  inTitle: boolean,
+  inBody: boolean
+): number {
+  let score = 0.1; // Base score
+
+  // Title match bonus
+  if (inTitle) {
+    score += 0.35;
+    // Exact title match
+    if (chunk.titleLower === query) {
+      score += 0.2;
+    }
+    // Title starts with query
+    else if (chunk.titleLower.startsWith(query)) {
+      score += 0.1;
+    }
+  }
+
+  // Body match bonus
+  if (inBody) {
+    score += 0.15;
+  }
+
+  // Frequency bonus (how many times the query appears)
+  const fullContent = chunk.titleLower + " " + chunk.contentLower;
+  let occurrences = 0;
+  for (const term of terms.length > 0 ? terms : [query]) {
+    let pos = 0;
+    while ((pos = fullContent.indexOf(term, pos)) !== -1) {
+      occurrences++;
+      pos += term.length;
+    }
+  }
+  score += Math.min(occurrences / 15, 1) * 0.2;
+
+  // Position bonus (earlier match is better)
+  const firstIndex = chunk.contentLower.indexOf(query);
+  if (firstIndex !== -1 && firstIndex < 300) {
+    score += 0.1 * (1 - firstIndex / 300);
+  }
+
+  // Category bonus (transcript is most relevant)
+  if (chunk.category === "transcript") {
+    score += 0.05;
+  } else if (chunk.category === "quote-bank") {
+    score += 0.03;
+  }
+
+  // Term coverage bonus (for multi-word queries)
+  if (terms.length > 1) {
+    const termMatches = terms.filter(
+      (t) => chunk.titleLower.includes(t) || chunk.contentLower.includes(t)
+    ).length;
+    score += (termMatches / terms.length) * 0.1;
+  }
+
+  return Math.min(score, 1);
+}
+
+/**
+ * Extract a snippet around the first match with context.
+ */
+function extractSnippet(text: string, query: string, terms: string[], maxLength = 200): string {
+  const lowerText = text.toLowerCase();
+
+  // Find best match position
+  let matchIndex = lowerText.indexOf(query);
+  if (matchIndex === -1 && terms.length > 0) {
+    // Find first term match
+    for (const term of terms) {
+      matchIndex = lowerText.indexOf(term);
+      if (matchIndex !== -1) break;
+    }
+  }
+
+  if (matchIndex === -1) {
+    return text.slice(0, maxLength) + (text.length > maxLength ? "..." : "");
+  }
+
+  // Calculate window
+  const contextBefore = 60;
+  let start = Math.max(0, matchIndex - contextBefore);
+  let end = Math.min(text.length, start + maxLength);
+
+  // Adjust to word boundaries
+  if (start > 0) {
+    const spaceIndex = text.indexOf(" ", start);
+    if (spaceIndex !== -1 && spaceIndex < matchIndex) {
+      start = spaceIndex + 1;
+    }
+  }
+
+  if (end < text.length) {
+    const spaceIndex = text.lastIndexOf(" ", end);
+    if (spaceIndex !== -1 && spaceIndex > matchIndex) {
+      end = spaceIndex;
+    }
+  }
+
+  let snippet = text.slice(start, end);
+
+  if (start > 0) snippet = "..." + snippet;
+  if (end < text.length) snippet = snippet + "...";
+
+  return snippet;
+}
+
+/**
+ * Extract matching terms for highlighting.
+ */
+function extractHighlights(text: string, terms: string[]): string[] {
+  const highlights: string[] = [];
+  const lowerText = text.toLowerCase();
+
+  for (const term of terms) {
+    const index = lowerText.indexOf(term);
+    if (index !== -1) {
+      // Get original case from text
+      highlights.push(text.slice(index, index + term.length));
+    }
+  }
+
+  return highlights;
+}
+
+// ============================================================================
+// Utility Functions
+// ============================================================================
+
+/**
+ * Get index stats for debugging.
+ */
+export function getIndexStats(): {
+  indexed: boolean;
+  chunkCount: number;
+  timestamp: number | null;
+  categoryCounts: Record<DocCategory, number>;
+} {
+  if (!indexCache) {
+    return {
+      indexed: false,
+      chunkCount: 0,
+      timestamp: null,
+      categoryCounts: {
+        transcript: 0,
+        "quote-bank": 0,
+        distillation: 0,
+        metaprompt: 0,
+        "raw-response": 0,
+      },
+    };
+  }
+
+  const counts: Record<DocCategory, number> = {
+    transcript: 0,
+    "quote-bank": 0,
+    distillation: 0,
+    metaprompt: 0,
+    "raw-response": 0,
+  };
+
+  for (const chunk of indexCache) {
+    counts[chunk.category]++;
+  }
+
+  return {
+    indexed: true,
+    chunkCount: indexCache.length,
+    timestamp: indexTimestamp,
+    categoryCounts: counts,
+  };
+}
+
+/**
+ * Pre-warm the search index.
+ */
+export async function warmIndex(): Promise<void> {
+  await getIndex();
+}
+
+/**
+ * Clear the search index (for testing).
+ */
+export function clearIndex(): void {
+  indexCache = null;
+  indexTimestamp = null;
+}

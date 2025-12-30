@@ -5,6 +5,8 @@ import "./globals.css";
 import { HeaderNav, BottomNav, ReadingProgress, BackToTop, ThemeToggle } from "@/components/ui/nav";
 import { Button } from "@/components/ui/button";
 import { CommandPalette } from "@/components/ui/command-palette";
+import { SearchProvider, SearchTrigger } from "@/components/search";
+import { Providers } from "@/components/providers";
 import { Toaster } from "@/components/ui/toast";
 
 const geistSans = Geist({
@@ -115,6 +117,8 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <Providers>
+        <SearchProvider>
         <div className="min-h-dvh flex flex-col bg-background text-foreground">
           {/* Reading Progress */}
           <ReadingProgress />
@@ -137,6 +141,9 @@ export default function RootLayout({
                 {/* Desktop Navigation */}
                 <div className="flex items-center gap-2">
                   <HeaderNav />
+
+                  {/* Global Search */}
+                  <SearchTrigger className="hidden md:flex" />
 
                   {labModeEnabled && (
                     <Button asChild size="sm" className="hidden lg:inline-flex ml-2">
@@ -213,6 +220,8 @@ export default function RootLayout({
           {/* Toast Notifications */}
           <Toaster />
         </div>
+        </SearchProvider>
+        </Providers>
       </body>
     </html>
   );
