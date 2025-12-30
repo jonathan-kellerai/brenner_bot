@@ -132,27 +132,33 @@ const convergences = [
 const colorClasses = {
   opus: {
     badge: "model-badge-opus",
-    border: "border-[var(--opus)]/30 hover:border-[var(--opus)]/60",
+    border: "border-[var(--opus)]/20 hover:border-[var(--opus)]/50",
     bg: "bg-[var(--opus-subtle)]",
     text: "text-[var(--opus-foreground)]",
     accent: "text-[var(--opus)]",
-    glow: "hover:shadow-[0_0_30px_var(--opus)/0.15]",
+    glow: "hover:shadow-[0_4px_40px_var(--opus)/0.2]",
+    gradient: "from-[var(--opus)]/5 via-transparent to-transparent",
+    ring: "group-hover:ring-[var(--opus)]/20",
   },
   gpt: {
     badge: "model-badge-gpt",
-    border: "border-[var(--gpt)]/30 hover:border-[var(--gpt)]/60",
+    border: "border-[var(--gpt)]/20 hover:border-[var(--gpt)]/50",
     bg: "bg-[var(--gpt-subtle)]",
     text: "text-[var(--gpt-foreground)]",
     accent: "text-[var(--gpt)]",
-    glow: "hover:shadow-[0_0_30px_var(--gpt)/0.15]",
+    glow: "hover:shadow-[0_4px_40px_var(--gpt)/0.2]",
+    gradient: "from-[var(--gpt)]/5 via-transparent to-transparent",
+    ring: "group-hover:ring-[var(--gpt)]/20",
   },
   gemini: {
     badge: "model-badge-gemini",
-    border: "border-[var(--gemini)]/30 hover:border-[var(--gemini)]/60",
+    border: "border-[var(--gemini)]/20 hover:border-[var(--gemini)]/50",
     bg: "bg-[var(--gemini-subtle)]",
     text: "text-[var(--gemini-foreground)]",
     accent: "text-[var(--gemini)]",
-    glow: "hover:shadow-[0_0_30px_var(--gemini)/0.15]",
+    glow: "hover:shadow-[0_4px_40px_var(--gemini)/0.2]",
+    gradient: "from-[var(--gemini)]/5 via-transparent to-transparent",
+    ring: "group-hover:ring-[var(--gemini)]/20",
   },
 };
 
@@ -224,58 +230,64 @@ export default async function DistillationsPage() {
               <Link
                 key={d.model}
                 href={`/corpus/${d.docId}`}
-                className={`group relative flex flex-col rounded-2xl border bg-card p-6 transition-all duration-300 ${colors.border} ${colors.glow} animate-fade-in-up stagger-${index + 1}`}
+                className={`group relative flex flex-col rounded-2xl border bg-card overflow-hidden transition-all duration-300 ease-out hover:-translate-y-1 active:translate-y-0 active:scale-[0.99] ${colors.border} ${colors.glow} animate-fade-in-up stagger-${index + 1} ring-1 ring-transparent ${colors.ring} touch-manipulation`}
               >
-                {/* Model Badge */}
-                <div className="flex items-center justify-between mb-4">
-                  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${colors.badge}`}>
-                    {d.modelShort}
-                  </span>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1">
-                      <ClockIcon />
-                      {d.readTime}
+                {/* Gradient overlay on hover */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${colors.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none`} />
+
+                {/* Content container */}
+                <div className="relative p-6 flex flex-col h-full">
+                  {/* Model Badge */}
+                  <div className="flex items-center justify-between mb-4">
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-transform duration-200 group-hover:scale-105 ${colors.badge}`}>
+                      {d.modelShort}
                     </span>
-                    {d.wordCount && (
+                    <div className="flex items-center gap-3 text-xs text-muted-foreground">
                       <span className="flex items-center gap-1">
-                        <DocumentIcon />
-                        {Math.round(d.wordCount / 1000)}k
+                        <ClockIcon />
+                        {d.readTime}
                       </span>
-                    )}
+                      {d.wordCount && (
+                        <span className="flex items-center gap-1">
+                          <DocumentIcon />
+                          {Math.round(d.wordCount / 1000)}k
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
 
-                {/* Model Name */}
-                <h3 className="text-xl font-semibold text-foreground mb-2 group-hover:text-primary transition-colors">
-                  {d.model}
-                </h3>
+                  {/* Model Name */}
+                  <h3 className="text-xl font-semibold text-foreground mb-2 transition-colors duration-200 group-hover:text-primary">
+                    {d.model}
+                  </h3>
 
-                {/* Key Insight Badge */}
-                <div className={`inline-flex self-start items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium mb-3 ${colors.bg} ${colors.text}`}>
-                  <svg className="size-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  {d.keyInsight}
-                </div>
-
-                {/* Description */}
-                <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
-                  {d.description}
-                </p>
-
-                {/* Excerpt Preview */}
-                {d.excerpt && (
-                  <div className="rounded-lg bg-muted/50 p-3 mb-4 border border-border/50">
-                    <p className="text-xs text-muted-foreground italic line-clamp-3">
-                      &ldquo;{d.excerpt}&rdquo;
-                    </p>
+                  {/* Key Insight Badge */}
+                  <div className={`inline-flex self-start items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium mb-3 transition-all duration-200 group-hover:shadow-sm ${colors.bg} ${colors.text}`}>
+                    <svg className="size-3 transition-transform duration-200 group-hover:rotate-12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                    {d.keyInsight}
                   </div>
-                )}
 
-                {/* Read Link */}
-                <div className="flex items-center gap-2 text-sm font-medium text-primary mt-auto pt-2">
-                  <span>Read full distillation</span>
-                  <ArrowRightIcon />
+                  {/* Description */}
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-4 flex-1">
+                    {d.description}
+                  </p>
+
+                  {/* Excerpt Preview */}
+                  {d.excerpt && (
+                    <div className="rounded-lg bg-muted/40 p-3 mb-4 border border-border/30 transition-colors duration-200 group-hover:bg-muted/60 group-hover:border-border/50">
+                      <p className="text-xs text-muted-foreground italic line-clamp-3">
+                        &ldquo;{d.excerpt}&rdquo;
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Read Link */}
+                  <div className={`flex items-center gap-2 text-sm font-medium mt-auto pt-2 transition-colors duration-200 ${colors.accent}`}>
+                    <span>Read full distillation</span>
+                    <ArrowRightIcon />
+                  </div>
                 </div>
               </Link>
             );

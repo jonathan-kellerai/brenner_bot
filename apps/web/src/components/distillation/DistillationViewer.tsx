@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import type {
   ParsedDistillation,
   DistillationPart,
@@ -250,7 +251,7 @@ function StrengthPill({ strength, theme, index }: StrengthPillProps) {
 // ============================================================================
 
 interface StatChipProps {
-  icon: React.ReactNode;
+  icon: ReactNode;
   value: string;
   label: string;
   accent?: boolean;
@@ -617,4 +618,3 @@ function BackToTopButton() {
     </button>
   );
 }
-

@@ -2932,4 +2932,232 @@
   .loop-node[data-expanded="true"] ~ .loop-detail {
     @apply opacity-100 translate-y-0 pointer-events-auto;
   }
+
+  /* ========================================================================
+     SCROLL-TRIGGERED REVEAL - Pure CSS approach
+     Uses IntersectionObserver via data attribute (set by component)
+     ======================================================================== */
+
+  /* Initial hidden state */
+  .reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-out);
+  }
+
+  .reveal[data-visible="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Reveal from left */
+  .reveal-left {
+    opacity: 0;
+    transform: translateX(-30px);
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-out);
+  }
+
+  .reveal-left[data-visible="true"] {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Reveal from right */
+  .reveal-right {
+    opacity: 0;
+    transform: translateX(30px);
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-out);
+  }
+
+  .reveal-right[data-visible="true"] {
+    opacity: 1;
+    transform: translateX(0);
+  }
+
+  /* Reveal with scale */
+  .reveal-scale {
+    opacity: 0;
+    transform: scale(0.95);
+    transition:
+      opacity var(--duration-slow) var(--ease-out),
+      transform var(--duration-slow) var(--ease-spring);
+  }
+
+  .reveal-scale[data-visible="true"] {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ========================================================================
+     MOBILE TOUCH FEEDBACK - Enhanced tactile responses
+     ======================================================================== */
+
+  /* Touch manipulation - prevents delay and zoom on touch */
+  .touch-manipulation {
+    touch-action: manipulation;
+  }
+
+  /* Active state scale - for buttons and interactive elements */
+  .touch-active {
+    transition: transform var(--duration-fast) var(--ease-out);
+  }
+
+  .touch-active:active {
+    transform: scale(0.97);
+  }
+
+  /* Subtle touch feedback */
+  .touch-active-subtle:active {
+    transform: scale(0.99);
+  }
+
+  /* Touch ripple effect on mobile */
+  @media (hover: none) and (pointer: coarse) {
+    .touch-ripple {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .touch-ripple::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: currentColor;
+      opacity: 0;
+      transition: opacity var(--duration-fast);
+    }
+
+    .touch-ripple:active::after {
+      opacity: 0.1;
+    }
+  }
+
+  /* ========================================================================
+     REDUCED MOTION PREFERENCES - Accessibility
+     ======================================================================== */
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+
+    .animate-pulse-ring,
+    .animate-float,
+    .animate-float-slow,
+    .animate-bounce-subtle,
+    .animate-gradient,
+    .animate-mesh {
+      animation: none !important;
+    }
+
+    html {
+      scroll-behavior: auto !important;
+    }
+  }
+
+  /* ========================================================================
+     FOCUS STATES - Enhanced accessibility
+     ======================================================================== */
+
+  .focus-ring {
+    outline: none;
+  }
+
+  .focus-ring:focus-visible {
+    box-shadow: var(--focus-ring);
+  }
+
+  /* Focus ring with offset */
+  .focus-ring-offset:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
+  /* Focus ring inset */
+  .focus-ring-inset:focus-visible {
+    box-shadow: inset 0 0 0 2px var(--ring);
+  }
+
+  /* ========================================================================
+     PREMIUM CARD EFFECTS - Stripe-level polish
+     ======================================================================== */
+
+  .card-premium {
+    @apply relative rounded-2xl border border-border bg-card;
+    @apply transition-all duration-300;
+    @apply hover:border-primary/30 hover:shadow-xl;
+  }
+
+  .card-premium::before {
+    content: "";
+    @apply absolute inset-0 rounded-2xl opacity-0;
+    @apply transition-opacity duration-300;
+    background: linear-gradient(
+      135deg,
+      oklch(0.58 0.19 195 / 0.05) 0%,
+      oklch(0.80 0.14 75 / 0.03) 100%
+    );
+    pointer-events: none;
+  }
+
+  .card-premium:hover::before {
+    @apply opacity-100;
+  }
+
+  /* Card with glow border on hover */
+  .card-glow {
+    @apply relative rounded-2xl border border-border bg-card overflow-hidden;
+    @apply transition-all duration-300;
+  }
+
+  .card-glow::after {
+    content: "";
+    @apply absolute -inset-px rounded-2xl opacity-0;
+    @apply transition-opacity duration-300;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    z-index: -1;
+  }
+
+  .card-glow:hover {
+    @apply border-transparent;
+  }
+
+  .card-glow:hover::after {
+    @apply opacity-100;
+  }
+
+  /* ========================================================================
+     INTERACTIVE STATES - Comprehensive feedback
+     ======================================================================== */
+
+  /* Disabled state */
+  .interactive-disabled {
+    @apply opacity-50 pointer-events-none;
+  }
+
+  /* Loading state */
+  .interactive-loading {
+    @apply relative pointer-events-none;
+  }
+
+  .interactive-loading::after {
+    content: "";
+    @apply absolute inset-0 bg-background/50;
+    border-radius: inherit;
+  }
+
+  /* Selected state */
+  .interactive-selected {
+    @apply ring-2 ring-primary ring-offset-2 ring-offset-background;
+  }
 }
