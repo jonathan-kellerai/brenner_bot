@@ -2,3 +2,21 @@
 .bv/
 .vercel
 .env*.local
+
+# dependencies
+node_modules/
+**/node_modules/
+
+# build/test outputs
+dist/
+**/dist/
+coverage/
+**/coverage/
+apps/web/playwright-report/
+apps/web/test-results/
+apps/web/.next/
+apps/web/out/
+*.tsbuildinfo
+
+# OS junk
+.DS_Store
