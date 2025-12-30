@@ -311,7 +311,7 @@ function validateDelta(raw: unknown, rawJson: string): ParsedDelta {
  *
  * Captures the content between the fences.
  */
-const DELTA_BLOCK_REGEX = /```delta\s*\n([\s\S]*?)```/g;
+const DELTA_BLOCK_REGEX = /```delta\s*\r?\n([\s\S]*?)```/g;
 
 /**
  * Extract all delta blocks from a markdown message body.

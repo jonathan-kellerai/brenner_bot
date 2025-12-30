@@ -9,7 +9,8 @@
  */
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import MiniSearch from "minisearch";
 
 // Import parsers - use relative paths for build script
@@ -60,8 +61,9 @@ interface IndexStats {
 // Configuration
 // ============================================================================
 
-// Use import.meta.url for cross-runtime compatibility (works in Bun and Node)
-const __dirname = new URL(".", import.meta.url).pathname;
+// Use import.meta.url for cross-runtime compatibility (works in Bun and Node).
+// NOTE: fileURLToPath avoids Windows "/C:/" paths and percent-encoded characters in URL.pathname.
+const __dirname = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = resolve(__dirname, "../../..");
 const OUTPUT_DIR = resolve(__dirname, "../public/search");
 const OUTPUT_FILE = join(OUTPUT_DIR, "index.json");
@@ -79,7 +81,7 @@ const INDEXABLE_CATEGORIES: DocCategory[] = [
 // Document Processing
 // ============================================================================
 
-function readCorpusFile(filename: string): string {
+const readCorpusFile = (filename: string): string => {
   // Try public/_corpus first (for build process)
   const publicPath = join(__dirname, "../public/_corpus", filename);
   if (existsSync(publicPath)) {
@@ -93,9 +95,9 @@ function readCorpusFile(filename: string): string {
   }
 
   throw new Error(`Corpus file not found: ${filename}`);
-}
+};
 
-function processTranscript(docId: string, docTitle: string, content: string): SearchEntry[] {
+const processTranscript = (docId: string, docTitle: string, content: string): SearchEntry[] => {
   const entries: SearchEntry[] = [];
   const parsed = parseTranscript(content);
 
@@ -119,9 +121,9 @@ function processTranscript(docId: string, docTitle: string, content: string): Se
   }
 
   return entries;
-}
+};
 
-function processDistillation(docId: string, docTitle: string, content: string): SearchEntry[] {
+const processDistillation = (docId: string, docTitle: string, content: string): SearchEntry[] => {
   const entries: SearchEntry[] = [];
   const parsed = parseDistillation(content, docId);
   const includePartPrefix = parsed.parts.length > 1;
@@ -175,9 +177,9 @@ function processDistillation(docId: string, docTitle: string, content: string): 
   }
 
   return entries;
-}
+};
 
-function processQuoteBank(docId: string, docTitle: string, content: string): SearchEntry[] {
+const processQuoteBank = (docId: string, docTitle: string, content: string): SearchEntry[] => {
   const entries: SearchEntry[] = [];
   const parsed = parseQuoteBank(content);
 
@@ -198,9 +200,9 @@ function processQuoteBank(docId: string, docTitle: string, content: string): Sea
   }
 
   return entries;
-}
+};
 
-function processMetaprompt(docId: string, docTitle: string, content: string): SearchEntry[] {
+const processMetaprompt = (docId: string, docTitle: string, content: string): SearchEntry[] => {
   const entries: SearchEntry[] = [];
   const parsed = parseMetaprompt(content);
 
@@ -220,13 +222,13 @@ function processMetaprompt(docId: string, docTitle: string, content: string): Se
   }
 
   return entries;
-}
+};
 
 // ============================================================================
 // Index Building
 // ============================================================================
 
-function buildIndex(): { entries: SearchEntry[]; miniSearchIndex: object; stats: IndexStats; buildTimeMs: number } {
+const buildIndex = (): { entries: SearchEntry[]; miniSearchIndex: object; stats: IndexStats; buildTimeMs: number } => {
   const startTime = Date.now();
   const entries: SearchEntry[] = [];
   const byCategory: Record<string, number> = {};
@@ -300,13 +302,13 @@ function buildIndex(): { entries: SearchEntry[]; miniSearchIndex: object; stats:
   console.log(`  Build time: ${buildTimeMs}ms`);
 
   return { entries, miniSearchIndex, stats, buildTimeMs };
-}
+};
 
 // ============================================================================
 // Main
 // ============================================================================
 
-function main() {
+const main = (): void => {
   console.log("╔══════════════════════════════════════════════════════════╗");
   console.log("║           SEARCH INDEX BUILDER                           ║");
   console.log("╚══════════════════════════════════════════════════════════╝\n");
@@ -341,6 +343,6 @@ function main() {
     console.log(`║    ${category}: ${String(count).padEnd(48)}║`);
   }
   console.log("╚══════════════════════════════════════════════════════════╝\n");
-}
+};
 
 main();

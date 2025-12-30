@@ -49,6 +49,32 @@ Some prose explanation here.
     });
   });
 
+  it("parses delta blocks with CRLF line endings", () => {
+    const body =
+      "Some prose.\r\n\r\n```delta\r\n{\r\n" +
+      '  "operation": "ADD",\r\n' +
+      '  "section": "hypothesis_slate",\r\n' +
+      '  "target_id": null,\r\n' +
+      '  "payload": {\r\n' +
+      '    "name": "CRLF Hypothesis",\r\n' +
+      '    "claim": "X causes Y",\r\n' +
+      '    "mechanism": "Via Z"\r\n' +
+      "  }\r\n" +
+      "}\r\n```\r\n";
+
+    const result = parseDeltaMessage(body);
+
+    expect(result.totalBlocks).toBe(1);
+    expect(result.validCount).toBe(1);
+    expect(result.invalidCount).toBe(0);
+    expect(result.deltas[0]).toMatchObject({
+      valid: true,
+      operation: "ADD",
+      section: "hypothesis_slate",
+      target_id: null,
+    });
+  });
+
   it("parses a valid EDIT delta with target_id", () => {
     const body = `
 \`\`\`delta
