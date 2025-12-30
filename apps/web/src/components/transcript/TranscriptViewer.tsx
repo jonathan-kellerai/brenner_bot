@@ -568,6 +568,10 @@ interface TranscriptViewerProps {
   wordCount: string;
 }
 
+// Progressive loading for mobile performance - load sections incrementally
+const MOBILE_INITIAL_SECTIONS = 8;
+const MOBILE_LOAD_INCREMENT = 8;
+
 export function TranscriptViewer({ data, estimatedReadTime, wordCount }: TranscriptViewerProps) {
   const [activeSection, setActiveSection] = useState(0);
   const [readingProgress, setReadingProgress] = useState(0);
@@ -575,7 +579,9 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   const [highlightedSection, setHighlightedSection] = useState<number | null>(null);
   const [searchNavQuery, setSearchNavQuery] = useState<string | null>(null);
   const [isMobileTocOpen, setIsMobileTocOpen] = useState(false);
+  const [mobileSectionsLoaded, setMobileSectionsLoaded] = useState(MOBILE_INITIAL_SECTIONS);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const loadMoreSentinelRef = useRef<HTMLDivElement>(null);
 
   // Current section for sticky indicator
   const currentSection = data.sections[activeSection] ?? null;
@@ -712,6 +718,26 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
     };
   }, [virtualizer, savePosition, data.sections]);
 
+  // Progressive loading: IntersectionObserver to load more sections on mobile
+  useEffect(() => {
+    if (typeof window === "undefined" || window.innerWidth >= 1024) return;
+
+    const sentinel = loadMoreSentinelRef.current;
+    if (!sentinel) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting && mobileSectionsLoaded < data.sections.length) {
+          setMobileSectionsLoaded((n) => Math.min(n + MOBILE_LOAD_INCREMENT, data.sections.length));
+        }
+      },
+      { rootMargin: "300px" }
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [mobileSectionsLoaded, data.sections.length]);
+
   // Handle URL hash OR restore saved position on mount
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -783,12 +809,30 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
       const isMobile = window.innerWidth < 1024;
 
       if (isMobile) {
-        // Mobile: scroll the section element into view
-        const section = data.sections[index];
-        if (section) {
-          const el = document.getElementById(`section-${section.number}`);
-          if (el) {
-            el.scrollIntoView({ behavior: "smooth", block: "start" });
+        // Mobile: ensure section is loaded first (progressive loading)
+        if (index >= mobileSectionsLoaded) {
+          // Load up to the target section plus a buffer
+          setMobileSectionsLoaded(Math.min(index + MOBILE_LOAD_INCREMENT, data.sections.length));
+          // Wait for DOM update then scroll
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              const section = data.sections[index];
+              if (section) {
+                const el = document.getElementById(`section-${section.number}`);
+                if (el) {
+                  el.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+              }
+            });
+          });
+        } else {
+          // Section already loaded, scroll directly
+          const section = data.sections[index];
+          if (section) {
+            const el = document.getElementById(`section-${section.number}`);
+            if (el) {
+              el.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
           }
         }
       } else {
@@ -796,7 +840,7 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         virtualizer.scrollToIndex(index, { align: "start", behavior: "smooth" });
       }
     },
-    [virtualizer, data.sections]
+    [virtualizer, data.sections, mobileSectionsLoaded]
   );
 
   // Memoize virtual items to avoid recalculation
@@ -866,9 +910,9 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
 
           {/* Main content - normal flow on mobile, virtualized container on desktop */}
           <main className="scroll-smooth">
-            {/* Mobile: render all sections in normal document flow (no virtualization) */}
+            {/* Mobile: progressive loading - render sections incrementally */}
             <div className="lg:hidden">
-              {data.sections.map((section, index) => (
+              {data.sections.slice(0, mobileSectionsLoaded).map((section, index) => (
                 <TranscriptSection
                   key={section.number}
                   section={section}
@@ -877,6 +921,18 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
                   searchHighlights={searchHighlights}
                 />
               ))}
+              {/* Sentinel for loading more sections */}
+              {mobileSectionsLoaded < data.sections.length && (
+                <div
+                  ref={loadMoreSentinelRef}
+                  className="flex items-center justify-center py-8 text-muted-foreground"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="size-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                    <span className="text-sm">Loading more sections...</span>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Desktop: virtualized scroll container */}
