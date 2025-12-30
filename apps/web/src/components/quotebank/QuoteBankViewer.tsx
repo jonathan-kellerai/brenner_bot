@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useRef, useCallback } from "react";
+import { useState, useMemo, useRef } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
 import { filterQuotesByTag, searchQuotes } from "@/lib/quotebank-parser";
@@ -309,7 +309,7 @@ export function QuoteBankViewer({ data }: QuoteBankViewerProps) {
     count: filteredQuotes.length,
     getScrollElement: () => scrollContainerRef.current,
     // Estimate average quote card height (will be measured dynamically)
-    estimateSize: useCallback(() => 280, []),
+    estimateSize: () => 280,
     // Render extra items above/below viewport for smoother scrolling
     overscan: 3,
   });
