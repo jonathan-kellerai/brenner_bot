@@ -1,12 +1,9 @@
 import { resolve } from "node:path";
 import { cookies, headers } from "next/headers";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { AgentMailClient } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
-import { composePrompt } from "@/lib/prompts";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
+import { SessionForm } from "@/components/sessions";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -234,80 +231,6 @@ function parseAgentsResult(result: unknown): AgentDirectory | null {
   return null;
 }
 
-function splitCsv(raw: string): string[] {
-  return raw
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-async function sendKickoff(formData: FormData): Promise<void> {
-  "use server";
-
-  // Fail-closed: check both lab mode AND optional secret
-  const reqHeaders = await headers();
-  const reqCookies = await cookies();
-  const authResult = checkOrchestrationAuth(reqHeaders, reqCookies);
-  if (!authResult.authorized) {
-    // Return 404 to avoid leaking that this route exists
-    notFound();
-  }
-
-  const projectKey = String(formData.get("projectKey") || repoRootFromWebCwd());
-  const sender = String(formData.get("sender") || "").trim();
-  const recipients = splitCsv(String(formData.get("to") || ""));
-  const threadId = String(formData.get("threadId") || "").trim();
-
-  const excerpt = String(formData.get("excerpt") || "");
-  const theme = String(formData.get("theme") || "").trim() || undefined;
-  const domain = String(formData.get("domain") || "").trim() || undefined;
-  const question = String(formData.get("question") || "").trim() || undefined;
-  const ackRequired = formData.get("ackRequired") === "on";
-
-  if (!sender) throw new Error("Missing sender");
-  if (!threadId) throw new Error("Missing thread id");
-  if (recipients.length === 0) throw new Error("Missing recipients");
-  if (!excerpt.trim()) throw new Error("Missing transcript excerpt");
-
-  const client = new AgentMailClient();
-  const subjectRaw = String(formData.get("subject") || "").trim();
-  const subject = subjectRaw || `[${threadId}] Brenner Loop kickoff`;
-
-  const body = await composePrompt({
-    templatePathFromRepoRoot: "metaprompt_by_gpt_52.md",
-    excerpt,
-    theme,
-    domain,
-    question,
-  });
-
-  let projectSlug = projectKey;
-  if (projectKey.startsWith("/")) {
-    const ensured = await client.toolsCall("ensure_project", { human_key: projectKey });
-    const ensuredSlug = parseEnsureProjectSlug(ensured);
-    if (!ensuredSlug) throw new Error("Agent Mail: ensure_project did not return a project slug.");
-    projectSlug = ensuredSlug;
-  }
-  await client.toolsCall("register_agent", {
-    project_key: projectSlug,
-    name: sender,
-    program: "brenner-web",
-    model: "nextjs",
-    task_description: `Brenner Bot session: ${threadId}`,
-  });
-  await client.toolsCall("send_message", {
-    project_key: projectSlug,
-    sender_name: sender,
-    to: recipients,
-    subject,
-    body_md: body,
-    thread_id: threadId,
-    ack_required: ackRequired,
-  });
-
-  redirect(`/sessions/new?sent=1&thread=${encodeURIComponent(threadId)}`);
-}
-
 export default async function NewSessionPage({
   searchParams,
 }: {
@@ -444,115 +367,13 @@ export default async function NewSessionPage({
         )}
       </div>
 
-      {/* Form */}
-      <form action={sendKickoff} className="space-y-6 animate-fade-in-up stagger-2">
-        {/* Session Setup */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Session Setup</h2>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              name="threadId"
-              label="Thread ID"
-              placeholder="FEAT-123"
-              hint="Unique identifier for this research thread"
-              required
-            />
-            <Input
-              name="sender"
-              label="Your Agent Name"
-              defaultValue={senderDefault}
-              placeholder="GreenCastle"
-              hint="How you'll appear in Agent Mail"
-              required
-            />
-          </div>
-
-          <Input
-            name="to"
-            label="Recipients"
-            placeholder="BlueMountain, RedForest"
-            hint="Comma-separated list of agent names"
-            required
-          />
-
-          <Input
-            name="subject"
-            label="Subject"
-            placeholder="[FEAT-123] Brenner Loop kickoff"
-            hint="Optional - will auto-generate from thread ID if left blank"
-          />
-        </div>
-
-        {/* Content */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Content</h2>
-
-          <Textarea
-            name="excerpt"
-            label="Transcript Excerpt"
-            placeholder="Paste transcript chunks here (with section headings if you have them)."
-            hint="The raw Brenner transcript material to analyze"
-            className="min-h-[200px] font-mono text-sm"
-            autoResize
-            required
-          />
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <Input
-              name="theme"
-              label="Theme"
-              placeholder="decision experiments"
-              hint="Optional focus area"
-            />
-            <Input
-              name="domain"
-              label="Domain"
-              placeholder="biology"
-              hint="Optional field context"
-            />
-            <Input
-              name="question"
-              label="Question"
-              placeholder="What's the most discriminative next experiment?"
-              hint="Optional guiding question"
-            />
-          </div>
-        </div>
-
-        {/* Options */}
-        <div className="space-y-4">
-          <h2 className="text-lg font-semibold text-foreground">Options</h2>
-
-          <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
-            <input
-              type="checkbox"
-              name="ackRequired"
-              className="size-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background"
-            />
-            <div>
-              <div className="font-medium text-foreground">Require acknowledgment</div>
-              <div className="text-sm text-muted-foreground">Recipients must explicitly confirm receipt</div>
-            </div>
-          </label>
-        </div>
-
-        {/* Hidden Fields */}
-        <input type="hidden" name="projectKey" value={projectKeyDefault} />
-
-        {/* Submit */}
-        <div className="flex items-center gap-4 pt-4 border-t border-border">
-          <Button type="submit" size="lg" className="gap-2">
-            <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-            </svg>
-            Send Kickoff
-          </Button>
-          <p className="text-sm text-muted-foreground">
-            This will compose and send a Brenner Loop prompt to the specified agents.
-          </p>
-        </div>
-      </form>
+      {/* Form - Uses TanStack Form for field-level validation */}
+      <div className="animate-fade-in-up stagger-2">
+        <SessionForm
+          defaultSender={senderDefault}
+          defaultProjectKey={projectKeyDefault}
+        />
+      </div>
     </div>
   );
 }

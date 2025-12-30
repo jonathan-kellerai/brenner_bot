@@ -3,9 +3,11 @@
 /**
  * SessionForm - Client Component for Session Creation
  *
+ * Uses TanStack Form for field-level validation with Zod schemas.
  * Uses TanStack Query mutation for proper loading/error state management.
+ *
  * Renders the Brenner Loop session kickoff form with:
- * - Real-time validation feedback
+ * - Real-time validation feedback on blur
  * - Loading spinner during submission
  * - Error display with actionable messages
  * - Success notification and redirect
@@ -13,14 +15,15 @@
 
 import * as React from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "@tanstack/react-form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
   useSessionMutation,
   getSessionErrorMessage,
-  type SessionKickoffInput,
 } from "@/hooks/mutations/useSessionMutation";
+import { sessionFormSchema, sessionFieldValidators } from "@/lib/schemas/session";
 
 // ============================================================================
 // Icons
@@ -76,6 +79,21 @@ interface SessionFormProps {
 }
 
 // ============================================================================
+// Field Error Component
+// ============================================================================
+
+function FieldError({ errors }: { errors: string[] }) {
+  if (!errors.length) return null;
+  return (
+    <div className="mt-1 text-sm text-destructive">
+      {errors.map((error, i) => (
+        <p key={i}>{error}</p>
+      ))}
+    </div>
+  );
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -83,41 +101,56 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
   const router = useRouter();
   const mutation = useSessionMutation();
 
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const form = useForm({
+    defaultValues: {
+      threadId: "",
+      sender: defaultSender,
+      recipients: "",
+      subject: "",
+      excerpt: "",
+      theme: "",
+      domain: "",
+      question: "",
+      ackRequired: false,
+    },
+    onSubmit: async ({ value }) => {
+      // Parse and validate with full schema
+      const parsed = sessionFormSchema.safeParse(value);
+      if (!parsed.success) {
+        return;
+      }
 
-    const formData = new FormData(e.currentTarget);
-
-    // Build input from form data
-    const recipientsRaw = String(formData.get("to") || "");
-    const recipients = recipientsRaw
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    const input: SessionKickoffInput = {
-      projectKey: defaultProjectKey || undefined,
-      sender: String(formData.get("sender") || "").trim(),
-      recipients,
-      threadId: String(formData.get("threadId") || "").trim(),
-      subject: String(formData.get("subject") || "").trim() || undefined,
-      excerpt: String(formData.get("excerpt") || "").trim(),
-      theme: String(formData.get("theme") || "").trim() || undefined,
-      domain: String(formData.get("domain") || "").trim() || undefined,
-      question: String(formData.get("question") || "").trim() || undefined,
-      ackRequired: formData.get("ackRequired") === "on",
-    };
-
-    mutation.mutate(input, {
-      onSuccess: (result) => {
-        // Redirect to success state
-        router.push(`/sessions/new?sent=1&thread=${encodeURIComponent(result.threadId)}`);
-      },
-    });
-  };
+      mutation.mutate(
+        {
+          projectKey: defaultProjectKey || undefined,
+          sender: parsed.data.sender,
+          recipients: parsed.data.recipients,
+          threadId: parsed.data.threadId,
+          subject: parsed.data.subject || undefined,
+          excerpt: parsed.data.excerpt,
+          theme: parsed.data.theme || undefined,
+          domain: parsed.data.domain || undefined,
+          question: parsed.data.question || undefined,
+          ackRequired: parsed.data.ackRequired,
+        },
+        {
+          onSuccess: (result) => {
+            router.push(`/sessions/new?sent=1&thread=${encodeURIComponent(result.threadId)}`);
+          },
+        }
+      );
+    },
+  });
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        void form.handleSubmit();
+      }}
+      className="space-y-6"
+    >
       {/* Error Display */}
       {mutation.isError && (
         <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 flex items-start gap-3 animate-fade-in-up">
@@ -138,80 +171,202 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
         <h2 className="text-lg font-semibold text-foreground">Session Setup</h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Input
+          <form.Field
             name="threadId"
-            label="Thread ID"
-            placeholder="FEAT-123"
-            hint="Unique identifier for this research thread"
-            required
-            disabled={mutation.isPending}
-          />
-          <Input
+            validators={{
+              onBlur: sessionFieldValidators.threadId,
+            }}
+          >
+            {(field) => (
+              <div>
+                <Input
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  label="Thread ID"
+                  placeholder="FEAT-123"
+                  hint="Unique identifier for this research thread"
+                  disabled={mutation.isPending}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FieldError errors={field.state.meta.errors.map(String)} />
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field
             name="sender"
-            label="Your Agent Name"
-            defaultValue={defaultSender}
-            placeholder="GreenCastle"
-            hint="How you'll appear in Agent Mail"
-            required
-            disabled={mutation.isPending}
-          />
+            validators={{
+              onBlur: sessionFieldValidators.sender,
+            }}
+          >
+            {(field) => (
+              <div>
+                <Input
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  label="Your Agent Name"
+                  placeholder="GreenCastle"
+                  hint="How you'll appear in Agent Mail"
+                  disabled={mutation.isPending}
+                  aria-invalid={field.state.meta.errors.length > 0}
+                />
+                <FieldError errors={field.state.meta.errors.map(String)} />
+              </div>
+            )}
+          </form.Field>
         </div>
 
-        <Input
-          name="to"
-          label="Recipients"
-          placeholder="BlueMountain, RedForest"
-          hint="Comma-separated list of agent names"
-          required
-          disabled={mutation.isPending}
-        />
+        <form.Field
+          name="recipients"
+          validators={{
+            onBlur: sessionFieldValidators.recipients,
+          }}
+        >
+          {(field) => (
+            <div>
+              <Input
+                name={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                label="Recipients"
+                placeholder="BlueMountain, RedForest"
+                hint="Comma-separated list of agent names"
+                disabled={mutation.isPending}
+                aria-invalid={field.state.meta.errors.length > 0}
+              />
+              <FieldError errors={field.state.meta.errors.map(String)} />
+            </div>
+          )}
+        </form.Field>
 
-        <Input
+        <form.Field
           name="subject"
-          label="Subject"
-          placeholder="[FEAT-123] Brenner Loop kickoff"
-          hint="Optional - will auto-generate from thread ID if left blank"
-          disabled={mutation.isPending}
-        />
+          validators={{
+            onBlur: sessionFieldValidators.subject,
+          }}
+        >
+          {(field) => (
+            <div>
+              <Input
+                name={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                label="Subject"
+                placeholder="[FEAT-123] Brenner Loop kickoff"
+                hint="Optional - will auto-generate from thread ID if left blank"
+                disabled={mutation.isPending}
+              />
+              <FieldError errors={field.state.meta.errors.map(String)} />
+            </div>
+          )}
+        </form.Field>
       </div>
 
       {/* Content */}
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Content</h2>
 
-        <Textarea
+        <form.Field
           name="excerpt"
-          label="Transcript Excerpt"
-          placeholder="Paste transcript chunks here (with section headings if you have them)."
-          hint="The raw Brenner transcript material to analyze"
-          className="min-h-[200px] font-mono text-sm"
-          autoResize
-          required
-          disabled={mutation.isPending}
-        />
+          validators={{
+            onBlur: sessionFieldValidators.excerpt,
+          }}
+        >
+          {(field) => (
+            <div>
+              <Textarea
+                name={field.name}
+                value={field.state.value}
+                onChange={(e) => field.handleChange(e.target.value)}
+                onBlur={field.handleBlur}
+                label="Transcript Excerpt"
+                placeholder="Paste transcript chunks here (with section headings if you have them)."
+                hint="The raw Brenner transcript material to analyze"
+                className="min-h-[200px] font-mono text-sm"
+                autoResize
+                disabled={mutation.isPending}
+                aria-invalid={field.state.meta.errors.length > 0}
+              />
+              <FieldError errors={field.state.meta.errors.map(String)} />
+            </div>
+          )}
+        </form.Field>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Input
+          <form.Field
             name="theme"
-            label="Theme"
-            placeholder="decision experiments"
-            hint="Optional focus area"
-            disabled={mutation.isPending}
-          />
-          <Input
+            validators={{
+              onBlur: sessionFieldValidators.theme,
+            }}
+          >
+            {(field) => (
+              <div>
+                <Input
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  label="Theme"
+                  placeholder="decision experiments"
+                  hint="Optional focus area"
+                  disabled={mutation.isPending}
+                />
+                <FieldError errors={field.state.meta.errors.map(String)} />
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field
             name="domain"
-            label="Domain"
-            placeholder="biology"
-            hint="Optional field context"
-            disabled={mutation.isPending}
-          />
-          <Input
+            validators={{
+              onBlur: sessionFieldValidators.domain,
+            }}
+          >
+            {(field) => (
+              <div>
+                <Input
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  label="Domain"
+                  placeholder="biology"
+                  hint="Optional field context"
+                  disabled={mutation.isPending}
+                />
+                <FieldError errors={field.state.meta.errors.map(String)} />
+              </div>
+            )}
+          </form.Field>
+
+          <form.Field
             name="question"
-            label="Question"
-            placeholder="What's the most discriminative next experiment?"
-            hint="Optional guiding question"
-            disabled={mutation.isPending}
-          />
+            validators={{
+              onBlur: sessionFieldValidators.question,
+            }}
+          >
+            {(field) => (
+              <div>
+                <Input
+                  name={field.name}
+                  value={field.state.value}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  onBlur={field.handleBlur}
+                  label="Question"
+                  placeholder="What's the most discriminative next experiment?"
+                  hint="Optional guiding question"
+                  disabled={mutation.isPending}
+                />
+                <FieldError errors={field.state.meta.errors.map(String)} />
+              </div>
+            )}
+          </form.Field>
         </div>
       </div>
 
@@ -219,37 +374,53 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-foreground">Options</h2>
 
-        <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
-          <input
-            type="checkbox"
-            name="ackRequired"
-            disabled={mutation.isPending}
-            className="size-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background disabled:opacity-50"
-          />
-          <div>
-            <div className="font-medium text-foreground">Require acknowledgment</div>
-            <div className="text-sm text-muted-foreground">
-              Recipients must explicitly confirm receipt
-            </div>
-          </div>
-        </label>
+        <form.Field name="ackRequired">
+          {(field) => (
+            <label className="flex items-center gap-3 p-4 rounded-xl border border-border bg-card hover:bg-muted/50 cursor-pointer transition-colors">
+              <input
+                type="checkbox"
+                checked={field.state.value}
+                onChange={(e) => field.handleChange(e.target.checked)}
+                disabled={mutation.isPending}
+                className="size-5 rounded border-border text-primary focus:ring-primary focus:ring-offset-background disabled:opacity-50"
+              />
+              <div>
+                <div className="font-medium text-foreground">Require acknowledgment</div>
+                <div className="text-sm text-muted-foreground">
+                  Recipients must explicitly confirm receipt
+                </div>
+              </div>
+            </label>
+          )}
+        </form.Field>
       </div>
 
       {/* Submit */}
       <div className="flex items-center gap-4 pt-4 border-t border-border">
-        <Button type="submit" size="lg" className="gap-2" disabled={mutation.isPending}>
-          {mutation.isPending ? (
-            <>
-              <LoadingSpinner />
-              Sending...
-            </>
-          ) : (
-            <>
-              <SendIcon />
-              Send Kickoff
-            </>
+        <form.Subscribe
+          selector={(state) => [state.canSubmit, state.isSubmitting]}
+        >
+          {([canSubmit, isSubmitting]) => (
+            <Button
+              type="submit"
+              size="lg"
+              className="gap-2"
+              disabled={!canSubmit || mutation.isPending || isSubmitting}
+            >
+              {mutation.isPending ? (
+                <>
+                  <LoadingSpinner />
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <SendIcon />
+                  Send Kickoff
+                </>
+              )}
+            </Button>
           )}
-        </Button>
+        </form.Subscribe>
         <p className="text-sm text-muted-foreground">
           {mutation.isPending
             ? "Composing prompt and sending to Agent Mail..."
