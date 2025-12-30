@@ -79,21 +79,7 @@ status: "active"
 - Speed: 2 (1-2 weeks per experimental series)
 - Ambiguity: 3 (digital readout — cell expresses marker or doesn't)
 
-### T2: Division block + fate scoring (Score: 8/12)
-**Procedure**: Chemically or genetically block cell division using hydroxyurea or cdk mutants. Score whether fate determination proceeds in arrested cells.
-**Discriminates**: H1 vs H2
-**Expected outcomes**:
-- If H1: Fate determination fails (no lineage history to count)
-- If H2: Fate determination proceeds (gradient reading doesn't require division)
-**Potency check**: Verify division block by DNA content measurement (cells should be polyploid if block worked). Include known division-independent fate decisions as positive control.
-**Feasibility**: Standard reagents and tools. Easy technical execution.
-**Evidence-per-week score**:
-- Likelihood ratio: 2 (10-100:1 — some confounding toxicity effects)
-- Cost: 3 (<$1K)
-- Speed: 2 (1 week)
-- Ambiguity: 1 (confounds: drug toxicity, off-target effects)
-
-### T3: Morphogen source ablation with gradient reporter (Score: 9/12)
+### T2: Morphogen source ablation with gradient reporter (Score: 9/12)
 **Procedure**: Laser-ablate cells that produce candidate morphogens (e.g., Wnt sources). Monitor gradient shape with fluorescent reporters and score downstream cell fates.
 **Discriminates**: H2 vs H1/H4
 **Expected outcomes**:
@@ -106,6 +92,20 @@ status: "active"
 - Cost: 2 ($5-10K for laser setup if not available)
 - Speed: 2 (1-2 weeks)
 - Ambiguity: 2 (some confounds from cell death signalling)
+
+### T3: Division block + fate scoring (Score: 8/12)
+**Procedure**: Chemically or genetically block cell division using hydroxyurea or cdk mutants. Score whether fate determination proceeds in arrested cells.
+**Discriminates**: H1 vs H2
+**Expected outcomes**:
+- If H1: Fate determination fails (no lineage history to count)
+- If H2: Fate determination proceeds (gradient reading doesn't require division)
+**Potency check**: Verify division block by DNA content measurement (cells should be polyploid if block worked). Include known division-independent fate decisions as positive control.
+**Feasibility**: Standard reagents and tools. Easy technical execution.
+**Evidence-per-week score**:
+- Likelihood ratio: 2 (10-100:1 — some confounding toxicity effects)
+- Cost: 3 (<$1K)
+- Speed: 2 (1 week)
+- Ambiguity: 1 (confounds: drug toxicity, off-target effects)
 
 ### T4: Single-cell transcriptomics across lineage branches (Score: 7/12)
 **Procedure**: Perform scRNA-seq on embryos at multiple stages. Cluster cells and ask whether clusters correspond to lineage clades or spatial domains.
@@ -211,7 +211,7 @@ status: "active"
 - [x] Third alternative explicitly labeled (H3)
 - [x] At least 3 predictions in table (5 present)
 - [x] At least 2 discriminative tests (4 present)
-- [x] Tests ranked by score (T1: 10/12, T3: 9/12, T2: 8/12, T4: 7/12)
+- [x] Tests ranked by score (T1: 10/12, T2: 9/12, T3: 8/12, T4: 7/12)
 - [x] All tests have potency checks
 - [x] At least 3 assumptions (6 present)
 - [x] At least 1 scale check (2 present: A4, A5)
