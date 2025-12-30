@@ -5,7 +5,36 @@ High‑signal verbatim snippets keyed by the `§` (transcript section number) an
 Conventions:
 - Quotes are verbatim (no editorial ellipses).
 - Each entry captures one “primitive” Brenner move/constraint/stance.
-- Tags are descriptive (not yet canonical).
+- Tags are kebab-case. Prefer canonical tags (taxonomy below); legacy tags remain until migrated.
+
+## Tag taxonomy v0.1
+
+This is a compact, stable tag set intended for UI/search filtering. Use these tags when applicable.
+
+### Operator tags (canonical)
+
+- `level-split` (⊘)
+- `recode` (𝓛)
+- `invariant-extract` (≡)
+- `exclusion-test` (✂)
+- `object-transpose` (⟂)
+- `amplify` (↑)
+- `cross-domain` (⊕)
+- `paradox-hunt` (◊)
+- `exception-quarantine` (ΔE)
+- `dephase` (∿)
+- `theory-kill` (†)
+- `materialize` (⌂)
+- `diy` (🔧)
+- `scale-check` (⊞)
+
+### Motif tags (canonical)
+
+- `third-alternative`
+- `digital-handle`
+- `dont-worry`
+- `chastity-vs-impotence`
+- `out-of-phase`
 
 ---
 
