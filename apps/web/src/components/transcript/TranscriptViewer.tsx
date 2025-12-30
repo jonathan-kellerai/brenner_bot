@@ -643,11 +643,44 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
   });
 
   // Track active section based on scroll position
+  // Mobile uses window scroll, desktop uses container scroll
   useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    // Check if we're on mobile (lg breakpoint is 1024px)
+    const checkIsMobile = () => window.innerWidth < 1024;
+    let isMobile = checkIsMobile();
 
-    const handleScroll = () => {
+    // Mobile scroll handler - uses window scroll
+    const handleMobileScroll = () => {
+      const scrollTop = window.scrollY;
+      const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+
+      // Update reading progress
+      const progress = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
+      setReadingProgress(Math.min(100, Math.max(0, progress)));
+
+      // Find active section by checking element positions
+      const sectionElements = document.querySelectorAll("[id^='section-']");
+      const viewportTop = scrollTop + window.innerHeight * 0.3;
+
+      for (let i = sectionElements.length - 1; i >= 0; i--) {
+        const el = sectionElements[i] as HTMLElement;
+        if (el.offsetTop <= viewportTop) {
+          const sectionNum = parseInt(el.id.replace("section-", ""), 10);
+          const sectionIndex = data.sections.findIndex((s) => s.number === sectionNum);
+          if (sectionIndex >= 0) {
+            setActiveSection(sectionIndex);
+            savePosition(scrollTop, sectionIndex);
+          }
+          break;
+        }
+      }
+    };
+
+    // Desktop scroll handler - uses container scroll with virtualizer
+    const handleDesktopScroll = () => {
+      const container = scrollContainerRef.current;
+      if (!container) return;
+
       const scrollTop = container.scrollTop;
       const scrollHeight = container.scrollHeight - container.clientHeight;
 
@@ -665,18 +698,51 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
         const itemBottom = item.start + item.size;
         if (itemBottom > viewportCenter) {
           setActiveSection(item.index);
-          // Save position for persistence (debounced in hook)
           savePosition(scrollTop, item.index);
           break;
         }
       }
     };
 
-    container.addEventListener("scroll", handleScroll, { passive: true });
-    handleScroll(); // Initial call
+    // Handle resize to switch between mobile/desktop handlers
+    const handleResize = () => {
+      const wasMobile = isMobile;
+      isMobile = checkIsMobile();
 
-    return () => container.removeEventListener("scroll", handleScroll);
-  }, [virtualizer, savePosition]);
+      if (wasMobile !== isMobile) {
+        // Switched modes - update listeners
+        if (wasMobile) {
+          window.removeEventListener("scroll", handleMobileScroll);
+          scrollContainerRef.current?.addEventListener("scroll", handleDesktopScroll, {
+            passive: true,
+          });
+        } else {
+          scrollContainerRef.current?.removeEventListener("scroll", handleDesktopScroll);
+          window.addEventListener("scroll", handleMobileScroll, { passive: true });
+        }
+      }
+    };
+
+    // Set up initial listeners
+    if (isMobile) {
+      window.addEventListener("scroll", handleMobileScroll, { passive: true });
+      handleMobileScroll();
+    } else {
+      const container = scrollContainerRef.current;
+      if (container) {
+        container.addEventListener("scroll", handleDesktopScroll, { passive: true });
+        handleDesktopScroll();
+      }
+    }
+
+    window.addEventListener("resize", handleResize, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", handleMobileScroll);
+      window.removeEventListener("resize", handleResize);
+      scrollContainerRef.current?.removeEventListener("scroll", handleDesktopScroll);
+    };
+  }, [virtualizer, savePosition, data.sections]);
 
   // Handle URL hash OR restore saved position on mount
   useEffect(() => {
@@ -793,44 +859,60 @@ export function TranscriptViewer({ data, estimatedReadTime, wordCount }: Transcr
             onTocClick={() => setIsMobileTocOpen(!isMobileTocOpen)}
           />
 
-          {/* Main content - uses window scroll on mobile, virtualized container on desktop */}
-          <main
-            ref={scrollContainerRef}
-            className="lg:h-[calc(100dvh-200px)] lg:overflow-y-auto scroll-smooth"
-          >
-            {/* Total height spacer */}
+          {/* Main content - normal flow on mobile, virtualized container on desktop */}
+          <main className="scroll-smooth">
+            {/* Mobile: render all sections in normal document flow (no virtualization) */}
+            <div className="lg:hidden">
+              {data.sections.map((section, index) => (
+                <TranscriptSection
+                  key={section.number}
+                  section={section}
+                  isActive={activeSection === index}
+                  isHighlighted={highlightedSection === index}
+                  searchHighlights={searchHighlights}
+                />
+              ))}
+            </div>
+
+            {/* Desktop: virtualized scroll container */}
             <div
-              style={{
-                height: virtualizer.getTotalSize(),
-                width: "100%",
-                position: "relative",
-              }}
+              ref={scrollContainerRef}
+              className="hidden lg:block h-[calc(100dvh-200px)] overflow-y-auto scroll-smooth"
             >
-              {/* Only render visible items */}
-              {virtualItems.map((virtualRow) => {
-                const section = data.sections[virtualRow.index];
-                return (
-                  <div
-                    key={section.number}
-                    data-index={virtualRow.index}
-                    ref={virtualizer.measureElement}
-                    style={{
-                      position: "absolute",
-                      top: 0,
-                      left: 0,
-                      width: "100%",
-                      transform: `translateY(${virtualRow.start}px)`,
-                    }}
-                  >
-                    <TranscriptSection
-                      section={section}
-                      isActive={activeSection === virtualRow.index}
-                      isHighlighted={highlightedSection === virtualRow.index}
-                      searchHighlights={searchHighlights}
-                    />
-                  </div>
-                );
-              })}
+              {/* Total height spacer for virtualization */}
+              <div
+                style={{
+                  height: virtualizer.getTotalSize(),
+                  width: "100%",
+                  position: "relative",
+                }}
+              >
+                {/* Only render visible items */}
+                {virtualItems.map((virtualRow) => {
+                  const section = data.sections[virtualRow.index];
+                  return (
+                    <div
+                      key={section.number}
+                      data-index={virtualRow.index}
+                      ref={virtualizer.measureElement}
+                      style={{
+                        position: "absolute",
+                        top: 0,
+                        left: 0,
+                        width: "100%",
+                        transform: `translateY(${virtualRow.start}px)`,
+                      }}
+                    >
+                      <TranscriptSection
+                        section={section}
+                        isActive={activeSection === virtualRow.index}
+                        isHighlighted={highlightedSection === virtualRow.index}
+                        searchHighlights={searchHighlights}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </main>
         </div>
