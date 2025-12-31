@@ -335,19 +335,11 @@ export const CritiqueSchema = z
     {
       message: "targetId is required and must match the format for the target type",
     }
-  )
-  .refine(
-    (data) => {
-      // If status is 'dismissed', dismissalReason should be provided
-      if (data.status === "dismissed" && !data.dismissalReason) {
-        return true; // Soft validation - just a warning
-      }
-      return true;
-    },
-    {
-      message: "Dismissed critiques should include a dismissal reason",
-    }
   );
+
+// Note: dismissalReason enforcement is handled by dismissCritique() function
+// which always sets dismissalReason when dismissing. Schema-level validation
+// is not appropriate here since dismissed status can only be set via that function.
 
 export type Critique = z.infer<typeof CritiqueSchema>;
 
