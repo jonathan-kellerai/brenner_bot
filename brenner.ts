@@ -107,7 +107,15 @@ import {
   type HypothesisOrigin,
   type HypothesisConfidence,
 } from "./apps/web/src/lib/schemas/hypothesis";
+import { transitionHypothesis } from "./apps/web/src/lib/schemas/hypothesis-lifecycle";
 import { TestStorage } from "./apps/web/src/lib/storage/test-storage";
+import { PredictionSchema, type Prediction } from "./apps/web/src/lib/schemas/prediction";
+import { TestRecordSchema, type TestRecord, type TestStatus } from "./apps/web/src/lib/schemas/test-record";
+import {
+  recordTestExecution,
+  suggestTransitionsFromExecution,
+  type ExecutionInput,
+} from "./apps/web/src/lib/schemas/test-binding";
 import {
   scoreSession,
   BRENNER_QUOTES,
@@ -1289,6 +1297,15 @@ Commands:
   hypothesis search <query> [--project-key <abs-path>] [--json]
   hypothesis link <child-id> <parent-id> [--project-key <abs-path>] [--json]
   hypothesis stats [--project-key <abs-path>] [--json]
+
+  test list [--session-id <id>] [--status <designed|ready|in_progress|completed|blocked|abandoned>] [--project-key <abs-path>] [--json]
+  test show <id> [--project-key <abs-path>] [--json]
+  test execute <id> --result <s> (--potency-pass|--potency-fail)
+             [--confidence <high|medium|low|speculative>] [--by <s>] [--notes <s>] [--potency-notes <s>]
+             [--apply] [--min-confidence <high|medium|low|speculative>] [--kills-only]
+             [--project-key <abs-path>] [--json]
+  test suggest-kills <id> [--confidence <high|medium|low|speculative>] [--project-key <abs-path>] [--json]
+  test bind <test-id> <hypothesis-id> (--matched|--violated) [--reason <s>] [--by <s>] [--project-key <abs-path>] [--json]
 
   mail health
   mail tools
@@ -3925,6 +3942,382 @@ ${JSON.stringify(delta, null, 2)}
     }
 
     throw new Error(`Unknown hypothesis subcommand: ${sub ?? "(missing)"}`);
+  }
+
+  // ============================================================================
+  // Test Command
+  // ============================================================================
+  if (top === "test") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+    const testStorage = new TestStorage({ baseDir: projectKey });
+    const hypothesisStorage = new HypothesisStorage({ baseDir: projectKey });
+
+    const VALID_STATUSES: TestStatus[] = ["designed", "ready", "in_progress", "completed", "blocked", "abandoned"];
+    const VALID_CONFIDENCES: HypothesisConfidence[] = ["high", "medium", "low", "speculative"];
+
+    function buildSyntheticPrediction(test: TestRecord): Prediction {
+      const now = new Date().toISOString();
+      const id = test.addressesPredictions?.[0] ?? test.id.replace(/^T-/, "P-");
+
+      return PredictionSchema.parse({
+        id,
+        condition: `Test ${test.id}: ${test.name}`,
+        hypothesisPredictions: test.expectedOutcomes.map((o) => ({
+          hypothesisId: o.hypothesisId,
+          prediction: o.resultType ?? o.outcome,
+        })),
+        sessionId: test.designedInSession,
+        linkedTests: [test.id],
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    async function loadHypothesesForTest(test: TestRecord): Promise<Hypothesis[]> {
+      const ids = [
+        ...new Set(test.expectedOutcomes.map((o) => o.hypothesisId)),
+      ];
+      const out: Hypothesis[] = [];
+      for (const id of ids) {
+        const h = await hypothesisStorage.getHypothesisById(id);
+        if (h) out.push(h);
+      }
+      return out;
+    }
+
+    function compareConfidence(a: HypothesisConfidence, b: HypothesisConfidence): number {
+      const order: HypothesisConfidence[] = ["high", "medium", "low", "speculative"];
+      return order.indexOf(a) - order.indexOf(b);
+    }
+
+    // Subcommand: list
+    if (sub === "list") {
+      const sessionId = asStringFlag(flags, "session-id") ?? asStringFlag(flags, "session");
+      const statusFilterRaw = asStringFlag(flags, "status") as TestStatus | undefined;
+
+      if (statusFilterRaw && !VALID_STATUSES.includes(statusFilterRaw)) {
+        throw new Error(`Invalid --status "${statusFilterRaw}" (expected one of: ${VALID_STATUSES.join(", ")})`);
+      }
+
+      let tests: TestRecord[];
+      if (sessionId) {
+        tests = await testStorage.loadSessionTests(sessionId);
+      } else if (statusFilterRaw) {
+        tests = await testStorage.getTestsByStatus(statusFilterRaw);
+      } else {
+        tests = await testStorage.getAllTests();
+      }
+
+      if (statusFilterRaw) tests = tests.filter((t) => t.status === statusFilterRaw);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: tests.length, tests }, null, 2));
+      } else {
+        if (tests.length === 0) {
+          stdoutLine("No tests found.");
+        } else {
+          for (const t of tests) {
+            const status = t.status.padEnd(12);
+            const targets = t.discriminates.join(", ") || "(none)";
+            const name = t.name.length > 60 ? `${t.name.slice(0, 57)}...` : t.name;
+            stdoutLine(`[${status}] ${t.id}: ${name} (targets: ${targets})`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: show
+    if (sub === "show") {
+      const testId = action;
+      if (!testId) throw new Error("Missing test ID. Usage: test show <id>");
+
+      const test = await testStorage.getTestById(testId);
+      if (!test) throw new Error(`Test not found: ${testId}`);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, test }, null, 2));
+      } else {
+        stdoutLine(`ID:          ${test.id}`);
+        stdoutLine(`Name:        ${test.name}`);
+        stdoutLine(`Status:      ${test.status}`);
+        stdoutLine(`Session:     ${test.designedInSession}`);
+        if (test.designedBy) stdoutLine(`Designed by: ${test.designedBy}`);
+        stdoutLine(`Procedure:   ${test.procedure}`);
+        stdoutLine(`Discriminates: ${test.discriminates.join(", ")}`);
+        stdoutLine(`Expected outcomes:`);
+        for (const o of test.expectedOutcomes) {
+          const rt = o.resultType ? ` (${o.resultType})` : "";
+          stdoutLine(`  - ${o.hypothesisId}:${rt} ${o.outcome}`);
+        }
+        if (test.addressesPredictions?.length) stdoutLine(`Addresses predictions: ${test.addressesPredictions.join(", ")}`);
+        stdoutLine(`Potency check:`);
+        stdoutLine(`  Positive control: ${test.potencyCheck.positiveControl}`);
+        if (test.potencyCheck.sensitivityVerification) stdoutLine(`  Sensitivity:      ${test.potencyCheck.sensitivityVerification}`);
+        if (test.potencyCheck.timingValidation) stdoutLine(`  Timing:           ${test.potencyCheck.timingValidation}`);
+        stdoutLine(`Evidence/week score: LR=${test.evidencePerWeekScore.likelihoodRatio} cost=${test.evidencePerWeekScore.cost} speed=${test.evidencePerWeekScore.speed} ambiguity=${test.evidencePerWeekScore.ambiguity}`);
+        stdoutLine(`Feasibility:`);
+        stdoutLine(`  Requirements: ${test.feasibility.requirements}`);
+        stdoutLine(`  Difficulty:   ${test.feasibility.difficulty}`);
+        if (test.feasibility.blockers?.length) stdoutLine(`  Blockers:     ${test.feasibility.blockers.join(", ")}`);
+        if (test.requiredAssumptions?.length) stdoutLine(`Required assumptions: ${test.requiredAssumptions.join(", ")}`);
+        if (test.anchors?.length) stdoutLine(`Anchors:     ${test.anchors.join(", ")}`);
+        if (test.tags?.length) stdoutLine(`Tags:        ${test.tags.join(", ")}`);
+        if (test.notes) stdoutLine(`Notes:       ${test.notes}`);
+        stdoutLine(`Created:     ${test.createdAt}`);
+        stdoutLine(`Updated:     ${test.updatedAt}`);
+
+        if (test.execution) {
+          stdoutLine(`Execution:`);
+          stdoutLine(`  Started:      ${test.execution.startedAt}`);
+          if (test.execution.completedAt) stdoutLine(`  Completed:    ${test.execution.completedAt}`);
+          if (test.execution.executedBy) stdoutLine(`  Executed by:  ${test.execution.executedBy}`);
+          stdoutLine(`  Outcome:      ${test.execution.observedOutcome}`);
+          stdoutLine(`  Potency pass: ${test.execution.potencyCheckPassed ? "yes" : "no"}`);
+          if (test.execution.potencyCheckNotes) stdoutLine(`  Potency note: ${test.execution.potencyCheckNotes}`);
+          if (test.execution.notes) stdoutLine(`  Notes:        ${test.execution.notes}`);
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: execute
+    if (sub === "execute") {
+      const testId = action;
+      if (!testId) throw new Error("Missing test ID. Usage: test execute <id> --result <s> (--potency-pass|--potency-fail)");
+
+      const resultText = asStringFlag(flags, "result");
+      if (!resultText) throw new Error("Missing --result.");
+
+      const potencyPass = asBoolFlag(flags, "potency-pass");
+      const potencyFail = asBoolFlag(flags, "potency-fail");
+      if (potencyPass === potencyFail) {
+        throw new Error("Pass exactly one of: --potency-pass or --potency-fail");
+      }
+
+      const confidenceRaw = (asStringFlag(flags, "confidence") ?? "medium") as HypothesisConfidence;
+      if (!VALID_CONFIDENCES.includes(confidenceRaw)) {
+        throw new Error(`Invalid --confidence "${confidenceRaw}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
+      }
+
+      const executedBy = asStringFlag(flags, "by");
+      const notes = asStringFlag(flags, "notes");
+      const potencyNotes = asStringFlag(flags, "potency-notes");
+
+      const apply = asBoolFlag(flags, "apply");
+      const killsOnly = asBoolFlag(flags, "kills-only");
+
+      const minConfidenceRaw = asStringFlag(flags, "min-confidence") as HypothesisConfidence | undefined;
+      if (minConfidenceRaw && !VALID_CONFIDENCES.includes(minConfidenceRaw)) {
+        throw new Error(`Invalid --min-confidence "${minConfidenceRaw}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
+      }
+
+      const test = await testStorage.getTestById(testId);
+      if (!test) throw new Error(`Test not found: ${testId}`);
+      if (test.execution) throw new Error(`Test already has execution: ${testId}`);
+
+      const prediction = buildSyntheticPrediction(test);
+      const input: ExecutionInput = {
+        testId: test.id,
+        result: resultText,
+        matchedPredictions: [prediction.id],
+        violatedPredictions: [],
+        confidence: confidenceRaw,
+        executedBy: executedBy || undefined,
+        notes: notes || undefined,
+        potencyCheckPassed: potencyPass ? true : false,
+        potencyCheckNotes: potencyNotes || undefined,
+      };
+
+      const record = recordTestExecution(input, test, [prediction]);
+      if (!record.success || !record.execution) {
+        throw new Error(record.errors.length > 0 ? record.errors.join("; ") : "Failed to record execution.");
+      }
+
+      const updatedTest = TestRecordSchema.parse({
+        ...test,
+        status: "completed",
+        execution: record.execution,
+        updatedAt: new Date().toISOString(),
+      });
+      await testStorage.saveTest(updatedTest);
+
+      const hypotheses = await loadHypothesesForTest(updatedTest);
+      const suggest = suggestTransitionsFromExecution(input, [prediction], hypotheses);
+
+      const warnings = [...record.warnings, ...suggest.warnings];
+
+      let applied: { applied: Array<{ hypothesisId: string; ok: boolean; transition?: unknown; error?: string }>; saved: number } | null = null;
+
+      if (apply) {
+        const hypothesisMap = new Map(hypotheses.map((h) => [h.id, h]));
+        const appliedResults: Array<{ hypothesisId: string; ok: boolean; transition?: unknown; error?: string }> = [];
+
+        for (const s of suggest.suggestions) {
+          if (s.suggestedAction === "none") continue;
+          if (killsOnly && s.suggestedAction === "validate") continue;
+          if (minConfidenceRaw && compareConfidence(s.confidence, minConfidenceRaw) > 0) continue;
+
+          const hypothesis = hypothesisMap.get(s.hypothesisId);
+          if (!hypothesis) {
+            appliedResults.push({ hypothesisId: s.hypothesisId, ok: false, error: "Hypothesis not loaded." });
+            continue;
+          }
+
+          const trigger = s.suggestedAction === "kill" ? "refute" : "confirm";
+          const testResultId = `${updatedTest.id}:${s.supportingPredictions.join(",")}`;
+
+          const result = transitionHypothesis(hypothesis, trigger, {
+            triggeredBy: executedBy || "test-cli",
+            testResultId,
+            reason: s.reason,
+            sessionId: updatedTest.designedInSession,
+          });
+
+          if (result.success) {
+            hypothesisMap.set(s.hypothesisId, result.hypothesis);
+            appliedResults.push({ hypothesisId: s.hypothesisId, ok: true, transition: result.transition });
+          } else {
+            appliedResults.push({ hypothesisId: s.hypothesisId, ok: false, error: result.error.message });
+          }
+        }
+
+        let saved = 0;
+        for (const h of hypothesisMap.values()) {
+          await hypothesisStorage.saveHypothesis(h);
+          saved++;
+        }
+
+        applied = { applied: appliedResults, saved };
+      }
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({
+          ok: true,
+          test: updatedTest,
+          warnings,
+          suggestions: suggest.suggestions,
+          applied,
+        }, null, 2));
+      } else {
+        stdoutLine(`Recorded execution for ${updatedTest.id}`);
+        if (warnings.length > 0) {
+          stdoutLine("Warnings:");
+          for (const w of warnings) stdoutLine(`  - ${w}`);
+        }
+        const actionable = suggest.suggestions.filter((s) => s.suggestedAction !== "none");
+        if (actionable.length === 0) {
+          stdoutLine("No transition suggestions.");
+        } else {
+          stdoutLine("Suggested transitions:");
+          for (const s of actionable) {
+            stdoutLine(`  ${s.hypothesisId}: ${s.currentState} → ${s.suggestedAction} (${s.confidence})`);
+          }
+        }
+        if (applied) {
+          const okCount = applied.applied.filter((r) => r.ok).length;
+          stdoutLine(`Applied: ${okCount}/${applied.applied.length}`);
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: suggest-kills
+    if (sub === "suggest-kills") {
+      const testId = action;
+      if (!testId) throw new Error("Missing test ID. Usage: test suggest-kills <id>");
+
+      const confidenceRaw = (asStringFlag(flags, "confidence") ?? "medium") as HypothesisConfidence;
+      if (!VALID_CONFIDENCES.includes(confidenceRaw)) {
+        throw new Error(`Invalid --confidence "${confidenceRaw}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
+      }
+
+      const test = await testStorage.getTestById(testId);
+      if (!test) throw new Error(`Test not found: ${testId}`);
+      if (!test.execution) throw new Error(`Test has no execution record: ${testId}`);
+
+      const prediction = buildSyntheticPrediction(test);
+      const input: ExecutionInput = {
+        testId: test.id,
+        result: test.execution.observedOutcome,
+        matchedPredictions: [prediction.id],
+        violatedPredictions: [],
+        confidence: confidenceRaw,
+        executedBy: test.execution.executedBy,
+        notes: test.execution.notes,
+        potencyCheckPassed: test.execution.potencyCheckPassed,
+        potencyCheckNotes: test.execution.potencyCheckNotes,
+      };
+
+      const hypotheses = await loadHypothesesForTest(test);
+      const suggest = suggestTransitionsFromExecution(input, [prediction], hypotheses);
+      const kills = suggest.suggestions.filter((s) => s.suggestedAction === "kill");
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: kills.length, kills, warnings: suggest.warnings }, null, 2));
+      } else {
+        if (kills.length === 0) {
+          stdoutLine(`No kill suggestions for ${testId}.`);
+        } else {
+          stdoutLine(`Suggested kills for ${testId}:`);
+          for (const k of kills) {
+            stdoutLine(`  ${k.hypothesisId}: ${k.reason} (${k.confidence})`);
+          }
+        }
+        if (suggest.warnings.length > 0) {
+          stdoutLine("Warnings:");
+          for (const w of suggest.warnings) stdoutLine(`  - ${w}`);
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: bind
+    if (sub === "bind") {
+      const testId = action;
+      const hypothesisId = positional[3];
+      if (!testId || !hypothesisId) throw new Error("Usage: test bind <test-id> <hypothesis-id> (--matched|--violated)");
+
+      const matched = asBoolFlag(flags, "matched");
+      const violated = asBoolFlag(flags, "violated");
+      if (matched === violated) throw new Error("Pass exactly one of: --matched or --violated");
+
+      const by = asStringFlag(flags, "by");
+      const reasonFlag = asStringFlag(flags, "reason");
+
+      const test = await testStorage.getTestById(testId);
+      if (!test) throw new Error(`Test not found: ${testId}`);
+
+      const hypothesis = await hypothesisStorage.getHypothesisById(hypothesisId);
+      if (!hypothesis) throw new Error(`Hypothesis not found: ${hypothesisId}`);
+
+      const trigger = matched ? "confirm" : "refute";
+      const testResultId = `${testId}:manual:${matched ? "matched" : "violated"}`;
+      const reason =
+        reasonFlag ??
+        `Manual binding for ${testId}: marked hypothesis ${hypothesisId} as ${matched ? "matched" : "violated"}.`;
+
+      const result = transitionHypothesis(hypothesis, trigger, {
+        triggeredBy: by || "test-cli",
+        testResultId,
+        reason,
+        sessionId: test.designedInSession,
+      });
+
+      if (!result.success) throw new Error(result.error.message);
+
+      await hypothesisStorage.saveHypothesis(result.hypothesis);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
+      } else {
+        stdoutLine(`Applied ${trigger} to ${hypothesisId} (from ${hypothesis.state} → ${result.hypothesis.state})`);
+      }
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown test subcommand: ${sub ?? "(missing)"}`);
   }
 
   // ============================================================================
