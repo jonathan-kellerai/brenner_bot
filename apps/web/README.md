@@ -23,7 +23,35 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 Key routes:
 - `/corpus`: browse primary docs in this repo (read server-side from repo root)
-- `/sessions/new`: compose a “Brenner Loop kickoff” prompt and send it to agents via Agent Mail
+- `/sessions/new`: compose a "Brenner Loop kickoff" prompt and send it to agents via Agent Mail
+
+## Lab Mode & Session Orchestration
+
+The `/sessions/new` route is **fail-closed by default** and requires lab mode to be enabled.
+
+### Enabling Lab Mode
+
+Set `BRENNER_LAB_MODE=1` in your environment. Additionally, one of these auth methods must be satisfied:
+
+1. **Cloudflare Access** (production): Set `BRENNER_TRUST_CF_ACCESS_HEADERS=1` and deploy behind Cloudflare Access
+2. **Shared Secret** (local dev): Set `BRENNER_LAB_SECRET=your-secret` and provide it via:
+   - Header: `x-brenner-lab-secret: your-secret`
+   - Cookie: `brenner_lab_secret=your-secret`
+
+### Session Form with Role Assignment
+
+The session kickoff form supports **explicit roster-based role assignment**:
+
+1. Enter recipients as comma-separated Agent Mail names (e.g., `BlueLake, PurpleMountain, RedForest`)
+2. The **Role Assignment** section appears automatically
+3. Assign roles per recipient using dropdowns:
+   - **Hypothesis Generator**: Generates candidates, hunts paradoxes
+   - **Test Designer**: Designs discriminative tests with potency controls
+   - **Adversarial Critic**: Attacks framing, checks scale, quarantines anomalies
+4. Click **"Default 3-Agent"** for automatic role assignment in standard order
+5. Toggle **Unified Mode** to send the same prompt to all (no role differentiation)
+
+The form uses the same `composeKickoffMessages()` logic as the CLI, ensuring consistent role-specific prompts.
 
 ## Generated Files
 

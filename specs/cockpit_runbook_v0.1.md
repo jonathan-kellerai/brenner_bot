@@ -189,6 +189,8 @@ Source: `cm context "<query>" --json --no-history --limit 8`
 
 ### 3.3 Send the kickoff via Agent Mail
 
+#### Simple mode (role heuristics - deprecated)
+
 ```bash
 ./brenner.ts orchestrate start \
   --project-key "$PWD" \
@@ -199,10 +201,37 @@ Source: `cm context "<query>" --json --no-history --limit 8`
   --ack-required
 ```
 
+#### Roster mode (explicit role assignment - recommended)
+
+```bash
+./brenner.ts session start \
+  --project-key "$PWD" \
+  --thread-id "$THREAD_ID" \
+  --sender FuchsiaDog \
+  --to BlueLake,PurpleMountain,RedForest \
+  --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,RedForest=adversarial_critic" \
+  --excerpt-file excerpt.md \
+  --ack-required
+```
+
 Notes:
 - `--sender` must be an adjective+noun name (Agent Mail convention).
 - `--to` values must match names returned by `./brenner.ts mail agents`.
-- By default, `./brenner.ts session start` sends **role-specific prompts** to each recipient (see next section). Use `--unified` if you want everyone to receive the same kickoff prompt.
+- **Roster mode** (explicit `--role-map`) sends role-specific prompts per recipient. This is the recommended approach for production sessions.
+- Use `--unified` if you want everyone to receive the same kickoff prompt (no role differentiation).
+- Role heuristics (inferring roles from agent name substrings) are deprecated. Real Agent Mail identities like `BlueLake` and `PurpleMountain` do not contain role hints.
+
+#### Web UI roster assignment (alternative path)
+
+The web lab at `/sessions/new` also supports roster-based role assignment:
+
+1. Navigate to `/sessions/new` (requires lab mode enabled)
+2. Enter recipients as comma-separated names (e.g., `BlueLake, PurpleMountain, RedForest`)
+3. The **Role Assignment** section appears automatically
+4. Assign roles via dropdowns, or click **"Default 3-Agent"** for automatic assignment
+5. Toggle **Unified Mode** if you want the same prompt sent to all
+
+The web UI uses the same `composeKickoffMessages()` logic as the CLI, ensuring consistent role-specific prompts across both paths.
 
 ### 3.4 Roles + response contract (what agents must send back)
 
@@ -552,14 +581,22 @@ ntm spawn "$THREAD_ID" --cc=1 --cod=1 --gmi=1
 # 3) Confirm Agent Mail is reachable
 ./brenner.ts mail health
 
-# 4) Compose kickoff
+# 4) Check available agents
+./brenner.ts mail agents --project-key "$PWD"
+# → BlueLake, PurpleMountain, RedForest
+
+# 5) Compose kickoff
 ./brenner.ts prompt compose --template metaprompt_by_gpt_52.md --excerpt-file excerpt.md > kickoff.md
 
-# 5) Send kickoff (use real agent identity names from `mail agents`)
-./brenner.ts orchestrate start --project-key "$PWD" --thread-id "$THREAD_ID" \
-  --sender FuchsiaDog --to BlueLake,PurpleMountain,RedForest --excerpt-file excerpt.md
+# 6) Send kickoff with explicit roster (recommended)
+./brenner.ts session start --project-key "$PWD" --thread-id "$THREAD_ID" \
+  --sender FuchsiaDog \
+  --to BlueLake,PurpleMountain,RedForest \
+  --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,RedForest=adversarial_critic" \
+  --excerpt-file excerpt.md \
+  --ack-required
 
-# 6) Tell the agents to check mail in their panes
+# 7) Tell the agents to check mail in their panes
 ntm send "$THREAD_ID" --all "Check Agent Mail thread: $THREAD_ID and reply with DELTA[...]"
 ```
 

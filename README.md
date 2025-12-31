@@ -298,7 +298,7 @@ bun run dev
 
 Key routes:
 - `/corpus`: browse primary docs (read server-side from repo root)
-- `/sessions/new`: compose a kickoff prompt and send it via Agent Mail (requires local Agent Mail + lab gating)
+- `/sessions/new`: compose a kickoff prompt and send it via Agent Mail (requires local Agent Mail + lab gating). Supports **per-recipient role assignment** via dropdown UI and a "Default 3-Agent" quick assign button.
 
 ### Use the CLI (local)
 
@@ -439,40 +439,53 @@ This is the primary workflow for running Brenner Loop sessions with multiple age
 # 1. Pick a thread ID (this is your join-key)
 export THREAD_ID="RS-20251230-cell-fate"
 
-# 2. Create an ntm session with agent panes
+# 2. List available agents in this project
+./brenner.ts mail agents --project-key "$PWD"
+# Example output: BlueLake, PurpleMountain, GreenValley
+
+# 3. Create an ntm session with agent panes
 ntm new $THREAD_ID --layout=3-agent
 
-# 3. Compose kickoff prompt with excerpt
+# 4. Compose kickoff prompt with excerpt
 ./brenner.ts prompt compose \
   --template metaprompt_by_gpt_52.md \
   --excerpt-file excerpt.md \
   > kickoff.md
 
-# 4. Send kickoff to all agents via Agent Mail
-# Option A (compose + send in one step):
+# 5. Send role-separated kickoff (recommended for multi-agent sessions)
+# Use --role-map to assign roles to real Agent Mail identities:
 ./brenner.ts session start \
   --project-key "$PWD" \
   --thread-id $THREAD_ID \
   --sender Operator \
-  --to Claude,GPT,Gemini \
+  --to BlueLake,PurpleMountain,GreenValley \
+  --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,GreenValley=adversarial_critic" \
   --excerpt-file excerpt.md
-#
-# Option B (send a pre-rendered kickoff.md):
-./brenner.ts mail send \
-  --project-key "$PWD" \
-  --sender Operator \
-  --to Claude,GPT,Gemini \
-  --thread-id $THREAD_ID \
-  --subject "KICKOFF: [$THREAD_ID] Brenner Loop kickoff" \
-  --body-file kickoff.md
 
-# 5. Run agents in ntm panes (they post responses to Agent Mail)
+# Alternative: unified mode (all agents get the same prompt)
+./brenner.ts session start \
+  --project-key "$PWD" \
+  --thread-id $THREAD_ID \
+  --sender Operator \
+  --to BlueLake,PurpleMountain,GreenValley \
+  --unified \
+  --excerpt-file excerpt.md
+
+# 6. Run agents in ntm panes (they post responses to Agent Mail)
 ntm broadcast $THREAD_ID "Please check your Agent Mail inbox"
 
-# 6. Fetch/compile/publish: planned (tracked in `brenner_bot-5so.3`)
-# For now, use the Agent Mail web UI to read responses:
-#   http://127.0.0.1:8765/mail
+# 7. Compile and publish the artifact
+./brenner.ts session compile --project-key "$PWD" --thread-id $THREAD_ID > artifact.md
+./brenner.ts session publish --project-key "$PWD" --thread-id $THREAD_ID \
+  --sender Operator --to BlueLake,PurpleMountain,GreenValley
 ```
+
+**Roster roles** (for `--role-map`):
+| Role | Primary Model | Responsibility |
+|------|---------------|----------------|
+| `hypothesis_generator` | Codex/GPT | Hunt paradoxes, propose hypotheses (H1-H3) |
+| `test_designer` | Claude/Opus | Design discriminative tests + potency controls |
+| `adversarial_critic` | Gemini | Attack framing, check scale constraints |
 
 **Key insight**: Agents run in **your terminal** (via ntm), not in the cloud. You manage the sessions, review outputs, and decide when to compile. This is humans-in-the-loop orchestration.
 
