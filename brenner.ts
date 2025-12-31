@@ -13,6 +13,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { randomUUID } from "node:crypto";
 import { homedir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
+import { createInterface } from "node:readline";
 
 // Shared modules from web lib (bundled by Bun)
 import { AgentMailClient } from "./apps/web/src/lib/agentMail";
@@ -1302,7 +1303,7 @@ Commands:
 
   test list [--session-id <id>] [--status <designed|ready|in_progress|completed|blocked|abandoned>] [--project-key <abs-path>] [--json]
   test show <id> [--project-key <abs-path>] [--json]
-  test execute <id> --result <s> (--potency-pass|--potency-fail)
+  test execute <id> [--interactive] [--no-interactive] [--result <s>] [--potency-pass|--potency-fail]
              [--confidence <high|medium|low|speculative>] [--by <s>] [--notes <s>] [--potency-notes <s>]
              [--apply] [--min-confidence <high|medium|low|speculative>] [--kills-only]
              [--project-key <abs-path>] [--json]
@@ -4194,25 +4195,115 @@ ${JSON.stringify(delta, null, 2)}
     // Subcommand: execute
     if (sub === "execute") {
       const testId = action;
-      if (!testId) throw new Error("Missing test ID. Usage: test execute <id> --result <s> (--potency-pass|--potency-fail)");
+      if (!testId) throw new Error("Missing test ID. Usage: test execute <id> [--interactive] --result <s> (--potency-pass|--potency-fail)");
 
-      const resultText = asStringFlag(flags, "result");
-      if (!resultText) throw new Error("Missing --result.");
-
-      const potencyPass = asBoolFlag(flags, "potency-pass");
-      const potencyFail = asBoolFlag(flags, "potency-fail");
-      if (potencyPass === potencyFail) {
-        throw new Error("Pass exactly one of: --potency-pass or --potency-fail");
+      const forceInteractive = asBoolFlag(flags, "interactive");
+      const noInteractive = asBoolFlag(flags, "no-interactive");
+      if (forceInteractive && noInteractive) {
+        throw new Error("Use only one of: --interactive or --no-interactive");
       }
 
-      const confidenceRaw = (asStringFlag(flags, "confidence") ?? "medium") as HypothesisConfidence;
+      const allowPrompts = forceInteractive || (process.stdin.isTTY === true && process.stdout.isTTY === true && !noInteractive);
+
+      const test = await testStorage.getTestById(testId);
+      if (!test) throw new Error(`Test not found: ${testId}`);
+      if (test.execution) throw new Error(`Test already has execution: ${testId}`);
+
+      let resultText = asStringFlag(flags, "result") ?? null;
+
+      const potencyPassFlag = asBoolFlag(flags, "potency-pass");
+      const potencyFailFlag = asBoolFlag(flags, "potency-fail");
+      let potencyCheckPassed: boolean | null = potencyPassFlag !== potencyFailFlag ? potencyPassFlag : null;
+
+      const shouldPrompt =
+        allowPrompts &&
+        (forceInteractive || resultText === null || potencyCheckPassed === null);
+
+      if (!shouldPrompt) {
+        if (!resultText) throw new Error("Missing --result. (Tip: pass --interactive to prompt.)");
+        if (potencyCheckPassed === null) {
+          throw new Error("Pass exactly one of: --potency-pass or --potency-fail. (Tip: pass --interactive to prompt.)");
+        }
+      }
+
+      let confidenceRaw = (asStringFlag(flags, "confidence") ?? "medium") as HypothesisConfidence;
+
+      let executedBy = asStringFlag(flags, "by") ?? null;
+      let notes = asStringFlag(flags, "notes") ?? null;
+      let potencyNotes = asStringFlag(flags, "potency-notes") ?? null;
+
+      if (shouldPrompt) {
+        const promptOut = process.stderr;
+        const rl = createInterface({ input: process.stdin, output: promptOut });
+        const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
+
+        try {
+          const promptRequired = async (label: string, current: string | null): Promise<string> => {
+            while (true) {
+              const suffix = current ? ` [${current}]` : "";
+              const answer = (await ask(`${label}${suffix}: `)).trim();
+              const value = answer.length > 0 ? answer : current ?? "";
+              if (value.trim().length > 0) return value;
+              promptOut.write("Value is required.\n");
+            }
+          };
+
+          const promptOptional = async (label: string, current: string | null): Promise<string | null> => {
+            const suffix = current ? ` [${current}]` : " (optional)";
+            const answer = (await ask(`${label}${suffix}: `)).trim();
+            if (answer.length > 0) return answer;
+            return current;
+          };
+
+          const promptChoice = async (
+            label: string,
+            opts: { choices: string[]; defaultValue?: string; required?: boolean },
+          ): Promise<string> => {
+            const { choices, defaultValue, required } = opts;
+            const choiceHint = `(${choices.join("/")})`;
+            const suffix = defaultValue ? ` [${defaultValue}]` : "";
+            while (true) {
+              const raw = (await ask(`${label} ${choiceHint}${suffix}: `)).trim().toLowerCase();
+              const resolved = raw.length === 0 && defaultValue ? defaultValue : raw;
+              if (!resolved && required) {
+                promptOut.write("Value is required.\n");
+                continue;
+              }
+              if (resolved && choices.includes(resolved)) return resolved;
+              promptOut.write(`Invalid choice. Expected one of: ${choices.join(", ")}\n`);
+            }
+          };
+
+          resultText = await promptRequired("Observed result / observation", resultText);
+
+          if (potencyCheckPassed === null || forceInteractive) {
+            const potency = await promptChoice("Potency check", { choices: ["pass", "fail"], required: true });
+            potencyCheckPassed = potency === "pass";
+          }
+
+          if (!VALID_CONFIDENCES.includes(confidenceRaw)) {
+            promptOut.write(`Invalid --confidence "${confidenceRaw}" (defaulting to "medium").\n`);
+            confidenceRaw = "medium";
+          }
+
+          const confidence = await promptChoice("Confidence", {
+            choices: [...VALID_CONFIDENCES],
+            defaultValue: confidenceRaw,
+            required: true,
+          });
+          confidenceRaw = confidence as HypothesisConfidence;
+
+          executedBy = await promptOptional("Executed by", executedBy);
+          notes = await promptOptional("Notes", notes);
+          potencyNotes = await promptOptional("Potency notes", potencyNotes);
+        } finally {
+          rl.close();
+        }
+      }
+
       if (!VALID_CONFIDENCES.includes(confidenceRaw)) {
         throw new Error(`Invalid --confidence "${confidenceRaw}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
       }
-
-      const executedBy = asStringFlag(flags, "by");
-      const notes = asStringFlag(flags, "notes");
-      const potencyNotes = asStringFlag(flags, "potency-notes");
 
       const apply = asBoolFlag(flags, "apply");
       const killsOnly = asBoolFlag(flags, "kills-only");
@@ -4222,20 +4313,16 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Invalid --min-confidence "${minConfidenceRaw}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
       }
 
-      const test = await testStorage.getTestById(testId);
-      if (!test) throw new Error(`Test not found: ${testId}`);
-      if (test.execution) throw new Error(`Test already has execution: ${testId}`);
-
       const prediction = buildSyntheticPrediction(test);
       const input: ExecutionInput = {
         testId: test.id,
-        result: resultText,
+        result: resultText ?? "",
         matchedPredictions: [prediction.id],
         violatedPredictions: [],
         confidence: confidenceRaw,
         executedBy: executedBy || undefined,
         notes: notes || undefined,
-        potencyCheckPassed: potencyPass ? true : false,
+        potencyCheckPassed: potencyCheckPassed === true,
         potencyCheckNotes: potencyNotes || undefined,
       };
 
@@ -4258,8 +4345,22 @@ ${JSON.stringify(delta, null, 2)}
       const warnings = [...record.warnings, ...suggest.warnings];
 
       let applied: { applied: Array<{ hypothesisId: string; ok: boolean; transition?: unknown; error?: string }>; saved: number } | null = null;
+      let applyNow = apply;
 
-      if (apply) {
+      const actionableSuggestions = suggest.suggestions.filter((s) => s.suggestedAction !== "none");
+      if (!applyNow && shouldPrompt && actionableSuggestions.length > 0) {
+        const promptOut = process.stderr;
+        const rl = createInterface({ input: process.stdin, output: promptOut });
+        const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
+        try {
+          const raw = (await ask("Apply suggested transitions? (y/N): ")).trim().toLowerCase();
+          applyNow = raw === "y" || raw === "yes";
+        } finally {
+          rl.close();
+        }
+      }
+
+      if (applyNow) {
         const hypothesisMap = new Map(hypotheses.map((h) => [h.id, h]));
         const appliedResults: Array<{ hypothesisId: string; ok: boolean; transition?: unknown; error?: string }> = [];
 

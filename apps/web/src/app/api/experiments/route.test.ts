@@ -149,6 +149,24 @@ describe("POST /api/experiments", () => {
       });
     });
 
+    it("rejects command with empty argv[0]", async () => {
+      const response = await POST(
+        makeRequest({
+          threadId: "TEST-1",
+          testId: "T1",
+          command: ["", "hello"],
+        })
+      );
+
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json).toMatchObject({
+        success: false,
+        code: "VALIDATION_ERROR",
+        error: "Invalid command: first element must be a non-empty string",
+      });
+    });
+
     it("rejects invalid timeout", async () => {
       const response = await POST(
         makeRequest({
@@ -185,6 +203,47 @@ describe("POST /api/experiments", () => {
         code: "VALIDATION_ERROR",
         error: "Invalid timeout: must be 1-3600 seconds",
       });
+    });
+
+    it("rejects reserved threadId/testId path segments", async () => {
+      const response = await POST(
+        makeRequest({
+          projectKey: testDir,
+          threadId: "..",
+          testId: "T1",
+          command: ["echo", "hello"],
+          timeout: 10,
+        })
+      );
+
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json).toMatchObject({
+        success: false,
+        code: "VALIDATION_ERROR",
+      });
+      expect(String((json as { error?: unknown }).error)).toContain("reserved");
+    });
+
+    it("rejects cwd that resolves outside projectKey", async () => {
+      const response = await POST(
+        makeRequest({
+          projectKey: testDir,
+          threadId: "TEST-CWD",
+          testId: "T1",
+          command: ["echo", "hello"],
+          cwd: "..",
+          timeout: 10,
+        })
+      );
+
+      expect(response.status).toBe(400);
+      const json = await response.json();
+      expect(json).toMatchObject({
+        success: false,
+        code: "VALIDATION_ERROR",
+      });
+      expect(String((json as { error?: unknown }).error)).toContain("outside");
     });
   });
 
@@ -276,6 +335,25 @@ describe("POST /api/experiments", () => {
       expect(json.result.runtime.platform).toBe(process.platform);
       expect(json.result.runtime.arch).toBe(process.arch);
       expect(json.result.runtime.bun_version).toBeDefined();
+    });
+
+    it("truncates very large stdout output", async () => {
+      const response = await POST(
+        makeRequest({
+          projectKey: testDir,
+          threadId: "TEST-TRUNC",
+          testId: "T5",
+          command: ["bash", "-c", "yes a | head -c 250000"],
+          timeout: 10,
+        })
+      );
+
+      expect(response.status).toBe(200);
+      const json = await response.json();
+
+      expect(json.success).toBe(true);
+      expect(json.result.stdout).toContain("truncated");
+      expect(json.result.stdout.length).toBeLessThanOrEqual(200000 + 32);
     });
   });
 });

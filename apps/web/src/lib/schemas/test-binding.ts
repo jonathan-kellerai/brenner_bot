@@ -419,8 +419,12 @@ export function suggestTransitionsFromExecution(
  * This function takes the suggestions from suggestTransitionsFromExecution
  * and applies the transitions using the hypothesis-lifecycle module.
  *
+ * NOTE: The original hypotheses array is NOT mutated. Updated hypothesis objects
+ * are available via the returned ApplyResult.transition.hypothesis for successful
+ * transitions. Callers should use these if they need the updated state.
+ *
  * @param suggestions - The transition suggestions to apply
- * @param hypotheses - The hypotheses to transition (will be mutated in returned results)
+ * @param hypotheses - The hypotheses to transition (used for lookup, not mutated)
  * @param options - Additional options for the transitions
  * @returns ApplyTransitionsResult with applied transitions and errors
  */

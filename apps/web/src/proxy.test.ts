@@ -74,9 +74,25 @@ describe("proxy()", () => {
     });
   });
 
+  it("fails closed for orchestration API routes when BRENNER_LAB_MODE is disabled", () => {
+    withEnv({ BRENNER_LAB_MODE: undefined }, () => {
+      const request = makeRequest({ pathname: "/api/experiments" });
+      const response = proxy(request);
+      expect(response.status).toBe(404);
+    });
+  });
+
   it("fails closed when lab mode enabled but no auth is provided", () => {
     withEnv({ BRENNER_LAB_MODE: "1", BRENNER_LAB_SECRET: undefined }, () => {
       const request = makeRequest({ pathname: "/sessions/new" });
+      const response = proxy(request);
+      expect(response.status).toBe(404);
+    });
+  });
+
+  it("fails closed for orchestration API routes when lab mode enabled but no auth is provided", () => {
+    withEnv({ BRENNER_LAB_MODE: "1", BRENNER_LAB_SECRET: undefined }, () => {
+      const request = makeRequest({ pathname: "/api/sessions/actions" });
       const response = proxy(request);
       expect(response.status).toBe(404);
     });
@@ -111,6 +127,17 @@ describe("proxy()", () => {
     withEnv({ BRENNER_LAB_MODE: "1", BRENNER_TRUST_CF_ACCESS_HEADERS: undefined, BRENNER_LAB_SECRET: "secret123" }, () => {
       const request = makeRequest({
         pathname: "/sessions/new",
+        headers: { "x-brenner-lab-secret": "secret123" },
+      });
+      const response = proxy(request);
+      expect(response.headers.get("x-middleware-next")).toBe("1");
+    });
+  });
+
+  it("allows orchestration API routes when valid lab secret is provided", () => {
+    withEnv({ BRENNER_LAB_MODE: "1", BRENNER_TRUST_CF_ACCESS_HEADERS: undefined, BRENNER_LAB_SECRET: "secret123" }, () => {
+      const request = makeRequest({
+        pathname: "/api/experiments",
         headers: { "x-brenner-lab-secret": "secret123" },
       });
       const response = proxy(request);

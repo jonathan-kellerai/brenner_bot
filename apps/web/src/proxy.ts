@@ -64,7 +64,12 @@ export function proxy(request: NextRequest) {
 
   // Protect orchestration routes (sessions, API endpoints that trigger Agent Mail)
   // Fail-closed: deny access unless explicitly enabled
-  if (pathname.startsWith("/sessions")) {
+  const isOrchestrationPath =
+    pathname.startsWith("/sessions") ||
+    pathname.startsWith("/api/sessions") ||
+    pathname.startsWith("/api/experiments");
+
+  if (isOrchestrationPath) {
     // Check 1: Lab mode must be enabled
     if (!isLabModeEnabled()) {
       return new NextResponse("Not found", { status: 404 });
@@ -83,5 +88,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/sessions/:path*"],
+  matcher: ["/sessions/:path*", "/api/sessions/:path*", "/api/experiments/:path*"],
 };

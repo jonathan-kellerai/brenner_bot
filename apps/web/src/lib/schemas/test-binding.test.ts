@@ -467,7 +467,8 @@ describe("suggestTransitionsFromExecution", () => {
       expect(result.warnings.some((w) => w.includes("H-UNKNOWN-001"))).toBe(true);
     });
 
-    it("handles ambiguous predictions without warnings", () => {
+    it("warns for unknown hypotheses even with ambiguous predictions", () => {
+      // Add a hypothesis prediction with ambiguous polarity for a non-existent hypothesis
       predictions[0].hypothesisPredictions.push({
         hypothesisId: "H-UNKNOWN-001",
         prediction: "Something unclear",  // Ambiguous - no polarity indicators
@@ -480,9 +481,45 @@ describe("suggestTransitionsFromExecution", () => {
 
       const result = suggestTransitionsFromExecution(input, predictions, hypotheses);
 
-      // Ambiguous predictions don't generate suggestions or warnings
-      // (they're silently skipped)
+      // No suggestion is generated for ambiguous predictions (they have no action)
       expect(result.suggestions.every((s) => s.hypothesisId !== "H-UNKNOWN-001")).toBe(true);
+
+      // But a warning IS generated because the hypothesis doesn't exist
+      // This is correct behavior - we want to catch data integrity issues
+      expect(result.warnings.some((w) => w.includes("H-UNKNOWN-001"))).toBe(true);
+    });
+
+    it("generates 'none' suggestion for existing hypothesis with ambiguous prediction", () => {
+      // Replace the original prediction with one that has ONLY ambiguous predictions
+      predictions = [
+        createTestPrediction({
+          id: "P-TEST-001",
+          hypothesisPredictions: [
+            { hypothesisId: "H-TEST-001", prediction: "Something unclear" },
+            { hypothesisId: "H-TEST-002", prediction: "Another ambiguous statement" },
+          ],
+        }),
+      ];
+
+      // Use an ambiguous result (no polarity indicators like "observed", "present", etc.)
+      const input = createExecutionInput({
+        result: "Inconclusive data - cannot determine outcome",  // Truly ambiguous
+        matchedPredictions: ["P-TEST-001"],
+        violatedPredictions: [],
+      });
+
+      const result = suggestTransitionsFromExecution(input, predictions, hypotheses);
+
+      // Both hypotheses should get "none" suggestions since everything is ambiguous
+      const h1Suggestion = result.suggestions.find((s) => s.hypothesisId === "H-TEST-001");
+      const h2Suggestion = result.suggestions.find((s) => s.hypothesisId === "H-TEST-002");
+      expect(h1Suggestion).toBeDefined();
+      expect(h2Suggestion).toBeDefined();
+      expect(h1Suggestion!.suggestedAction).toBe("none");
+      expect(h2Suggestion!.suggestedAction).toBe("none");
+
+      // No warnings since both hypotheses exist
+      expect(result.warnings).toHaveLength(0);
     });
   });
 });
