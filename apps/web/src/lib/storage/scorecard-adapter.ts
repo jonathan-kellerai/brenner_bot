@@ -71,9 +71,11 @@ export function assumptionToArtifactItem(a: Assumption): AssumptionItem {
  * - Quarantine status → Anomaly Quarantine Discipline dimension
  */
 export function anomalyToArtifactItem(a: Anomaly): AnomalyItem {
+  // Truncate observation for name with ellipsis if needed (consistent with other converters)
+  const truncatedObs = a.observation.substring(0, 50) + (a.observation.length > 50 ? "..." : "");
   return {
     id: a.id,
-    name: a.name ?? a.observation.substring(0, 50),
+    name: a.name ?? truncatedObs,
     observation: a.observation,
     conflicts_with: a.conflictsWith?.hypotheses ?? [],
   };
@@ -354,6 +356,15 @@ export class ScorecardAdapter {
    * Useful for program-level scorecard dimensions.
    */
   async buildProgramSessionData(sessionIds: string[], researchQuestion?: string): Promise<SessionData> {
+    // Handle empty sessionIds gracefully
+    if (sessionIds.length === 0) {
+      return this.buildSessionDataFromLoaded(
+        "program-empty",
+        [], [], [], [], [],
+        researchQuestion
+      );
+    }
+
     // Load all data across sessions
     const allHypotheses: Hypothesis[] = [];
     const allAssumptions: Assumption[] = [];
