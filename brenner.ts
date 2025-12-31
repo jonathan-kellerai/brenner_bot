@@ -2594,10 +2594,16 @@ ${JSON.stringify(delta, null, 2)}
     const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
     const storage = new AnomalyStorage({ baseDir: projectKey });
 
+    const VALID_QUARANTINE_STATUSES: QuarantineStatus[] = ["active", "resolved", "deferred", "paradigm_shifting"];
+
     // Subcommand: list
     if (sub === "list") {
       const sessionId = asStringFlag(flags, "session-id");
       const statusFilter = asStringFlag(flags, "status") as QuarantineStatus | undefined;
+
+      if (statusFilter && !VALID_QUARANTINE_STATUSES.includes(statusFilter)) {
+        throw new Error(`Invalid --status "${statusFilter}" (expected one of: ${VALID_QUARANTINE_STATUSES.join(", ")})`);
+      }
 
       let anomalies: Anomaly[];
       if (sessionId) {
@@ -2656,18 +2662,23 @@ ${JSON.stringify(delta, null, 2)}
     }
 
     // Subcommand: create
+    const VALID_SOURCE_TYPES = ["experiment", "literature", "discussion", "calculation"] as const;
     if (sub === "create") {
       const observation = asStringFlag(flags, "observation");
       const conflictsWithRaw = asStringFlag(flags, "conflicts-with");
       const conflictDescription = asStringFlag(flags, "conflict-description");
       const sessionId = asStringFlag(flags, "session-id") ?? `RS${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
-      const sourceType = (asStringFlag(flags, "source-type") ?? "discussion") as "experiment" | "literature" | "discussion" | "calculation";
+      const sourceTypeRaw = asStringFlag(flags, "source-type") ?? "discussion";
       const sourceRef = asStringFlag(flags, "source-ref");
       const name = asStringFlag(flags, "name");
 
       if (!observation) throw new Error("Missing --observation.");
       if (!conflictsWithRaw) throw new Error("Missing --conflicts-with (e.g., H-RS20251230-001,H-RS20251230-002).");
       if (!conflictDescription) throw new Error("Missing --conflict-description.");
+      if (!VALID_SOURCE_TYPES.includes(sourceTypeRaw as typeof VALID_SOURCE_TYPES[number])) {
+        throw new Error(`Invalid --source-type "${sourceTypeRaw}" (expected one of: ${VALID_SOURCE_TYPES.join(", ")})`);
+      }
+      const sourceType = sourceTypeRaw as typeof VALID_SOURCE_TYPES[number];
 
       const conflictsWithHypotheses = splitCsv(conflictsWithRaw);
       const existingAnomalies = await storage.loadSessionAnomalies(sessionId);
@@ -2774,8 +2785,18 @@ ${JSON.stringify(delta, null, 2)}
       const anomaly = await storage.getAnomalyById(anomalyId);
       if (!anomaly) throw new Error(`Anomaly not found: ${anomalyId}`);
 
-      // Generate a new hypothesis ID
-      const hypothesisId = `H-${anomaly.sessionId}-${String((anomaly.spawnedHypotheses?.length ?? 0) + 1).padStart(3, "0")}`;
+      // Generate a new hypothesis ID by finding max across ALL anomalies in session
+      const sessionAnomalies = await storage.loadSessionAnomalies(anomaly.sessionId);
+      const allSpawnedIds = sessionAnomalies.flatMap((a) => a.spawnedHypotheses ?? []);
+      const prefix = `H-${anomaly.sessionId}-`;
+      const sequences = allSpawnedIds
+        .filter((id) => id.startsWith(prefix))
+        .map((id) => {
+          const match = id.match(/-(\d{3})$/);
+          return match ? parseInt(match[1], 10) : 0;
+        });
+      const nextSeq = sequences.length > 0 ? Math.max(...sequences) + 1 : 1;
+      const hypothesisId = `${prefix}${String(nextSeq).padStart(3, "0")}`;
       const updated = linkSpawnedHypothesis(anomaly, hypothesisId);
       await storage.saveAnomaly(updated);
 
