@@ -47,6 +47,18 @@ import {
   type PlatformString,
 } from "./apps/web/src/lib/toolchain-manifest";
 import { parseTranscript } from "./apps/web/src/lib/transcript-parser";
+import { AnomalyStorage } from "./apps/web/src/lib/storage/anomaly-storage";
+import {
+  createAnomaly,
+  resolveAnomaly,
+  deferAnomaly,
+  reactivateAnomaly,
+  markParadigmShifting,
+  linkSpawnedHypothesis,
+  generateAnomalyId,
+  type Anomaly,
+  type QuarantineStatus,
+} from "./apps/web/src/lib/schemas/anomaly";
 
 function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1162,6 +1174,17 @@ Commands:
   evidence list --thread-id <id> [--project-key <abs-path>] [--json]
   evidence render --thread-id <id> [--project-key <abs-path>] [--out-file <path>]
   evidence verify --thread-id <id> --evidence-id <EV-NNN> --notes <s> [--project-key <abs-path>] [--json]
+
+  anomaly list [--session-id <id>] [--status <active|resolved|deferred|paradigm_shifting>] [--project-key <abs-path>] [--json]
+  anomaly show <id> [--project-key <abs-path>] [--json]
+  anomaly create --observation <s> --conflicts-with <H1,H2> --conflict-description <s>
+                 [--session-id <id>] [--source-type <experiment|literature|discussion|calculation>]
+                 [--source-ref <s>] [--name <s>] [--project-key <abs-path>] [--json]
+  anomaly resolve <id> --by <hypothesis-id> [--notes <s>] [--project-key <abs-path>] [--json]
+  anomaly defer <id> --reason <s> [--project-key <abs-path>] [--json]
+  anomaly reactivate <id> [--project-key <abs-path>] [--json]
+  anomaly spawn-hypothesis <id> [--project-key <abs-path>] [--json]
+  anomaly stats [--project-key <abs-path>] [--json]
 
   mail health
   mail tools
@@ -2538,6 +2561,230 @@ ${JSON.stringify(delta, null, 2)}
     }
 
     throw new Error(`Unknown evidence subcommand: ${sub ?? "(missing)"}`);
+  }
+
+  // ============================================================================
+  // Anomaly Command
+  // ============================================================================
+  if (top === "anomaly") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+    const storage = new AnomalyStorage({ baseDir: projectKey });
+
+    // Subcommand: list
+    if (sub === "list") {
+      const sessionId = asStringFlag(flags, "session-id");
+      const statusFilter = asStringFlag(flags, "status") as QuarantineStatus | undefined;
+
+      let anomalies: Anomaly[];
+      if (sessionId) {
+        anomalies = await storage.loadSessionAnomalies(sessionId);
+      } else if (statusFilter) {
+        anomalies = await storage.getAnomaliesByStatus(statusFilter);
+      } else {
+        anomalies = await storage.getAllAnomalies();
+      }
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: anomalies.length, anomalies }, null, 2));
+      } else {
+        if (anomalies.length === 0) {
+          stdoutLine("No anomalies found.");
+        } else {
+          for (const a of anomalies) {
+            const status = a.quarantineStatus.padEnd(16);
+            const conflicts = a.conflictsWith.hypotheses.join(",") || "(none)";
+            stdoutLine(`[${status}] ${a.id}: ${a.observation.slice(0, 60)}... (conflicts: ${conflicts})`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: show
+    if (sub === "show") {
+      const anomalyId = action;
+      if (!anomalyId) throw new Error("Missing anomaly ID. Usage: anomaly show <id>");
+
+      const anomaly = await storage.getAnomalyById(anomalyId);
+      if (!anomaly) throw new Error(`Anomaly not found: ${anomalyId}`);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, anomaly }, null, 2));
+      } else {
+        stdoutLine(`ID:              ${anomaly.id}`);
+        if (anomaly.name) stdoutLine(`Name:            ${anomaly.name}`);
+        stdoutLine(`Status:          ${anomaly.quarantineStatus}`);
+        stdoutLine(`Session:         ${anomaly.sessionId}`);
+        stdoutLine(`Observation:     ${anomaly.observation}`);
+        stdoutLine(`Source:          ${anomaly.source.type}${anomaly.source.reference ? ` (${anomaly.source.reference})` : ""}`);
+        stdoutLine(`Conflicts with:`);
+        stdoutLine(`  Hypotheses:    ${anomaly.conflictsWith.hypotheses.join(", ") || "(none)"}`);
+        stdoutLine(`  Assumptions:   ${anomaly.conflictsWith.assumptions.join(", ") || "(none)"}`);
+        stdoutLine(`  Description:   ${anomaly.conflictsWith.description}`);
+        if (anomaly.resolutionPlan) stdoutLine(`Resolution plan: ${anomaly.resolutionPlan}`);
+        if (anomaly.resolvedBy) stdoutLine(`Resolved by:     ${anomaly.resolvedBy}`);
+        if (anomaly.spawnedHypotheses?.length) stdoutLine(`Spawned:         ${anomaly.spawnedHypotheses.join(", ")}`);
+        stdoutLine(`Created:         ${anomaly.createdAt}`);
+        stdoutLine(`Updated:         ${anomaly.updatedAt}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: create
+    if (sub === "create") {
+      const observation = asStringFlag(flags, "observation");
+      const conflictsWithRaw = asStringFlag(flags, "conflicts-with");
+      const conflictDescription = asStringFlag(flags, "conflict-description");
+      const sessionId = asStringFlag(flags, "session-id") ?? `RS${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+      const sourceType = (asStringFlag(flags, "source-type") ?? "discussion") as "experiment" | "literature" | "discussion" | "calculation";
+      const sourceRef = asStringFlag(flags, "source-ref");
+      const name = asStringFlag(flags, "name");
+
+      if (!observation) throw new Error("Missing --observation.");
+      if (!conflictsWithRaw) throw new Error("Missing --conflicts-with (e.g., H-RS20251230-001,H-RS20251230-002).");
+      if (!conflictDescription) throw new Error("Missing --conflict-description.");
+
+      const conflictsWithHypotheses = splitCsv(conflictsWithRaw);
+      const existingAnomalies = await storage.loadSessionAnomalies(sessionId);
+      const existingIds = existingAnomalies.map((a) => a.id);
+      const newId = generateAnomalyId(sessionId, existingIds);
+
+      const anomaly = createAnomaly({
+        id: newId,
+        observation,
+        source: {
+          type: sourceType,
+          reference: sourceRef,
+        },
+        conflictsWith: {
+          hypotheses: conflictsWithHypotheses,
+          assumptions: [],
+          description: conflictDescription,
+        },
+        sessionId,
+        name,
+      });
+
+      await storage.saveAnomaly(anomaly);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, anomaly }, null, 2));
+      } else {
+        stdoutLine(`Created anomaly: ${anomaly.id}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: resolve
+    if (sub === "resolve") {
+      const anomalyId = action;
+      const resolvedByHypothesisId = asStringFlag(flags, "by");
+      const notes = asStringFlag(flags, "notes");
+
+      if (!anomalyId) throw new Error("Missing anomaly ID. Usage: anomaly resolve <id> --by <hypothesis-id>");
+      if (!resolvedByHypothesisId) throw new Error("Missing --by <hypothesis-id>.");
+
+      const anomaly = await storage.getAnomalyById(anomalyId);
+      if (!anomaly) throw new Error(`Anomaly not found: ${anomalyId}`);
+
+      const resolved = resolveAnomaly(anomaly, resolvedByHypothesisId, { notes });
+      await storage.saveAnomaly(resolved);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, anomaly: resolved }, null, 2));
+      } else {
+        stdoutLine(`Resolved ${anomalyId} by ${resolvedByHypothesisId}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: defer
+    if (sub === "defer") {
+      const anomalyId = action;
+      const reason = asStringFlag(flags, "reason");
+
+      if (!anomalyId) throw new Error("Missing anomaly ID. Usage: anomaly defer <id> --reason <s>");
+      if (!reason) throw new Error("Missing --reason.");
+
+      const anomaly = await storage.getAnomalyById(anomalyId);
+      if (!anomaly) throw new Error(`Anomaly not found: ${anomalyId}`);
+
+      const deferred = deferAnomaly(anomaly, reason);
+      await storage.saveAnomaly(deferred);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, anomaly: deferred }, null, 2));
+      } else {
+        stdoutLine(`Deferred ${anomalyId}: ${reason}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: reactivate
+    if (sub === "reactivate") {
+      const anomalyId = action;
+
+      if (!anomalyId) throw new Error("Missing anomaly ID. Usage: anomaly reactivate <id>");
+
+      const anomaly = await storage.getAnomalyById(anomalyId);
+      if (!anomaly) throw new Error(`Anomaly not found: ${anomalyId}`);
+
+      const reactivated = reactivateAnomaly(anomaly);
+      await storage.saveAnomaly(reactivated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, anomaly: reactivated }, null, 2));
+      } else {
+        stdoutLine(`Reactivated ${anomalyId}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: spawn-hypothesis
+    if (sub === "spawn-hypothesis") {
+      const anomalyId = action;
+
+      if (!anomalyId) throw new Error("Missing anomaly ID. Usage: anomaly spawn-hypothesis <id>");
+
+      const anomaly = await storage.getAnomalyById(anomalyId);
+      if (!anomaly) throw new Error(`Anomaly not found: ${anomalyId}`);
+
+      // Generate a new hypothesis ID
+      const hypothesisId = `H-${anomaly.sessionId}-${String((anomaly.spawnedHypotheses?.length ?? 0) + 1).padStart(3, "0")}`;
+      const updated = linkSpawnedHypothesis(anomaly, hypothesisId);
+      await storage.saveAnomaly(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, anomaly: updated, spawnedHypothesisId: hypothesisId }, null, 2));
+      } else {
+        stdoutLine(`Spawned hypothesis ${hypothesisId} from ${anomalyId}`);
+        stdoutLine(`Note: Create the full hypothesis record separately with the hypothesis CLI.`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: stats
+    if (sub === "stats") {
+      const stats = await storage.getStatistics();
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, ...stats }, null, 2));
+      } else {
+        stdoutLine(`Anomaly Statistics:`);
+        stdoutLine(`  Total:                    ${stats.total}`);
+        stdoutLine(`  By status:`);
+        stdoutLine(`    Active:                 ${stats.byStatus.active}`);
+        stdoutLine(`    Resolved:               ${stats.byStatus.resolved}`);
+        stdoutLine(`    Deferred:               ${stats.byStatus.deferred}`);
+        stdoutLine(`    Paradigm-shifting:      ${stats.byStatus.paradigm_shifting}`);
+        stdoutLine(`  With spawned hypotheses:  ${stats.withSpawnedHypotheses}`);
+        stdoutLine(`  Sessions with anomalies:  ${stats.sessionsWithAnomalies}`);
+      }
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown anomaly subcommand: ${sub ?? "(missing)"}`);
   }
 
   if (top === "mail") {
