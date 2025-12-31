@@ -355,12 +355,13 @@ describe("QuoteBankViewer Accessibility", () => {
     expect(blockquotes.length).toBe(5);
   });
 
-  it("search input has aria label for clear button", () => {
+  it("search input is accessible", () => {
     render(<QuoteBankViewer data={comprehensiveQuoteBank} />);
 
-    // When there's no search text, clear button shouldn't be visible
-    // We'll just verify the search input exists
-    expect(screen.getByPlaceholderText(/Search quotes/)).toBeInTheDocument();
+    // Verify search input exists and is accessible via placeholder
+    const searchInput = screen.getByPlaceholderText(/Search quotes/);
+    expect(searchInput).toBeInTheDocument();
+    expect(searchInput.tagName).toBe("INPUT");
   });
 
   it("buttons have proper roles", () => {

@@ -324,13 +324,13 @@ describe("DistillationViewer", () => {
 
   describe("table of contents", () => {
     it("shows TOC for documents with many sections", () => {
-      render(
+      const { container } = render(
         <DistillationViewer data={comprehensiveDistillation} docId="distillation-opus-45" />
       );
 
       // TOC should be visible for documents with > 3 sections
       // The TOC contains section titles
-      const nav = document.querySelector("nav");
+      const nav = container.querySelector("nav");
       expect(nav).toBeInTheDocument();
     });
 
@@ -358,12 +358,12 @@ describe("DistillationViewer", () => {
 
   describe("progress indicator", () => {
     it("renders progress bar", () => {
-      render(
+      const { container } = render(
         <DistillationViewer data={comprehensiveDistillation} docId="distillation-opus-45" />
       );
 
       // Progress bar should exist
-      const progressBar = document.querySelector(".fixed.top-0");
+      const progressBar = container.querySelector(".fixed.top-0");
       expect(progressBar).toBeInTheDocument();
     });
   });
@@ -414,24 +414,24 @@ describe("DistillationViewer Accessibility", () => {
   });
 
   it("uses semantic list elements", () => {
-    render(
+    const { container } = render(
       <DistillationViewer data={comprehensiveDistillation} docId="distillation-opus-45" />
     );
 
     // Should have ordered and unordered lists
-    const orderedLists = document.querySelectorAll("ol");
-    const unorderedLists = document.querySelectorAll("ul");
+    const orderedLists = container.querySelectorAll("ol");
+    const unorderedLists = container.querySelectorAll("ul");
 
     expect(orderedLists.length).toBeGreaterThan(0);
     expect(unorderedLists.length).toBeGreaterThan(0);
   });
 
   it("blockquotes have proper semantics", () => {
-    render(
+    const { container } = render(
       <DistillationViewer data={minimalDistillation} docId="distillation-opus-45" />
     );
 
-    const blockquotes = document.querySelectorAll("blockquote");
+    const blockquotes = container.querySelectorAll("blockquote");
     expect(blockquotes.length).toBeGreaterThan(0);
   });
 });

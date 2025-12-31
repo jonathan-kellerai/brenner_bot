@@ -79,16 +79,9 @@ const comprehensiveTranscript: ParsedTranscript = {
   ],
 };
 
-/**
- * Transcript with raw content fallback.
- */
-const rawContentTranscript: ParsedTranscript = {
-  title: "Unparsed Transcript",
-  subtitle: "Raw content mode",
-  totalSections: 0,
-  sections: [],
-  rawContent: "This is raw unparsed content that should be displayed as a fallback when no sections are available.",
-};
+// Note: rawContentTranscript fixture removed - TranscriptViewer component
+// exports individual subcomponents (TranscriptHero, TableOfContents, etc.)
+// rather than a unified viewer with raw content fallback handling.
 
 // ============================================================================
 // TranscriptHero Component Tests
