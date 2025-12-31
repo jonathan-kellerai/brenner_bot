@@ -1178,8 +1178,8 @@ Commands:
   prompt compose --excerpt-file <path> [--template <path>] [--theme <s>] [--domain <s>] [--question <s>]
 
   cockpit start [--project-key <abs-path>] --thread-id <id> --sender <AgentName> --to <A,B>
-               --excerpt-file <path> --question <s> [--context <s>]
-               [--hypotheses <s>] [--constraints <s>] [--outputs <s>] [--role-map <s>] [--with-memory]
+               --role-map <s> --excerpt-file <path> --question <s> [--context <s>]
+               [--hypotheses <s>] [--constraints <s>] [--outputs <s>] [--with-memory]
                [--ntm-args <s>] [--skip-ntm] [--skip-broadcast] [--broadcast-message <s>] [--dry-run] [--json]
 
   session start [--project-key <abs-path>] [--sender <AgentName>] --to <A,B> --thread-id <id>
@@ -2207,6 +2207,12 @@ ${JSON.stringify(delta, null, 2)}
 
     // Evidence pack path: artifacts/<thread_id>/evidence.json
     const safeThreadId = threadId.replace(/[^a-zA-Z0-9_.-]/g, "_");
+
+    // Prevent directory traversal via special directory names
+    if (safeThreadId === "." || safeThreadId === ".." || safeThreadId === "") {
+      throw new Error(`Invalid --thread-id: "${threadId}" (resolves to reserved or empty directory name)`);
+    }
+
     const evidenceDir = resolve(projectKey, "artifacts", safeThreadId);
     const evidenceJsonPath = join(evidenceDir, "evidence.json");
     const evidenceMdPath = join(evidenceDir, "evidence.md");
