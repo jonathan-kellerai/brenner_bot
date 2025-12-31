@@ -215,6 +215,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Experimen
 
     const proc = Bun.spawn(command, { cwd, stdout: "pipe", stderr: "pipe" });
     const timeoutMs = timeout * 1000;
+    let sigkillTimer: ReturnType<typeof setTimeout> | null = null;
     const killTimer = setTimeout(() => {
       timedOut = true;
       try {
@@ -222,7 +223,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Experimen
       } catch {
         // ignore
       }
-      setTimeout(() => {
+      sigkillTimer = setTimeout(() => {
         try {
           proc.kill("SIGKILL");
         } catch {
@@ -281,6 +282,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<Experimen
       });
     } finally {
       clearTimeout(killTimer);
+      if (sigkillTimer) clearTimeout(sigkillTimer);
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

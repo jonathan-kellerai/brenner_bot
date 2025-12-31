@@ -1,11 +1,10 @@
-import { describe, test, expect, beforeEach, afterEach } from "vitest";
+import { describe, test, expect, beforeEach } from "vitest";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 import {
   AssumptionStorage,
   type SessionAssumptionFile,
-  type AssumptionIndex,
 } from "./assumption-storage";
 import {
   type Assumption,
@@ -28,17 +27,12 @@ import {
 let testDir: string;
 
 async function createTestDir(): Promise<string> {
-  const dir = join(tmpdir(), `assumption-storage-test-${Date.now()}`);
+  const dir = join(
+    tmpdir(),
+    `assumption-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+  );
   await fs.mkdir(dir, { recursive: true });
   return dir;
-}
-
-async function cleanupTestDir(dir: string): Promise<void> {
-  try {
-    await fs.rm(dir, { recursive: true, force: true });
-  } catch {
-    // Ignore errors during cleanup
-  }
 }
 
 function createTestLoad(): AssumptionLoad {
@@ -98,10 +92,6 @@ function createTestAssumption(overrides: Partial<{
 
 beforeEach(async () => {
   testDir = await createTestDir();
-});
-
-afterEach(async () => {
-  await cleanupTestDir(testDir);
 });
 
 // ============================================================================

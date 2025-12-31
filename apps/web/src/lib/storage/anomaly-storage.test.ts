@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-import { AnomalyStorage, type SessionAnomalyFile, type AnomalyIndex } from "./anomaly-storage";
+import { AnomalyStorage, type SessionAnomalyFile } from "./anomaly-storage";
 import { createAnomaly, type Anomaly } from "../schemas/anomaly";
 
 // ============================================================================
@@ -13,14 +13,6 @@ async function createTempDir(): Promise<string> {
   const dir = join(tmpdir(), `anomaly-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   await fs.mkdir(dir, { recursive: true });
   return dir;
-}
-
-async function cleanupDir(dir: string): Promise<void> {
-  try {
-    await fs.rm(dir, { recursive: true, force: true });
-  } catch {
-    // Ignore cleanup errors
-  }
 }
 
 function createTestAnomaly(sessionId: string, seq: number): Anomaly {
@@ -51,10 +43,6 @@ describe("AnomalyStorage", () => {
   beforeEach(async () => {
     tempDir = await createTempDir();
     storage = new AnomalyStorage({ baseDir: tempDir });
-  });
-
-  afterEach(async () => {
-    await cleanupDir(tempDir);
   });
 
   // ============================================================================
@@ -181,15 +169,12 @@ describe("AnomalyStorage", () => {
     });
 
     it("rebuilds index when file is missing", async () => {
+      const storageNoAuto = new AnomalyStorage({ baseDir: tempDir, autoRebuildIndex: false });
       const anomaly = createTestAnomaly("RS20251230", 1);
-      await storage.saveAnomaly(anomaly);
-
-      // Delete the index file
-      const indexPath = join(tempDir, ".research", "anomaly-index.json");
-      await fs.unlink(indexPath);
+      await storageNoAuto.saveAnomaly(anomaly);
 
       // Should rebuild on load
-      const index = await storage.loadIndex();
+      const index = await storageNoAuto.loadIndex();
       expect(index.entries).toHaveLength(1);
     });
 
