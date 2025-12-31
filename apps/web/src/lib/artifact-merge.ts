@@ -1328,7 +1328,7 @@ export function lintArtifact(artifact: Artifact): LintReport {
       id: "WR-001",
       severity: "warning",
       message: "Research thread anchors are missing",
-      fix: "Add at least one transcript anchor (e.g., §42) or 'inference'",
+      fix: "Add at least one anchor: transcript (§42), evidence (EV-001), or 'inference'",
     });
   }
 
@@ -1376,7 +1376,7 @@ export function lintArtifact(artifact: Artifact): LintReport {
         id: "WH-001",
         severity: "warning",
         message: `${h.id} is missing anchors`,
-        fix: "Add transcript anchors (e.g., §42) or 'inference'",
+        fix: "Add anchors: transcript (§42), evidence (EV-001), or 'inference'",
       });
     }
   }
@@ -1590,10 +1590,43 @@ export function lintArtifact(artifact: Artifact): LintReport {
   }
 
   /**
+   * Check if anchors contain evidence pack citations (EV-NNN or EV-NNN#EN).
+   * Evidence citations are valid grounding alongside transcript anchors.
+   */
+  function hasEvidenceCitations(anchors: string[] | undefined): boolean {
+    if (!Array.isArray(anchors)) return false;
+    // Match EV-001, EV-42, EV-001#E1, EV-003#E12, etc.
+    const evidencePattern = /EV-\d+(?:#E\d+)?/i;
+    return anchors.some((a) => evidencePattern.test(a));
+  }
+
+  /**
+   * Check if anchors contain any valid grounding (transcript §n, evidence EV-*, or labeled inference).
+   */
+  function hasValidGrounding(anchors: string[] | undefined): boolean {
+    if (!Array.isArray(anchors) || anchors.length === 0) return false;
+    const transcriptRefs = extractAnchorRefs(anchors);
+    if (transcriptRefs.length > 0) return true;
+    if (hasEvidenceCitations(anchors)) return true;
+    // Check for explicit inference label
+    return anchors.some((a) => {
+      const lower = a.toLowerCase();
+      return lower === "inference" || lower === "[inference]" || lower.includes("[inference]");
+    });
+  }
+
+  /**
    * Check if anchors contain [inference] without source context.
+   * Returns false if there are transcript §n anchors or evidence EV-* citations
+   * alongside the inference label (those count as source context).
    */
   function isPureInference(anchors: string[] | undefined): boolean {
     if (!Array.isArray(anchors)) return false;
+    // If there are transcript anchors or evidence citations, inference has context
+    const transcriptRefs = extractAnchorRefs(anchors);
+    if (transcriptRefs.length > 0) return false;
+    if (hasEvidenceCitations(anchors)) return false;
+    // Check if any anchor is pure inference (no "from" qualifier)
     return anchors.some((a) => {
       const lower = a.toLowerCase();
       return (
@@ -1622,7 +1655,7 @@ export function lintArtifact(artifact: Artifact): LintReport {
         id: "WP-P02",
         severity: "warning",
         message: `${h.id} uses [inference] without source context`,
-        fix: "Use [inference] from §n to cite the evidence the inference is based on",
+        fix: "Add source context: §n (transcript), EV-NNN (evidence), or use [inference] from §n",
       });
     }
   }

@@ -1,0 +1,130 @@
+{
+  "metadata": {
+    "session_id": "GOLDEN-MIXED-CITATIONS-001",
+    "created_at": "2025-12-31T05:00:00Z",
+    "updated_at": "2025-12-31T05:30:00Z",
+    "version": 1,
+    "contributors": [
+      { "agent": "WhiteBear", "program": "claude-code", "model": "opus-4.5" }
+    ],
+    "status": "active"
+  },
+  "sections": {
+    "research_thread": {
+      "id": "RT",
+      "statement": "Does RRP depletion follow exponential decay?",
+      "context": "Testing mixed citation types for evidence pack support.",
+      "why_it_matters": "Validates linter accepts evidence pack citations.",
+      "anchors": ["§58", "EV-001#E1"]
+    },
+    "hypothesis_slate": [
+      {
+        "id": "H1",
+        "name": "Exponential decay model",
+        "claim": "RRP follows exponential decay with τ ≈ 500ms.",
+        "mechanism": "Vesicle release follows first-order kinetics.",
+        "anchors": ["EV-001", "EV-001#E1"]
+      },
+      {
+        "id": "H2",
+        "name": "Activity-dependent recovery",
+        "claim": "Recovery rate varies with prior activation.",
+        "mechanism": "Adaptive replenishment mechanisms modulate recovery.",
+        "anchors": ["EV-001#E2", "§155"]
+      },
+      {
+        "id": "H3",
+        "name": "Third Alternative",
+        "claim": "Both models are incomplete; hybrid mechanism exists.",
+        "mechanism": "Could involve state-dependent switching between modes.",
+        "anchors": ["EV-003#E1", "[inference]"],
+        "third_alternative": true
+      }
+    ],
+    "predictions_table": [
+      {
+        "id": "P1",
+        "condition": "Sustained stimulation",
+        "predictions": { "H1": "τ ≈ 500ms", "H2": "τ varies", "H3": "indeterminate" }
+      },
+      {
+        "id": "P2",
+        "condition": "Recovery after depletion",
+        "predictions": { "H1": "Fixed rate", "H2": "Activity-dependent", "H3": "indeterminate" }
+      },
+      {
+        "id": "P3",
+        "condition": "Variable inter-stimulus interval",
+        "predictions": { "H1": "No effect", "H2": "Rate changes", "H3": "indeterminate" }
+      }
+    ],
+    "discriminative_tests": [
+      {
+        "id": "T1",
+        "name": "Depletion time course",
+        "procedure": "Measure RRP at multiple timepoints during sustained stimulation.",
+        "discriminates": "H1 vs H2",
+        "expected_outcomes": { "H1": "Pure exponential", "H2": "Deviation from exponential" },
+        "potency_check": "Include positive control with known exponential decay.",
+        "feasibility": "Standard electrophysiology.",
+        "score": { "likelihood_ratio": 3, "cost": 2, "speed": 2, "ambiguity": 2 }
+      },
+      {
+        "id": "T2",
+        "name": "Recovery rate measurement",
+        "procedure": "Apply paired pulses at varying intervals post-depletion per EV-002.",
+        "discriminates": "H1 vs H2",
+        "expected_outcomes": { "H1": "Constant recovery τ", "H2": "Variable recovery τ" },
+        "potency_check": "Use established protocols from EV-002#E1.",
+        "feasibility": "Standard paired-pulse paradigm.",
+        "score": { "likelihood_ratio": 3, "cost": 2, "speed": 3, "ambiguity": 2 }
+      }
+    ],
+    "assumption_ledger": [
+      {
+        "id": "A1",
+        "name": "RRP is measurable",
+        "statement": "Readily releasable pool can be quantified via evoked release.",
+        "load": "If wrong, all measurements are invalid.",
+        "test": "Standard paired-pulse protocol.",
+        "status": "verified"
+      },
+      {
+        "id": "A2",
+        "name": "Scale check: τ vs observation window",
+        "statement": "Observation window must exceed τ by 3x for reliable fitting.",
+        "load": "If wrong, τ estimates are unreliable.",
+        "test": "Use 2s window for τ ≈ 500ms.",
+        "scale_check": true,
+        "calculation": "Window = 2000ms >> 3 * 500ms = 1500ms. ✓",
+        "implication": "Measurement window is sufficient."
+      },
+      {
+        "id": "A3",
+        "name": "Vesicle independence",
+        "statement": "Individual vesicle release events are independent (EV-001#E3).",
+        "load": "If wrong, Poisson statistics invalid.",
+        "test": "Check variance-to-mean ratio.",
+        "status": "assumed"
+      }
+    ],
+    "anomaly_register": [],
+    "adversarial_critique": [
+      {
+        "id": "C1",
+        "name": "Prior session killed H2-like hypothesis",
+        "attack": "EV-003 shows a similar fixed-rate hypothesis was killed previously.",
+        "evidence": "EV-003#E1 documents T3 results contradicting fixed-rate recovery.",
+        "current_status": "Should inform experiment design.",
+        "real_third_alternative": true
+      },
+      {
+        "id": "C2",
+        "name": "Temperature sensitivity",
+        "attack": "EV-004 shows τ varies strongly with temperature (§42-45).",
+        "evidence": "Both H1 and H2 may oversimplify temperature effects.",
+        "current_status": "Consider temperature control in T1 and T2."
+      }
+    ]
+  }
+}

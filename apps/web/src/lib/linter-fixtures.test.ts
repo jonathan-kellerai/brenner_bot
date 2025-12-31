@@ -154,6 +154,62 @@ describe("Linter Fixtures", () => {
       expect(warnings.length).toBeGreaterThan(0);
     });
   });
+
+  describe("mixed-citations", () => {
+    test("passes linting with evidence pack citations as valid grounding", () => {
+      const artifact = loadFixture("mixed-citations");
+      const report = lintArtifact(artifact);
+
+      expect(report.valid).toBe(true);
+      expect(report.summary.errors).toBe(0);
+    });
+
+    test("accepts EV-NNN format as valid anchor", () => {
+      const artifact = loadFixture("mixed-citations");
+      const report = lintArtifact(artifact);
+
+      // H1 uses only evidence citations (EV-001, EV-001#E1), no transcript §n
+      // Should NOT trigger WH-001 (missing anchors) warning
+      const missingAnchorWarnings = report.violations.filter(
+        (v) => v.id === "WH-001" && v.message.includes("H1")
+      );
+      expect(missingAnchorWarnings).toHaveLength(0);
+    });
+
+    test("accepts EV-NNN#EN format as valid anchor", () => {
+      const artifact = loadFixture("mixed-citations");
+      const report = lintArtifact(artifact);
+
+      // H2 uses mixed evidence (EV-001#E2) + transcript (§155)
+      // Should NOT trigger any anchor warnings
+      const h2Warnings = report.violations.filter(
+        (v) => v.message.includes("H2") && v.id.includes("-P")
+      );
+      expect(h2Warnings).toHaveLength(0);
+    });
+
+    test("accepts mixed transcript + evidence citations", () => {
+      const artifact = loadFixture("mixed-citations");
+      const report = lintArtifact(artifact);
+
+      // Research thread uses both §58 and EV-001#E1
+      // Should NOT trigger WR-001 (missing anchors)
+      const rtWarnings = report.violations.filter((v) => v.id === "WR-001");
+      expect(rtWarnings).toHaveLength(0);
+    });
+
+    test("evidence citation with inference does not trigger WP-P02", () => {
+      const artifact = loadFixture("mixed-citations");
+      const report = lintArtifact(artifact);
+
+      // H3 uses EV-003#E1 + [inference]
+      // The evidence citation provides context, so WP-P02 should not fire
+      const pureInferenceWarnings = report.violations.filter(
+        (v) => v.id === "WP-P02" && v.message.includes("H3")
+      );
+      expect(pureInferenceWarnings).toHaveLength(0);
+    });
+  });
 });
 
 describe("Linter Output Format", () => {
