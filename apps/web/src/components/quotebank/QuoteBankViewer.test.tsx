@@ -9,7 +9,6 @@
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import type { ParsedQuoteBank, Quote } from "@/lib/quotebank-parser";
 import { QuoteBankViewer } from "./QuoteBankViewer";
 
@@ -200,8 +199,13 @@ describe("QuoteBankViewer", () => {
       const { container } = render(<QuoteBankViewer data={comprehensiveQuoteBank} />);
 
       // Tags with only 1 quote should be filtered out initially
-      // "model-organism" has 1 quote so it should be excluded
-      // "methodology" has 4 quotes so it should be included
+      // "methodology" has 4 quotes so it should be included in the tag cloud
+      // Tags are rendered as buttons, so check the tag cloud area
+      const tagButtons = container.querySelectorAll("button");
+      const tagTexts = Array.from(tagButtons).map((b) => b.textContent);
+
+      // Methodology should be present (has 4 quotes)
+      expect(tagTexts.some((t) => t?.includes("methodology"))).toBe(true);
     });
   });
 

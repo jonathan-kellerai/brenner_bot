@@ -7,7 +7,7 @@
  * Run with: cd apps/web && bun run test -- src/components/transcript/TranscriptViewer.test.tsx
  */
 
-import { describe, it, expect, beforeEach, vi, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import type { ParsedTranscript, TranscriptSection as TSection, TranscriptContent } from "@/lib/transcript-parser";
 import { TranscriptHero, TableOfContents, ReadingProgress, TranscriptSection } from "./TranscriptViewer";

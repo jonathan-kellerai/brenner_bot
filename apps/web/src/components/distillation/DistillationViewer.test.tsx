@@ -8,8 +8,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, within } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen } from "@testing-library/react";
 import type { ParsedDistillation, DistillationPart, DistillationSection } from "@/lib/distillation-parser";
 import { DistillationViewer, DistillationHero } from "./DistillationViewer";
 
@@ -336,14 +335,14 @@ describe("DistillationViewer", () => {
     });
 
     it("hides TOC for documents with few sections", () => {
-      render(
+      const { container } = render(
         <DistillationViewer data={minimalDistillation} docId="distillation-opus-45" />
       );
 
       // Minimal distillation has only 1 section, TOC should be hidden
-      // Check there's no TOC navigation
-      const tocLinks = screen.queryAllByRole("link");
-      // May have other links, but not TOC-specific ones
+      // The TOC nav element should not be present for small documents
+      const nav = container.querySelector("nav");
+      expect(nav).not.toBeInTheDocument();
     });
   });
 
