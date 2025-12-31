@@ -16,8 +16,7 @@ import type { Hypothesis } from "../schemas/hypothesis";
 import type { Assumption } from "../schemas/assumption";
 import type { Anomaly } from "../schemas/anomaly";
 import type { Critique } from "../schemas/critique";
-import type { TestRecord } from "../schemas/test-record";
-import { calculateTotalScore } from "../schemas/test-record";
+import { calculateTotalScore, validatePotencyCheck, type TestRecord } from "../schemas/test-record";
 
 /**
  * Program Dashboard Aggregation
@@ -237,13 +236,17 @@ export class DashboardAggregator {
       }
 
       // Count by origin (always count, regardless of assumption status)
-      if (h.spawnedFromAnomaly) {
-        funnel.byOrigin.anomalySpawned++;
-      } else if (h.parentId) {
-        // If it has a parent but wasn't spawned from anomaly, it's a refinement/third alternative
-        funnel.byOrigin.thirdAlternative++;
-      } else {
-        funnel.byOrigin.original++;
+      switch (h.origin) {
+        case "anomaly_spawned":
+          funnel.byOrigin.anomalySpawned++;
+          break;
+        case "third_alternative":
+          funnel.byOrigin.thirdAlternative++;
+          break;
+        // "proposed" and "refinement" both count as non-anomaly, non-third-alternative origins here.
+        default:
+          funnel.byOrigin.original++;
+          break;
       }
     }
 
@@ -366,7 +369,7 @@ export class DashboardAggregator {
     let inProgress = 0;
     let completed = 0;
     let blocked = 0;
-    let withPotencyCheck = 0;
+    let potencySufficient = 0;
     let totalEvidenceScore = 0;
     let testsWithScore = 0;
 
@@ -388,9 +391,10 @@ export class DashboardAggregator {
         // abandoned tests are not counted
       }
 
-      // Potency check coverage
-      if (t.execution?.potencyCheckPassed !== undefined) {
-        withPotencyCheck++;
+      // Potency check coverage (quality threshold, not mere existence)
+      const potency = validatePotencyCheck(t);
+      if (potency.valid && potency.score >= 2) {
+        potencySufficient++;
       }
 
       // Evidence per week score (4 dimensions, 0-12 total)
@@ -400,7 +404,7 @@ export class DashboardAggregator {
       }
     }
 
-    const potencyCoverage = tests.length > 0 ? withPotencyCheck / tests.length : 0;
+    const potencyCoverage = tests.length > 0 ? potencySufficient / tests.length : 0;
     const avgEvidenceScore = testsWithScore > 0 ? totalEvidenceScore / testsWithScore : undefined;
 
     return {
