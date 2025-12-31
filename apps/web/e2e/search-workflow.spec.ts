@@ -14,6 +14,8 @@ import {
 } from "./utils";
 import { withStep } from "./utils/e2e-logging";
 
+const SPOTLIGHT_SHORTCUT = process.platform === "darwin" ? "Meta+k" : "Control+k";
+
 test.describe("Search Workflow - Desktop", () => {
   test.beforeEach(async ({ page }) => {
     // Start from the corpus page where search is most commonly used
@@ -22,6 +24,8 @@ test.describe("Search Workflow - Desktop", () => {
   });
 
   test("opens spotlight search with Cmd+K and focuses input", async ({ page, logger }) => {
+    test.skip(process.platform !== "darwin", "Cmd+K is macOS-specific; Ctrl+K is covered in a separate test.");
+
     await withStep(logger, page, "Open spotlight search with Cmd+K", async () => {
       await page.keyboard.press("Meta+k");
     });
@@ -55,7 +59,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("closes spotlight search on Escape", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     await expect(page.locator('[role="dialog"][aria-label="Search"]')).toBeVisible();
 
     await withStep(logger, page, "Close search with Escape key", async () => {
@@ -71,7 +75,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("closes spotlight search by clicking backdrop", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     await expect(page.locator('[role="dialog"][aria-label="Search"]')).toBeVisible();
 
     await withStep(logger, page, "Click backdrop to close", async () => {
@@ -88,7 +92,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("searches for content and displays results", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await expect(input).toBeFocused();
 
@@ -112,7 +116,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("navigates search results with arrow keys", async ({ page, logger }) => {
     // Open search and type query
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("elegans");
     await page.waitForSelector('[data-index="0"]', { timeout: 5000 });
@@ -141,7 +145,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("selects search result with Enter and navigates", async ({ page, logger }) => {
     // Open search and type query
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("genetics");
     await page.waitForSelector('[data-index="0"]', { timeout: 5000 });
@@ -170,7 +174,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("handles no results gracefully", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
 
     await withStep(logger, page, "Type nonsense search query", async () => {
@@ -192,7 +196,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("clears search input with clear button", async ({ page, logger }) => {
     // Open search and type query
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("test query");
 
@@ -211,7 +215,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("filters results by category", async ({ page, logger }) => {
     // Open search and type query
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("molecular");
     await page.waitForSelector('[data-index="0"]', { timeout: 5000 });
@@ -237,7 +241,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("debounces search input", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
 
     await withStep(logger, page, "Type rapidly without waiting", async () => {
@@ -257,7 +261,7 @@ test.describe("Search Workflow - Desktop", () => {
 
   test("uses suggestion chips when search is empty", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
 
     await withStep(logger, page, "Verify suggestion chips are visible", async () => {
       const suggestionChip = page.getByRole("button", { name: /C\. elegans/i });
@@ -295,7 +299,7 @@ test.describe("Search Workflow - Mobile", () => {
   test("opens search via keyboard shortcut on mobile", async ({ page, logger }) => {
     await withStep(logger, page, "Open search with keyboard shortcut", async () => {
       // On mobile, the search button might not be visible, so use keyboard shortcut
-      await page.keyboard.press("Meta+k");
+      await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     });
 
     await withStep(logger, page, "Verify search dialog opens", async () => {
@@ -314,7 +318,7 @@ test.describe("Search Workflow - Mobile", () => {
 
   test("search results are scrollable on mobile", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("Brenner");
     await page.waitForSelector('[data-index="0"]', { timeout: 5000 });
@@ -335,7 +339,7 @@ test.describe("Search Workflow - Mobile", () => {
 
   test("clicks on search result to navigate on mobile", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("genetics");
     await page.waitForSelector('[data-index="0"]', { timeout: 5000 });
@@ -355,7 +359,7 @@ test.describe("Search Workflow - Mobile", () => {
 
   test("category filters are visible on mobile", async ({ page, logger }) => {
     // Open search and type query
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
     await input.fill("biology");
     await page.waitForSelector('[data-index="0"]', { timeout: 5000 });
@@ -379,7 +383,7 @@ test.describe("Search Workflow - Edge Cases", () => {
 
   test("handles special characters in search query", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
 
     await withStep(logger, page, "Search with section anchor format", async () => {
@@ -400,7 +404,7 @@ test.describe("Search Workflow - Edge Cases", () => {
 
   test("handles very long search query", async ({ page, logger }) => {
     // Open search
-    await page.keyboard.press("Meta+k");
+    await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     const input = page.locator('input[placeholder*="Search transcript"]');
 
     const longQuery = "molecular biology genetics C elegans worm development Sydney Brenner research methodology scientific approach";
@@ -422,7 +426,7 @@ test.describe("Search Workflow - Edge Cases", () => {
   test("rapid toggle does not break search", async ({ page, logger }) => {
     await withStep(logger, page, "Rapidly toggle search open/close", async () => {
       for (let i = 0; i < 5; i++) {
-        await page.keyboard.press("Meta+k");
+        await page.keyboard.press(SPOTLIGHT_SHORTCUT);
         await page.waitForTimeout(50);
         await page.keyboard.press("Escape");
         await page.waitForTimeout(50);
@@ -430,7 +434,7 @@ test.describe("Search Workflow - Edge Cases", () => {
     });
 
     await withStep(logger, page, "Open search one final time", async () => {
-      await page.keyboard.press("Meta+k");
+      await page.keyboard.press(SPOTLIGHT_SHORTCUT);
     });
 
     await withStep(logger, page, "Verify search still works", async () => {
@@ -451,7 +455,7 @@ test.describe("Search Workflow - Edge Cases", () => {
       await waitForNetworkIdle(page, logger);
 
       await withStep(logger, page, `Test search from ${pagePath}`, async () => {
-        await page.keyboard.press("Meta+k");
+        await page.keyboard.press(SPOTLIGHT_SHORTCUT);
         const dialog = page.locator('[role="dialog"][aria-label="Search"]');
         await expect(dialog).toBeVisible({ timeout: 2000 });
         await page.keyboard.press("Escape");

@@ -473,8 +473,11 @@ Key fields:
 Generate a non-interpretive DELTA that attaches run metadata to the test:
 
 ```bash
+# Pick a specific run (avoid shell globs expanding to multiple files)
+RESULT_FILE=$(ls -t artifacts/$THREAD_ID/experiments/T1/*.json | head -1)
+
 ./brenner.ts experiment encode \
-  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
+  --result-file "$RESULT_FILE" \
   --project-key "$PROJECT_KEY" \
   > delta.md
 ```
@@ -482,7 +485,7 @@ Generate a non-interpretive DELTA that attaches run metadata to the test:
 With `--json`:
 ```bash
 ./brenner.ts experiment encode \
-  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
+  --result-file "$RESULT_FILE" \
   --project-key "$PROJECT_KEY" \
   --json
 ```
@@ -500,7 +503,7 @@ The `experiment post` command combines encode + send:
 
 ```bash
 ./brenner.ts experiment post \
-  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
+  --result-file "$RESULT_FILE" \
   --project-key "$PROJECT_KEY" \
   --sender Operator \
   --to BlueLake,PurpleMountain,RedForest
@@ -515,7 +518,7 @@ This:
 
 ```bash
 ./brenner.ts experiment encode \
-  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
+  --result-file "$RESULT_FILE" \
   --project-key "$PROJECT_KEY" \
   > delta.md
 

@@ -3,6 +3,8 @@
 > **Status**: Draft specification
 > **Purpose**: Define the CLI surface for `brenner cockpit start` - a one-command workflow for multi-agent session initialization
 > **Depends on**: `cockpit_runbook_v0.1.md`, `agent_roster_schema_v0.1.md`
+>
+> **Implementation status (2025-12-31)**: `./brenner.ts cockpit start` is implemented, but the shipped flag surface differs from parts of this draft. Current behavior is documented in `./brenner.ts --help` and `specs/cockpit_runbook_v0.1.md`. In particular: `--role-map` is required; orchestration is controlled via `--skip-ntm`, `--skip-broadcast`, `--ntm-args`, and `--broadcast-message`; roster presets/files are not implemented.
 
 ---
 
