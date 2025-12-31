@@ -28,6 +28,8 @@ import {
   calculateAdversarialCriticScore,
   checkPassFailGates,
   generateWarnings,
+  generateSessionWarnings,
+  SESSION_WARNING_THRESHOLDS,
   createEmptyStructuralCorrectness,
   createEmptyCitationCompliance,
   createEmptyRationaleQuality,
@@ -37,6 +39,7 @@ import {
   type TestDesignerCriteria,
   type AdversarialCriticCriteria,
   type ContributionScore,
+  type SessionScore,
 } from "./scorecard";
 
 describe("Score Schemas", () => {
