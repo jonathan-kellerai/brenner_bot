@@ -528,4 +528,211 @@ describe("AssumptionStorage", () => {
       expect(sessions).toEqual([]);
     });
   });
+
+  describe("simple ID format (A1, A42) lookups", () => {
+    test("getAssumptionById finds simple format ID A1", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      // Create assumption with simple ID format
+      const assumption = createTestAssumption({ id: "A1", sessionId: "TEST" });
+      await storage.saveSessionAssumptions("TEST", [assumption]);
+
+      const result = await storage.getAssumptionById("A1");
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe("A1");
+    });
+
+    test("getAssumptionById finds simple format ID A42", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumption = createTestAssumption({ id: "A42", sessionId: "SESSION42" });
+      await storage.saveSessionAssumptions("SESSION42", [assumption]);
+
+      const result = await storage.getAssumptionById("A42");
+
+      expect(result).not.toBeNull();
+      expect(result?.id).toBe("A42");
+    });
+
+    test("getAssumptionById finds simple ID across multiple sessions", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir, autoRebuildIndex: false });
+      const session1Assumptions = [
+        createTestAssumption({ id: "A1", sessionId: "SESSION1" }),
+      ];
+      const session2Assumptions = [
+        createTestAssumption({ id: "A2", sessionId: "SESSION2" }),
+        createTestAssumption({ id: "A3", sessionId: "SESSION2" }),
+      ];
+      await storage.saveSessionAssumptions("SESSION1", session1Assumptions);
+      await storage.saveSessionAssumptions("SESSION2", session2Assumptions);
+
+      const resultA1 = await storage.getAssumptionById("A1");
+      const resultA2 = await storage.getAssumptionById("A2");
+      const resultA3 = await storage.getAssumptionById("A3");
+
+      expect(resultA1?.id).toBe("A1");
+      expect(resultA2?.id).toBe("A2");
+      expect(resultA3?.id).toBe("A3");
+    });
+
+    test("getAssumptionById returns null for non-existent simple ID", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumption = createTestAssumption({ id: "A1", sessionId: "TEST" });
+      await storage.saveSessionAssumptions("TEST", [assumption]);
+
+      const result = await storage.getAssumptionById("A999");
+
+      expect(result).toBeNull();
+    });
+
+    test("deleteAssumption works with simple format IDs", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumption = createTestAssumption({ id: "A1", sessionId: "TEST" });
+      await storage.saveSessionAssumptions("TEST", [assumption]);
+
+      const deleted = await storage.deleteAssumption("A1");
+
+      expect(deleted).toBe(true);
+      const result = await storage.getAssumptionById("A1");
+      expect(result).toBeNull();
+    });
+
+    test("saveAssumption updates simple format ID", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumption = createTestAssumption({ id: "A1", sessionId: "TEST" });
+      await storage.saveAssumption(assumption);
+
+      const updated = createTestAssumption({
+        id: "A1",
+        sessionId: "TEST",
+        statement: "Updated simple format assumption.",
+      });
+      await storage.saveAssumption(updated);
+
+      const result = await storage.getAssumptionById("A1");
+      expect(result?.statement).toBe("Updated simple format assumption.");
+    });
+
+    test("getAffectedByFalsification works with simple format IDs", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumption = createTestAssumption({
+        id: "A1",
+        sessionId: "TEST",
+        load: {
+          affectedHypotheses: ["H-TEST-001"],
+          affectedTests: ["T1", "T2"],
+          description: "Dependencies with simple test IDs",
+        },
+      });
+      await storage.saveAssumption(assumption);
+
+      const affected = await storage.getAffectedByFalsification("A1");
+
+      expect(affected.hypotheses).toEqual(["H-TEST-001"]);
+      expect(affected.tests).toEqual(["T1", "T2"]);
+    });
+  });
+
+  describe("error handling and edge cases", () => {
+    test("loadSessionAssumptions handles malformed JSON gracefully", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+
+      // Create the directory structure
+      const assumptionsDir = join(testDir, ".research", "assumptions");
+      await fs.mkdir(assumptionsDir, { recursive: true });
+
+      // Write invalid JSON
+      const filePath = join(assumptionsDir, "MALFORMED-assumptions.json");
+      await fs.writeFile(filePath, "{ invalid json }");
+
+      // Should throw on malformed JSON
+      await expect(storage.loadSessionAssumptions("MALFORMED")).rejects.toThrow();
+    });
+
+    test("saveSessionAssumptions handles special characters in session ID", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const sessionId = "TEST/WITH\\SLASHES";
+      const assumption = createTestAssumption({ sessionId });
+
+      await storage.saveSessionAssumptions(sessionId, [assumption]);
+
+      // Session ID should be sanitized in filename
+      const sanitizedId = sessionId.replace(/[^a-zA-Z0-9_-]/g, "_");
+      const filePath = join(testDir, ".research", "assumptions", `${sanitizedId}-assumptions.json`);
+      const exists = await fs.access(filePath).then(() => true).catch(() => false);
+      expect(exists).toBe(true);
+    });
+
+    test("rebuildIndex handles empty assumptions directory", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+
+      const index = await storage.rebuildIndex();
+
+      expect(index.entries).toEqual([]);
+      expect(index.version).toBe("1.0.0");
+    });
+
+    test("rebuildIndex skips non-assumption files", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumptionsDir = join(testDir, ".research", "assumptions");
+      await fs.mkdir(assumptionsDir, { recursive: true });
+
+      // Create a non-assumption file
+      await fs.writeFile(join(assumptionsDir, "other-file.json"), "{}");
+
+      // Create a valid assumption file
+      const assumption = createTestAssumption();
+      await storage.saveSessionAssumptions("TEST", [assumption]);
+
+      const index = await storage.rebuildIndex();
+
+      expect(index.entries).toHaveLength(1);
+    });
+
+    test("getStatistics handles empty storage", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+
+      const stats = await storage.getStatistics();
+
+      expect(stats.total).toBe(0);
+      expect(stats.sessionsWithAssumptions).toBe(0);
+    });
+  });
+
+  describe("index consistency", () => {
+    test("index reflects hasCalculation correctly", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const withCalc = createTestAssumption({
+        id: "A-TEST-001",
+        type: "scale_physics",
+        calculation: createTestCalculation(),
+      });
+      const withoutCalc = createTestAssumption({
+        id: "A-TEST-002",
+        type: "scale_physics",
+      });
+      await storage.saveSessionAssumptions("TEST", [withCalc, withoutCalc]);
+
+      const index = await storage.loadIndex();
+
+      const entry1 = index.entries.find((e) => e.id === "A-TEST-001");
+      const entry2 = index.entries.find((e) => e.id === "A-TEST-002");
+      expect(entry1?.hasCalculation).toBe(true);
+      expect(entry2?.hasCalculation).toBe(false);
+    });
+
+    test("index updates after delete", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir });
+      const assumptions = [
+        createTestAssumption({ id: "A-TEST-001" }),
+        createTestAssumption({ id: "A-TEST-002" }),
+      ];
+      await storage.saveSessionAssumptions("TEST", assumptions);
+
+      await storage.deleteAssumption("A-TEST-001");
+      const index = await storage.loadIndex();
+
+      expect(index.entries).toHaveLength(1);
+      expect(index.entries[0].id).toBe("A-TEST-002");
+    });
+  });
 });

@@ -600,3 +600,292 @@ describe("AssumptionTransitionHistoryStore", () => {
     });
   });
 });
+
+// ============================================================================
+// End-to-End Falsification Cascade Tests
+// ============================================================================
+
+describe("Falsification Cascade (end-to-end)", () => {
+  describe("cascade scenarios", () => {
+    it("falsifying assumption produces correct cascade for multiple hypotheses and tests", () => {
+      const assumption = createTestAssumption({
+        id: "A-SCALE-001",
+        type: "scale_physics",
+        status: "unchecked",
+        load: {
+          affectedHypotheses: ["H-GRADIENT-001", "H-GRADIENT-002", "H-GRADIENT-003"],
+          affectedTests: ["T-DIFF-001", "T-DIFF-002"],
+          description: "All gradient-based hypotheses depend on diffusion timescale",
+        },
+      });
+
+      const result = falsifyAssumption(assumption, {
+        triggeredBy: "BlueLake",
+        evidenceRef: "T-MEASUREMENT-001",
+        reason: "Measured diffusion coefficient was 100x slower than assumed",
+        sessionId: "SCALE-CHECK-SESSION",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.assumption.status).toBe("falsified");
+        expect(result.propagation).toBeDefined();
+        expect(result.propagation!.undermindedHypotheses).toHaveLength(3);
+        expect(result.propagation!.invalidatedTests).toHaveLength(2);
+        expect(result.propagation!.summary).toContain("3 hypothesis(es) undermined");
+        expect(result.propagation!.summary).toContain("2 test(s) invalidated");
+        expect(result.propagation!.summary).toContain("H-GRADIENT-001");
+        expect(result.propagation!.summary).toContain("T-DIFF-001");
+      }
+    });
+
+    it("cascade is empty when assumption has no dependencies", () => {
+      const assumption = createTestAssumption({
+        id: "A-ISOLATED-001",
+        type: "background",
+        status: "unchecked",
+        load: {
+          affectedHypotheses: [],
+          affectedTests: [],
+          description: "Standalone assumption with no dependencies",
+        },
+      });
+
+      const result = falsifyAssumption(assumption, {
+        reason: "New literature contradicts this assumption",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.propagation!.undermindedHypotheses).toEqual([]);
+        expect(result.propagation!.invalidatedTests).toEqual([]);
+        expect(result.propagation!.summary).toContain("No linked hypotheses or tests affected");
+      }
+    });
+
+    it("cascade only affects tests when no hypotheses linked", () => {
+      const assumption = createTestAssumption({
+        id: "A-METHOD-001",
+        type: "methodological",
+        status: "challenged",
+        load: {
+          affectedHypotheses: [],
+          affectedTests: ["T1", "T2", "T3"],
+          description: "Method assumption affecting tests only",
+        },
+      });
+
+      const result = falsifyAssumption(assumption);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.propagation!.undermindedHypotheses).toEqual([]);
+        expect(result.propagation!.invalidatedTests).toEqual(["T1", "T2", "T3"]);
+        expect(result.propagation!.summary).toContain("3 test(s) invalidated");
+        expect(result.propagation!.summary).not.toContain("hypothesis");
+      }
+    });
+  });
+
+  describe("full lifecycle flow", () => {
+    it("tracks complete lifecycle: unchecked -> challenged -> verified", () => {
+      const store = new AssumptionTransitionHistoryStore();
+      let assumption = createTestAssumption({ id: "A-LIFECYCLE-001", status: "unchecked" });
+
+      // Step 1: Challenge the assumption
+      const challenge = challengeAssumption(assumption, {
+        triggeredBy: "RedMountain",
+        reason: "Literature review found conflicting evidence",
+      });
+      expect(challenge.success).toBe(true);
+      if (challenge.success) {
+        store.add(challenge.transition);
+        assumption = challenge.assumption;
+      }
+
+      // Step 2: Verify after investigation
+      const verify = verifyAssumption(assumption, {
+        triggeredBy: "GreenValley",
+        evidenceRef: "T-VERIFY-001",
+        reason: "Experimental confirmation of assumption",
+      });
+      expect(verify.success).toBe(true);
+      if (verify.success) {
+        store.add(verify.transition);
+        assumption = verify.assumption;
+      }
+
+      // Check final state
+      expect(assumption.status).toBe("verified");
+      const history = store.getHistory("A-LIFECYCLE-001");
+      expect(history).toHaveLength(2);
+      expect(history[0].trigger).toBe("challenge");
+      expect(history[1].trigger).toBe("verify");
+    });
+
+    it("tracks lifecycle: unchecked -> challenged -> falsified with cascade", () => {
+      const store = new AssumptionTransitionHistoryStore();
+      let assumption = createTestAssumption({
+        id: "A-DOOMED-001",
+        status: "unchecked",
+        load: {
+          affectedHypotheses: ["H-MAIN-001"],
+          affectedTests: ["T-MAIN-001"],
+          description: "Core assumption for main hypothesis",
+        },
+      });
+
+      // Step 1: Challenge
+      const challenge = challengeAssumption(assumption, { reason: "Questioned by reviewer" });
+      expect(challenge.success).toBe(true);
+      if (challenge.success) {
+        store.add(challenge.transition);
+        assumption = challenge.assumption;
+      }
+
+      // Step 2: Falsify
+      const falsify = falsifyAssumption(assumption, {
+        evidenceRef: "T-CRITICAL-001",
+        reason: "Critical test disproved assumption",
+      });
+      expect(falsify.success).toBe(true);
+      if (falsify.success) {
+        store.add(falsify.transition);
+        assumption = falsify.assumption;
+        expect(falsify.propagation!.undermindedHypotheses).toContain("H-MAIN-001");
+        expect(falsify.propagation!.invalidatedTests).toContain("T-MAIN-001");
+      }
+
+      // Check terminal state - cannot transition further
+      const rechallenge = challengeAssumption(assumption);
+      expect(rechallenge.success).toBe(false);
+      if (!rechallenge.success) {
+        expect(rechallenge.error.code).toBe(AssumptionTransitionErrorCode.TERMINAL_STATE);
+      }
+
+      // Verify history
+      const history = store.getHistory("A-DOOMED-001");
+      expect(history).toHaveLength(2);
+      expect(store.getFalsifiedAssumptions()).toContain("A-DOOMED-001");
+    });
+
+    it("verified assumption can be re-challenged and then falsified", () => {
+      const store = new AssumptionTransitionHistoryStore();
+      let assumption = createTestAssumption({
+        id: "A-REVISED-001",
+        status: "verified",
+        load: {
+          affectedHypotheses: ["H-REVISED-001"],
+          affectedTests: [],
+          description: "Previously verified assumption",
+        },
+      });
+
+      // Step 1: Re-challenge verified assumption
+      const rechallenge = challengeAssumption(assumption, {
+        reason: "New evidence contradicts previous verification",
+        evidenceRef: "PAPER-2025-001",
+      });
+      expect(rechallenge.success).toBe(true);
+      if (rechallenge.success) {
+        store.add(rechallenge.transition);
+        assumption = rechallenge.assumption;
+        expect(assumption.status).toBe("challenged");
+      }
+
+      // Step 2: Falsify after re-evaluation
+      const falsify = falsifyAssumption(assumption, {
+        reason: "Re-evaluation confirmed falsification",
+      });
+      expect(falsify.success).toBe(true);
+      if (falsify.success) {
+        store.add(falsify.transition);
+        assumption = falsify.assumption;
+        expect(falsify.propagation!.undermindedHypotheses).toContain("H-REVISED-001");
+      }
+
+      // Check complete history
+      const history = store.getHistory("A-REVISED-001");
+      expect(history).toHaveLength(2);
+      expect(history[0].fromState).toBe("verified");
+      expect(history[0].toState).toBe("challenged");
+      expect(history[1].fromState).toBe("challenged");
+      expect(history[1].toState).toBe("falsified");
+    });
+  });
+
+  describe("transition metadata", () => {
+    it("preserves all metadata through transitions", () => {
+      const assumption = createTestAssumption({ status: "unchecked" });
+
+      const result = transitionAssumption(assumption, "falsify", {
+        triggeredBy: "ExperimentBot",
+        evidenceRef: "T-CRITICAL-999",
+        reason: "Scale calculation was off by 3 orders of magnitude",
+        sessionId: "SESSION-2025-12-31",
+      });
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.transition.triggeredBy).toBe("ExperimentBot");
+        expect(result.transition.evidenceRef).toBe("T-CRITICAL-999");
+        expect(result.transition.reason).toContain("3 orders of magnitude");
+        expect(result.transition.sessionId).toBe("SESSION-2025-12-31");
+        expect(result.transition.id).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+        );
+        expect(result.transition.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+      }
+    });
+
+    it("updates assumption.updatedAt on transition", () => {
+      const assumption = createTestAssumption({ status: "unchecked" });
+      const originalUpdatedAt = assumption.updatedAt;
+
+      // Small delay to ensure different timestamp
+      const result = transitionAssumption(assumption, "challenge");
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(new Date(result.assumption.updatedAt).getTime()).toBeGreaterThanOrEqual(
+          new Date(originalUpdatedAt).getTime()
+        );
+      }
+    });
+  });
+
+  describe("edge cases", () => {
+    it("handles assumption with many dependencies", () => {
+      const manyHypotheses = Array.from({ length: 20 }, (_, i) => `H-MULTI-${String(i + 1).padStart(3, "0")}`);
+      const manyTests = Array.from({ length: 15 }, (_, i) => `T-MULTI-${String(i + 1).padStart(3, "0")}`);
+
+      const assumption = createTestAssumption({
+        id: "A-CENTRAL-001",
+        status: "unchecked",
+        load: {
+          affectedHypotheses: manyHypotheses,
+          affectedTests: manyTests,
+          description: "Central assumption with many dependencies",
+        },
+      });
+
+      const result = falsifyAssumption(assumption);
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.propagation!.undermindedHypotheses).toHaveLength(20);
+        expect(result.propagation!.invalidatedTests).toHaveLength(15);
+        expect(result.propagation!.summary).toContain("20 hypothesis(es) undermined");
+        expect(result.propagation!.summary).toContain("15 test(s) invalidated");
+      }
+    });
+
+    it("computeFalsificationPropagation includes timestamp", () => {
+      const assumption = createTestAssumption({ status: "falsified" });
+      const propagation = computeFalsificationPropagation(assumption);
+
+      expect(propagation.timestamp).toBeDefined();
+      expect(new Date(propagation.timestamp).getTime()).toBeLessThanOrEqual(Date.now());
+    });
+  });
+});

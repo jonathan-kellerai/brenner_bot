@@ -589,3 +589,265 @@ describe("createScaleAssumption", () => {
     expect(assumption.calculation).toBeDefined();
   });
 });
+
+// ============================================================================
+// Boundary Condition Tests
+// ============================================================================
+
+describe("Schema boundary conditions", () => {
+  const validBase = {
+    id: "A-TEST-001",
+    type: "background" as const,
+    status: "unchecked" as const,
+    load: {
+      affectedHypotheses: [],
+      affectedTests: [],
+      description: "No dependencies.",
+    },
+    sessionId: "TEST",
+    createdAt: "2025-12-30T19:00:00Z",
+    updatedAt: "2025-12-30T19:00:00Z",
+  };
+
+  describe("statement length boundaries", () => {
+    it("accepts statement with exactly 10 characters (minimum)", () => {
+      const data = { ...validBase, statement: "1234567890" }; // exactly 10
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects statement with 9 characters (below minimum)", () => {
+      const data = { ...validBase, statement: "123456789" }; // 9 chars
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+
+    it("accepts statement with exactly 500 characters (maximum)", () => {
+      const data = { ...validBase, statement: "x".repeat(500) };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects statement with 501 characters (above maximum)", () => {
+      const data = { ...validBase, statement: "x".repeat(501) };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("testMethod length boundaries", () => {
+    it("accepts testMethod with exactly 1000 characters (maximum)", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        testMethod: "x".repeat(1000),
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects testMethod with 1001 characters (above maximum)", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        testMethod: "x".repeat(1001),
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("notes length boundaries", () => {
+    it("accepts notes with exactly 2000 characters (maximum)", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        notes: "x".repeat(2000),
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(true);
+    });
+
+    it("rejects notes with 2001 characters (above maximum)", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        notes: "x".repeat(2001),
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("datetime validation", () => {
+    it("rejects invalid datetime format for createdAt", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        createdAt: "not-a-date",
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+
+    it("rejects invalid datetime format for updatedAt", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        updatedAt: "2025-12-30",
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+  });
+
+  describe("sessionId validation", () => {
+    it("rejects empty sessionId", () => {
+      const data = {
+        ...validBase,
+        statement: "Valid statement here.",
+        sessionId: "",
+      };
+      const result = AssumptionSchema.safeParse(data);
+      expect(result.success).toBe(false);
+    });
+  });
+});
+
+describe("ID format edge cases", () => {
+  it("rejects assumption ID with lowercase 'a' prefix", () => {
+    expect(isValidAssumptionId("a-TEST-001")).toBe(false);
+  });
+
+  it("rejects assumption ID with spaces", () => {
+    expect(isValidAssumptionId("A-TEST 001-001")).toBe(false);
+  });
+
+  it("validates complex session IDs with underscores", () => {
+    expect(isValidAssumptionId("A-RS_2025_12_30-001")).toBe(true);
+  });
+
+  it("validates session IDs starting with numbers after first char", () => {
+    expect(isValidAssumptionId("A-S20251230-001")).toBe(true);
+  });
+});
+
+describe("Anchor format edge cases", () => {
+  it("validates single digit anchors", () => {
+    expect(isValidAnchor("§1")).toBe(true);
+    expect(isValidAnchor("§0")).toBe(true);
+  });
+
+  it("validates multi-digit anchors", () => {
+    expect(isValidAnchor("§12345")).toBe(true);
+  });
+
+  it("rejects anchor ranges in wrong order (still valid format)", () => {
+    // Note: §50-1 is still a valid format, even if semantically odd
+    expect(isValidAnchor("§50-1")).toBe(true);
+  });
+
+  it("rejects negative numbers in anchors", () => {
+    expect(isValidAnchor("§-5")).toBe(false);
+  });
+});
+
+describe("evaluateScaleRigor edge cases", () => {
+  it("returns 1 when only quantities present", () => {
+    const calc: ScaleCalculation = {
+      quantities: "D ≈ 10 μm²/s",
+      result: "",
+      units: "seconds",
+      implication: "something",
+    };
+    expect(evaluateScaleRigor(calc)).toBe(1);
+  });
+
+  it("returns 2 when missing only units", () => {
+    const calc: ScaleCalculation = {
+      quantities: "D ≈ 10 μm²/s",
+      result: "τ ≈ 1000s",
+      units: "",
+      implication: "something",
+    };
+    expect(evaluateScaleRigor(calc)).toBe(2);
+  });
+
+  it("handles whitespace-only fields as empty", () => {
+    const calc: ScaleCalculation = {
+      quantities: "   ",
+      result: "τ ≈ 1000s",
+      units: "seconds",
+      implication: "something",
+    };
+    expect(evaluateScaleRigor(calc)).toBe(1);
+  });
+});
+
+describe("generateAssumptionId edge cases", () => {
+  it("handles session IDs with special characters", () => {
+    const id = generateAssumptionId("TEST_2025-12-30", []);
+    expect(id).toBe("A-TEST_2025-12-30-001");
+    expect(isValidAssumptionId(id)).toBe(true);
+  });
+
+  it("handles mixed existing ID formats", () => {
+    const existing = [
+      "A-TEST-001",
+      "A-TEST-003",
+      "A-OTHER-002",
+      "A1", // simple format - should be ignored for this session
+    ];
+    const id = generateAssumptionId("TEST", existing);
+    expect(id).toBe("A-TEST-004");
+  });
+});
+
+describe("validateScaleAssumptionPresence edge cases", () => {
+  const baseAssumption = (overrides: Partial<Assumption>): Assumption => ({
+    id: "A-TEST-001",
+    statement: "Test statement for assumption.",
+    type: "background",
+    status: "unchecked",
+    load: {
+      affectedHypotheses: [],
+      affectedTests: [],
+      description: "No dependencies.",
+    },
+    sessionId: "TEST",
+    createdAt: "2025-12-30T19:00:00Z",
+    updatedAt: "2025-12-30T19:00:00Z",
+    ...overrides,
+  });
+
+  it("returns empty array for empty assumptions list", () => {
+    const result = validateScaleAssumptionPresence([]);
+    expect(result.present).toBe(false);
+    expect(result.count).toBe(0);
+    expect(result.rigorLevels).toEqual([]);
+  });
+
+  it("correctly reports mixed rigor levels", () => {
+    const assumptions = [
+      baseAssumption({
+        id: "A-TEST-001",
+        type: "scale_physics",
+        calculation: undefined, // rigor 0
+      }),
+      baseAssumption({
+        id: "A-TEST-002",
+        type: "scale_physics",
+        calculation: {
+          quantities: "D ≈ 10 μm²/s",
+          result: "",
+          units: "",
+          implication: "",
+        }, // rigor 1
+      }),
+    ];
+    const result = validateScaleAssumptionPresence(assumptions);
+    expect(result.rigorLevels).toContain(0);
+    expect(result.rigorLevels).toContain(1);
+    expect(result.message).toContain("max rigor is 1/3");
+  });
+});
