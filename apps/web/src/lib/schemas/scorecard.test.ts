@@ -1434,6 +1434,32 @@ describe("Session-Level Dimension Scoring", () => {
       expect(result.points).toBeGreaterThan(0);
     });
 
+    it("detects reasoning from flagged kills without transitions", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Test", mechanism: "Test", killed: true, kill_reason: "Experiment showed no binding affinity" },
+      ];
+
+      const session = createTestSession({ artifact, hypothesisTransitions: [] });
+      const result = scoreHypothesisKillRate(session);
+
+      // Should detect reasoning from kill_reason field even without transitions
+      expect(result.signals.find((s) => s.signal.includes("reasoning documented"))?.found).toBe(true);
+    });
+
+    it("detects test links from flagged kills via killed_by field", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Test", mechanism: "Test", killed: true, killed_by: "T-1", kill_reason: "Failed test T-1" },
+      ];
+
+      const session = createTestSession({ artifact, hypothesisTransitions: [] });
+      const result = scoreHypothesisKillRate(session);
+
+      // Should detect test link from killed_by field even without transitions
+      expect(result.signals.find((s) => s.signal.includes("test result"))?.found).toBe(true);
+    });
+
     it("detects kills from transitions", () => {
       const artifact = createEmptyArtifact();
       artifact.sections.hypothesis_slate = [

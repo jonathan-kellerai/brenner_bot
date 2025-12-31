@@ -1101,6 +1101,7 @@ export function scoreHypothesisKillRate(session: SessionData): DimensionScore {
   const flaggedKillsWithReasoning = killsFromFlags.filter(
     (h) => h.kill_reason && h.kill_reason.length >= 10
   );
+  const totalKillsWithReasoning = killsWithReasoning.length + flaggedKillsWithReasoning.length;
 
   const signals: ScoreSignal[] = [
     {
@@ -1121,12 +1122,10 @@ export function scoreHypothesisKillRate(session: SessionData): DimensionScore {
     {
       signal: "Kill reasoning documented",
       points: 5,
-      found:
-        killsWithReasoning.length === killsFromTransitions.length &&
-        killsFromTransitions.length > 0,
+      found: totalKillsWithReasoning > 0,
       evidence:
-        killsWithReasoning.length > 0
-          ? `${killsWithReasoning.length} kills with reasoning`
+        totalKillsWithReasoning > 0
+          ? `${totalKillsWithReasoning} kills with reasoning`
           : undefined,
     },
   ];
