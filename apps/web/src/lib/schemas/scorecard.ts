@@ -1,4 +1,13 @@
 import { z } from "zod";
+import type {
+  Artifact,
+  HypothesisItem,
+  TestItem,
+  AssumptionItem,
+  AnomalyItem,
+  CritiqueItem,
+  ResearchThreadItem,
+} from "../artifact-merge";
 
 /**
  * Brenner Method Scorecard Schema
@@ -704,12 +713,6 @@ export const WARNING_THRESHOLDS = {
     message: "Low-quality contribution (< 50% of max score)",
     criterion: "composite",
   },
-  hypothesisSprawl: {
-    // This would need session context to check
-    check: (_score: ContributionScore) => false,
-    message: "> 3 ADDs without KILL indicates possible hypothesis sprawl",
-    criterion: "session",
-  },
   missingScaleCheck: {
     check: (score: ContributionScore) =>
       score.role === "adversarial_critic" && (score.adversarialCritic?.scaleCheckRigor.score ?? 0) === 0,
@@ -725,6 +728,58 @@ export const WARNING_THRESHOLDS = {
 } as const;
 
 // ============================================================================
+// Session-Level Warning Definitions
+// ============================================================================
+
+/**
+ * Session-level warning thresholds.
+ * These require the full session context to evaluate.
+ */
+export const SESSION_WARNING_THRESHOLDS = {
+  hypothesisSprawl: {
+    check: (session: SessionScore) =>
+      session.sessionMetrics.convergence.addCount > 3 &&
+      session.sessionMetrics.convergence.killCount === 0,
+    message: "> 3 ADDs without KILL indicates possible hypothesis sprawl",
+    criterion: "convergence",
+  },
+  lowConvergence: {
+    check: (session: SessionScore) =>
+      session.sessionMetrics.totalContributions >= 5 && !session.sessionMetrics.convergence.converging,
+    message: "Session has not converged (more ADDs than KILLs at end)",
+    criterion: "convergence",
+  },
+  lowOperatorCoverage: {
+    check: (session: SessionScore) => session.sessionMetrics.operatorCoverage.coveragePercentage < 50,
+    message: "Less than 50% of operators used in session",
+    criterion: "operatorCoverage",
+  },
+  decliningQuality: {
+    check: (session: SessionScore) => session.sessionMetrics.progression === "declining",
+    message: "Quality is declining over the session",
+    criterion: "progression",
+  },
+} as const;
+
+/**
+ * Generate warnings for a session.
+ */
+export function generateSessionWarnings(session: SessionScore): SessionScore["contributions"][0]["warnings"] {
+  const warnings: SessionScore["contributions"][0]["warnings"] = [];
+
+  for (const [, threshold] of Object.entries(SESSION_WARNING_THRESHOLDS)) {
+    if (threshold.check(session)) {
+      warnings.push({
+        criterion: threshold.criterion,
+        message: threshold.message,
+      });
+    }
+  }
+
+  return warnings;
+}
+
+// ============================================================================
 // Brenner Quotes for Feedback
 // ============================================================================
 
@@ -735,7 +790,7 @@ export const BRENNER_QUOTES: Record<string, string> = {
   levelSeparation: "Programs don't have wants. Interpreters do. (§58)",
   thirdAlternativePresence: "Both could be wrong. (§103)",
   scaleCheckRigor: "The imprisoned imagination — scale constraints are load-bearing. (§58)",
-  anomalyQuarantineDiscipline: "Neither hidden nor allowed to destroy coherent framework.",
+  anomalyQuarantineDiscipline: "We didn't conceal them; we put them in an appendix. (§110)",
   theoryKillJustification: "When they go ugly, kill them. Get rid of them. (§229)",
   discriminativePower: "Exclusion is always a tremendously good thing. (§147)",
 };
@@ -809,5 +864,647 @@ export function createEmptyRationaleQuality(): RationaleQuality {
     hasRationale: false,
     mentionsOperators: false,
     explainsWhy: false,
+  };
+}
+
+// ============================================================================
+// Session-Level Dimension Scoring (7 Dimensions)
+// ============================================================================
+// This section implements the 7-dimension session scoring as specified in
+// brenner_bot-yh8l. These dimensions aggregate session-level metrics rather
+// than per-contribution scores.
+
+/**
+ * A signal that contributes to a dimension score.
+ */
+export interface ScoreSignal {
+  signal: string;
+  points: number;
+  found: boolean;
+  evidence?: string;
+}
+
+/**
+ * Score for a single dimension.
+ */
+export interface DimensionScore {
+  dimension: string;
+  points: number;
+  maxPoints: number;
+  percentage: number;
+  signals: ScoreSignal[];
+}
+
+/**
+ * Session data for scoring - includes artifact and optional transition history.
+ */
+export interface SessionData {
+  sessionId: string;
+  researchQuestion?: string;
+  artifact: Artifact;
+  hypothesisTransitions?: HypothesisTransition[];
+}
+
+/**
+ * Hypothesis state transition record for kill rate scoring.
+ */
+export interface HypothesisTransition {
+  hypothesisId: string;
+  fromState: string;
+  toState: string;
+  triggeredBy?: string;
+  reason?: string;
+  timestamp: string;
+}
+
+/**
+ * Complete session-level dimension score.
+ */
+export interface SessionDimensionScore {
+  sessionId: string;
+  scoredAt: string;
+  dimensions: {
+    paradoxGrounding: DimensionScore;
+    hypothesisKillRate: DimensionScore;
+    testDiscriminability: DimensionScore;
+    assumptionTracking: DimensionScore;
+    thirdAlternativeDiscovery: DimensionScore;
+    experimentalFeasibility: DimensionScore;
+    adversarialPressure: DimensionScore;
+  };
+  totalScore: number;
+  maxScore: number;
+  grade: "A" | "B" | "C" | "D" | "F";
+}
+
+// ============================================================================
+// Dimension Scoring Functions
+// ============================================================================
+
+/**
+ * Compute a dimension score from signals.
+ */
+function computeDimensionScore(dimension: string, signals: ScoreSignal[], maxPoints: number): DimensionScore {
+  const points = signals
+    .filter((s) => s.found)
+    .reduce((sum, s) => sum + s.points, 0);
+
+  return {
+    dimension,
+    points: Math.min(points, maxPoints), // Cap at maxPoints
+    maxPoints,
+    percentage: maxPoints > 0 ? Math.round((Math.min(points, maxPoints) / maxPoints) * 100) : 0,
+    signals,
+  };
+}
+
+/**
+ * Keywords indicating paradox/puzzle in research question.
+ */
+const PARADOX_KEYWORDS = [
+  "paradox",
+  "puzzle",
+  "surprising",
+  "unexpected",
+  "contradiction",
+  "anomaly",
+  "mystery",
+  "counterintuitive",
+  "but",
+  "yet",
+  "however",
+  "despite",
+  "although",
+];
+
+/**
+ * Check if text contains paradox-related keywords.
+ */
+function checkForParadoxKeywords(text: string | undefined): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return PARADOX_KEYWORDS.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Check if text challenges existing paradigm.
+ */
+function checkForParadigmChallenge(text: string | undefined): boolean {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  const challengeKeywords = [
+    "challenge",
+    "question",
+    "rethink",
+    "reconsider",
+    "alternative",
+    "contrary to",
+    "unlike",
+    "different from",
+    "not as assumed",
+    "wrong",
+    "incorrect",
+    "mistaken",
+  ];
+  return challengeKeywords.some((kw) => lower.includes(kw));
+}
+
+/**
+ * Score Dimension 1: Paradox Grounding (0-20)
+ *
+ * Measures whether the session starts from a genuine paradox or puzzle.
+ * Signals:
+ * - Research question contains explicit paradox/puzzle (5 pts)
+ * - At least one surprising observation cited (5 pts)
+ * - Question challenges existing paradigm (5 pts)
+ * - Foundational assumptions questioned (5 pts)
+ */
+export function scoreParadoxGrounding(session: SessionData): DimensionScore {
+  const researchThread = session.artifact.sections.research_thread;
+  const questionText =
+    session.researchQuestion ??
+    researchThread?.statement ??
+    "";
+
+  const anomalies = session.artifact.sections.anomaly_register ?? [];
+  const assumptions = session.artifact.sections.assumption_ledger ?? [];
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "Research question contains explicit paradox/puzzle",
+      points: 5,
+      found: checkForParadoxKeywords(questionText),
+      evidence: checkForParadoxKeywords(questionText) ? "Keywords detected" : undefined,
+    },
+    {
+      signal: "At least one surprising observation cited",
+      points: 5,
+      found: anomalies.length > 0,
+      evidence: anomalies.length > 0 ? `${anomalies.length} anomalies registered` : undefined,
+    },
+    {
+      signal: "Question challenges existing paradigm",
+      points: 5,
+      found: checkForParadigmChallenge(questionText),
+      evidence: checkForParadigmChallenge(questionText) ? "Challenge language detected" : undefined,
+    },
+    {
+      signal: "Foundational assumptions questioned",
+      points: 5,
+      found: assumptions.some((a) => a.status === "falsified"),
+      evidence: assumptions.filter((a) => a.status === "falsified").length > 0
+        ? `${assumptions.filter((a) => a.status === "falsified").length} assumptions falsified`
+        : undefined,
+    },
+  ];
+
+  return computeDimensionScore("paradoxGrounding", signals, 20);
+}
+
+/**
+ * Score Dimension 2: Hypothesis Kill Rate (0-20)
+ *
+ * Measures how effectively hypotheses are being eliminated.
+ * "When they go ugly, kill them. Get rid of them." (§229)
+ *
+ * Signals:
+ * - At least one hypothesis killed in session (10 pts)
+ * - Kill linked to specific test result (5 pts)
+ * - Kill reasoning documented (5 pts)
+ *
+ * Penalty:
+ * - No hypothesis transitions (static session) (-5 pts)
+ */
+export function scoreHypothesisKillRate(session: SessionData): DimensionScore {
+  const transitions = session.hypothesisTransitions ?? [];
+  const hypotheses = session.artifact.sections.hypothesis_slate ?? [];
+
+  // Count kills from transitions or from killed flag on hypotheses
+  const killsFromTransitions = transitions.filter((t) => t.toState === "refuted" || t.toState === "killed");
+  const killsFromFlags = hypotheses.filter((h) => h.killed);
+  const totalKills = Math.max(killsFromTransitions.length, killsFromFlags.length);
+
+  // Check if kills are linked to test results
+  const killsWithTestLink = killsFromTransitions.filter(
+    (t) => t.triggeredBy?.startsWith("T-") || t.triggeredBy?.startsWith("test-")
+  );
+
+  // Check if kill reasoning is documented
+  const killsWithReasoning = killsFromTransitions.filter(
+    (t) => t.reason && t.reason.length >= 10
+  );
+  const flaggedKillsWithReasoning = killsFromFlags.filter(
+    (h) => h.kill_reason && h.kill_reason.length >= 10
+  );
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "At least one hypothesis killed in session",
+      points: 10,
+      found: totalKills > 0,
+      evidence: totalKills > 0 ? `${totalKills} hypotheses killed` : undefined,
+    },
+    {
+      signal: "Kill linked to specific test result",
+      points: 5,
+      found: killsWithTestLink.length > 0 || flaggedKillsWithReasoning.length > 0,
+      evidence:
+        killsWithTestLink.length > 0
+          ? `${killsWithTestLink.length} kills linked to tests`
+          : undefined,
+    },
+    {
+      signal: "Kill reasoning documented",
+      points: 5,
+      found:
+        killsWithReasoning.length === killsFromTransitions.length &&
+        killsFromTransitions.length > 0,
+      evidence:
+        killsWithReasoning.length > 0
+          ? `${killsWithReasoning.length} kills with reasoning`
+          : undefined,
+    },
+  ];
+
+  // Penalty for static session (no transitions at all)
+  if (transitions.length === 0 && hypotheses.length > 0) {
+    signals.push({
+      signal: "No hypothesis transitions (static session)",
+      points: -5,
+      found: true,
+      evidence: `${hypotheses.length} hypotheses but no transitions`,
+    });
+  }
+
+  return computeDimensionScore("hypothesisKillRate", signals, 20);
+}
+
+/**
+ * Score Dimension 3: Test Discriminability (0-20)
+ *
+ * Measures whether tests actually distinguish hypotheses.
+ * "Exclusion is always a tremendously good thing." (§147)
+ *
+ * Signals:
+ * - Tests have different predictions for hypotheses (8 pts)
+ * - Outcomes are observable/measurable (4 pts)
+ * - Potency checks included (8 pts)
+ */
+export function scoreTestDiscriminability(session: SessionData): DimensionScore {
+  const tests = session.artifact.sections.discriminative_tests ?? [];
+
+  // Check for different predictions
+  const testsWithDifferentPredictions = tests.filter(
+    (t) =>
+      t.expected_outcomes &&
+      Object.keys(t.expected_outcomes).length >= 2
+  );
+
+  // Check for observable outcomes (look for measurement language)
+  const observableKeywords = [
+    "measure",
+    "observe",
+    "detect",
+    "count",
+    "quantify",
+    "assay",
+    "analyze",
+    "sequence",
+    "image",
+    "stain",
+  ];
+  const testsWithObservableOutcomes = tests.filter((t) => {
+    const procedureLower = (t.procedure ?? "").toLowerCase();
+    return observableKeywords.some((kw) => procedureLower.includes(kw));
+  });
+
+  // Check for potency checks
+  const testsWithPotencyChecks = tests.filter(
+    (t) => t.potency_check && t.potency_check.length > 10
+  );
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "Tests have different predictions for hypotheses",
+      points: 8,
+      found: testsWithDifferentPredictions.length > 0,
+      evidence:
+        testsWithDifferentPredictions.length > 0
+          ? `${testsWithDifferentPredictions.length}/${tests.length} tests discriminate`
+          : undefined,
+    },
+    {
+      signal: "Outcomes are observable/measurable",
+      points: 4,
+      found: testsWithObservableOutcomes.length > 0,
+      evidence:
+        testsWithObservableOutcomes.length > 0
+          ? `${testsWithObservableOutcomes.length} tests with observable procedures`
+          : undefined,
+    },
+    {
+      signal: "Potency checks included",
+      points: 8,
+      found: testsWithPotencyChecks.length === tests.length && tests.length > 0,
+      evidence:
+        testsWithPotencyChecks.length > 0
+          ? `${testsWithPotencyChecks.length}/${tests.length} tests have potency checks`
+          : undefined,
+    },
+  ];
+
+  return computeDimensionScore("testDiscriminability", signals, 20);
+}
+
+/**
+ * Score Dimension 4: Assumption Tracking (0-15)
+ *
+ * Measures whether assumptions are tracked and challenged.
+ * "The imprisoned imagination" — scale constraints are load-bearing. (§58)
+ *
+ * Signals:
+ * - Assumptions are recorded (5 pts)
+ * - Assumptions linked to hypotheses (5 pts)
+ * - Scale/physics checks performed (5 pts)
+ */
+export function scoreAssumptionTracking(session: SessionData): DimensionScore {
+  const assumptions = session.artifact.sections.assumption_ledger ?? [];
+
+  // Check for recorded assumptions
+  const hasAssumptions = assumptions.length > 0;
+
+  // Check for linked assumptions (load field references hypothesis)
+  const linkedAssumptions = assumptions.filter(
+    (a) => a.load && a.load.length > 5
+  );
+
+  // Check for scale/physics checks
+  const scaleChecks = assumptions.filter((a) => a.scale_check === true);
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "Assumptions are recorded",
+      points: 5,
+      found: hasAssumptions,
+      evidence: hasAssumptions ? `${assumptions.length} assumptions recorded` : undefined,
+    },
+    {
+      signal: "Assumptions linked to hypotheses",
+      points: 5,
+      found: linkedAssumptions.length > 0,
+      evidence:
+        linkedAssumptions.length > 0
+          ? `${linkedAssumptions.length} assumptions have load-bearing links`
+          : undefined,
+    },
+    {
+      signal: "Scale/physics checks performed",
+      points: 5,
+      found: scaleChecks.length > 0,
+      evidence:
+        scaleChecks.length > 0
+          ? `${scaleChecks.length} scale checks performed`
+          : undefined,
+    },
+  ];
+
+  return computeDimensionScore("assumptionTracking", signals, 15);
+}
+
+/**
+ * Score Dimension 5: Third Alternative Discovery (0-15)
+ *
+ * Measures whether third alternatives are explored.
+ * "Both could be wrong." (§103)
+ *
+ * Signals:
+ * - Third alternatives proposed (5 pts)
+ * - Third alternatives are genuinely orthogonal (5 pts)
+ * - Third alternatives have different causal structure (5 pts)
+ */
+export function scoreThirdAlternativeDiscovery(session: SessionData): DimensionScore {
+  const hypotheses = session.artifact.sections.hypothesis_slate ?? [];
+
+  // Count hypotheses marked as third alternatives
+  const thirdAlts = hypotheses.filter((h) => h.third_alternative === true);
+
+  // Check if third alternatives are orthogonal (different mechanism)
+  // Heuristic: check if mechanism text is substantially different from other hypotheses
+  const isOrthogonal = thirdAlts.some((ta) => {
+    const taMech = (ta.mechanism ?? "").toLowerCase();
+    const otherMechs = hypotheses
+      .filter((h) => h.id !== ta.id && !h.third_alternative)
+      .map((h) => (h.mechanism ?? "").toLowerCase());
+
+    // Simple heuristic: check word overlap is low
+    const taWords = new Set(taMech.split(/\s+/).filter((w) => w.length > 3));
+    if (taWords.size === 0) return false;
+
+    for (const om of otherMechs) {
+      const omWords = new Set(om.split(/\s+/).filter((w) => w.length > 3));
+      const overlap = [...taWords].filter((w) => omWords.has(w)).length;
+      const overlapRatio = overlap / Math.max(taWords.size, 1);
+      if (overlapRatio < 0.3) return true; // Low overlap = orthogonal
+    }
+    return false;
+  });
+
+  // Check for different causal structure (look for distinct causal keywords)
+  const causalKeywords = ["because", "causes", "leads to", "results in", "triggers", "enables", "prevents"];
+  const thirdAltsWithCausalStructure = thirdAlts.filter((ta) => {
+    const mechLower = (ta.mechanism ?? "").toLowerCase();
+    return causalKeywords.some((kw) => mechLower.includes(kw));
+  });
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "Third alternatives proposed",
+      points: 5,
+      found: thirdAlts.length > 0,
+      evidence: thirdAlts.length > 0 ? `${thirdAlts.length} third alternatives` : undefined,
+    },
+    {
+      signal: "Third alternatives are genuinely orthogonal",
+      points: 5,
+      found: isOrthogonal,
+      evidence: isOrthogonal ? "Mechanism differs substantially from main hypotheses" : undefined,
+    },
+    {
+      signal: "Third alternatives have different causal structure",
+      points: 5,
+      found: thirdAltsWithCausalStructure.length > 0,
+      evidence:
+        thirdAltsWithCausalStructure.length > 0
+          ? `${thirdAltsWithCausalStructure.length} with distinct causal structure`
+          : undefined,
+    },
+  ];
+
+  return computeDimensionScore("thirdAlternativeDiscovery", signals, 15);
+}
+
+/**
+ * Score Dimension 6: Experimental Feasibility (0-10)
+ *
+ * Measures whether tests are actually feasible to run.
+ *
+ * Signals:
+ * - Tests have feasibility assessment (5 pts)
+ * - Tests have been executed (5 pts)
+ */
+export function scoreExperimentalFeasibility(session: SessionData): DimensionScore {
+  const tests = session.artifact.sections.discriminative_tests ?? [];
+
+  // Check for feasibility assessments
+  const testsWithFeasibility = tests.filter(
+    (t) => t.feasibility && t.feasibility.length > 10
+  );
+
+  // Check for executed tests
+  const executedTests = tests.filter((t) => t.status && t.status !== "untested");
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "Tests have feasibility assessment",
+      points: 5,
+      found: testsWithFeasibility.length > 0,
+      evidence:
+        testsWithFeasibility.length > 0
+          ? `${testsWithFeasibility.length}/${tests.length} tests have feasibility notes`
+          : undefined,
+    },
+    {
+      signal: "Tests have been executed",
+      points: 5,
+      found: executedTests.length > 0,
+      evidence:
+        executedTests.length > 0
+          ? `${executedTests.length}/${tests.length} tests executed`
+          : undefined,
+    },
+  ];
+
+  return computeDimensionScore("experimentalFeasibility", signals, 10);
+}
+
+/**
+ * Score Dimension 7: Adversarial Pressure (0-20)
+ *
+ * Measures whether adversarial critique has been applied.
+ *
+ * Signals:
+ * - Critiques have been logged (8 pts)
+ * - Critiques have evidence backing (6 pts)
+ * - Real third alternatives proposed from critique (6 pts)
+ */
+export function scoreAdversarialPressure(session: SessionData): DimensionScore {
+  const critiques = session.artifact.sections.adversarial_critique ?? [];
+
+  // Check for logged critiques
+  const hasCritiques = critiques.length > 0;
+
+  // Check for evidence-backed critiques
+  const critiquesWithEvidence = critiques.filter(
+    (c) => c.evidence && c.evidence.length > 20
+  );
+
+  // Check for real third alternatives from critique
+  const realThirdAlts = critiques.filter((c) => c.real_third_alternative === true);
+
+  const signals: ScoreSignal[] = [
+    {
+      signal: "Critiques have been logged",
+      points: 8,
+      found: hasCritiques,
+      evidence: hasCritiques ? `${critiques.length} critiques logged` : undefined,
+    },
+    {
+      signal: "Critiques have evidence backing",
+      points: 6,
+      found: critiquesWithEvidence.length > 0,
+      evidence:
+        critiquesWithEvidence.length > 0
+          ? `${critiquesWithEvidence.length}/${critiques.length} critiques have evidence`
+          : undefined,
+    },
+    {
+      signal: "Real third alternatives proposed from critique",
+      points: 6,
+      found: realThirdAlts.length > 0,
+      evidence:
+        realThirdAlts.length > 0
+          ? `${realThirdAlts.length} real third alternatives from critique`
+          : undefined,
+    },
+  ];
+
+  return computeDimensionScore("adversarialPressure", signals, 20);
+}
+
+// ============================================================================
+// Session Scoring Aggregation
+// ============================================================================
+
+/**
+ * Compute overall grade from total score percentage.
+ */
+export function computeGrade(totalScore: number, maxScore: number): "A" | "B" | "C" | "D" | "F" {
+  if (maxScore === 0) return "F";
+  const percentage = (totalScore / maxScore) * 100;
+  if (percentage >= 90) return "A";
+  if (percentage >= 80) return "B";
+  if (percentage >= 70) return "C";
+  if (percentage >= 60) return "D";
+  return "F";
+}
+
+/**
+ * Score a complete session across all 7 dimensions.
+ *
+ * Returns a SessionDimensionScore with individual dimension scores,
+ * total score, max possible score, and letter grade.
+ */
+export function scoreSession(session: SessionData): SessionDimensionScore {
+  const paradoxGrounding = scoreParadoxGrounding(session);
+  const hypothesisKillRate = scoreHypothesisKillRate(session);
+  const testDiscriminability = scoreTestDiscriminability(session);
+  const assumptionTracking = scoreAssumptionTracking(session);
+  const thirdAlternativeDiscovery = scoreThirdAlternativeDiscovery(session);
+  const experimentalFeasibility = scoreExperimentalFeasibility(session);
+  const adversarialPressure = scoreAdversarialPressure(session);
+
+  const totalScore =
+    paradoxGrounding.points +
+    hypothesisKillRate.points +
+    testDiscriminability.points +
+    assumptionTracking.points +
+    thirdAlternativeDiscovery.points +
+    experimentalFeasibility.points +
+    adversarialPressure.points;
+
+  const maxScore =
+    paradoxGrounding.maxPoints +
+    hypothesisKillRate.maxPoints +
+    testDiscriminability.maxPoints +
+    assumptionTracking.maxPoints +
+    thirdAlternativeDiscovery.maxPoints +
+    experimentalFeasibility.maxPoints +
+    adversarialPressure.maxPoints;
+
+  return {
+    sessionId: session.sessionId,
+    scoredAt: new Date().toISOString(),
+    dimensions: {
+      paradoxGrounding,
+      hypothesisKillRate,
+      testDiscriminability,
+      assumptionTracking,
+      thirdAlternativeDiscovery,
+      experimentalFeasibility,
+      adversarialPressure,
+    },
+    totalScore,
+    maxScore,
+    grade: computeGrade(totalScore, maxScore),
   };
 }

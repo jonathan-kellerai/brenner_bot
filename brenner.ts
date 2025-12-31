@@ -82,6 +82,28 @@ import {
   type CritiqueStatus,
   type CritiqueTargetType,
 } from "./apps/web/src/lib/schemas/critique";
+import { ProgramStorage } from "./apps/web/src/lib/storage/program-storage";
+import {
+  createResearchProgram,
+  generateProgramId,
+  addSessionToProgram,
+  removeSessionFromProgram,
+  pauseProgram,
+  resumeProgram,
+  completeProgram,
+  abandonProgram,
+  type ResearchProgram,
+  type ProgramStatus,
+} from "./apps/web/src/lib/schemas/research-program";
+import { HypothesisStorage } from "./apps/web/src/lib/storage/hypothesis-storage";
+import {
+  createHypothesis,
+  type Hypothesis,
+  type HypothesisState,
+  type HypothesisCategory,
+  type HypothesisOrigin,
+  type HypothesisConfidence,
+} from "./apps/web/src/lib/schemas/hypothesis";
 
 function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1233,6 +1255,28 @@ Commands:
   assumption falsify <id> --evidence <s> [--reason <s>] [--by <s>] [--project-key <abs-path>] [--json]
   assumption link <assumption-id> <hypothesis-id|test-id> [--load-description <s>] [--project-key <abs-path>] [--json]
   assumption stats [--project-key <abs-path>] [--json]
+
+  program list [--status <active|paused|completed|abandoned>] [--project-key <abs-path>] [--json]
+  program show <id> [--project-key <abs-path>] [--json]
+  program create --name <s> --description <s> [--sessions <RS1,RS2>] [--project-key <abs-path>] [--json]
+  program add-session <program-id> --session <session-id> [--project-key <abs-path>] [--json]
+  program remove-session <program-id> --session <session-id> [--project-key <abs-path>] [--json]
+  program pause <id> [--reason <s>] [--project-key <abs-path>] [--json]
+  program resume <id> [--project-key <abs-path>] [--json]
+  program complete <id> [--summary <s>] [--project-key <abs-path>] [--json]
+  program abandon <id> --reason <s> [--project-key <abs-path>] [--json]
+  program stats [--project-key <abs-path>] [--json]
+
+  hypothesis list [--session-id <id>] [--state <proposed|active|confirmed|refuted|superseded|deferred>]
+                 [--category <mechanistic|phenomenological|boundary|auxiliary|third_alternative>] [--project-key <abs-path>] [--json]
+  hypothesis show <id> [--project-key <abs-path>] [--json]
+  hypothesis create --statement <s> --category <mechanistic|phenomenological|boundary|auxiliary|third_alternative>
+                   [--session-id <id>] [--mechanism <s>] [--origin <proposed|third_alternative|refinement|anomaly_spawned>]
+                   [--confidence <high|medium|low|speculative>] [--parent <H-...>] [--by <s>]
+                   [--anchors <A,B>] [--tags <A,B>] [--notes <s>] [--project-key <abs-path>] [--json]
+  hypothesis search <query> [--project-key <abs-path>] [--json]
+  hypothesis link <child-id> <parent-id> [--project-key <abs-path>] [--json]
+  hypothesis stats [--project-key <abs-path>] [--json]
 
   mail health
   mail tools
@@ -3510,6 +3554,586 @@ ${JSON.stringify(delta, null, 2)}
     }
 
     throw new Error(`Unknown assumption subcommand: ${sub ?? "(missing)"}`);
+  }
+
+  // ============================================================================
+  // Hypothesis Command
+  // ============================================================================
+  if (top === "hypothesis") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+    const storage = new HypothesisStorage({ baseDir: projectKey });
+
+    const VALID_STATES: HypothesisState[] = ["proposed", "active", "confirmed", "refuted", "superseded", "deferred"];
+    const VALID_CATEGORIES: HypothesisCategory[] = ["mechanistic", "phenomenological", "boundary", "auxiliary", "third_alternative"];
+    const VALID_ORIGINS: HypothesisOrigin[] = ["proposed", "third_alternative", "refinement", "anomaly_spawned"];
+    const VALID_CONFIDENCES: HypothesisConfidence[] = ["high", "medium", "low", "speculative"];
+
+    // Subcommand: list
+    if (sub === "list") {
+      const sessionFilter = asStringFlag(flags, "session-id");
+      const stateFilter = asStringFlag(flags, "state") as HypothesisState | undefined;
+      const categoryFilter = asStringFlag(flags, "category") as HypothesisCategory | undefined;
+
+      if (stateFilter && !VALID_STATES.includes(stateFilter)) {
+        throw new Error(`Invalid --state "${stateFilter}" (expected one of: ${VALID_STATES.join(", ")})`);
+      }
+      if (categoryFilter && !VALID_CATEGORIES.includes(categoryFilter)) {
+        throw new Error(`Invalid --category "${categoryFilter}" (expected one of: ${VALID_CATEGORIES.join(", ")})`);
+      }
+
+      let hypotheses: Hypothesis[];
+
+      if (sessionFilter) {
+        hypotheses = await storage.loadSessionHypotheses(sessionFilter);
+      } else if (stateFilter) {
+        hypotheses = await storage.getHypothesesByState(stateFilter);
+      } else {
+        hypotheses = await storage.getAllHypotheses();
+      }
+
+      // Apply category filter if provided
+      if (categoryFilter) {
+        hypotheses = hypotheses.filter((h) => h.category === categoryFilter);
+      }
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: hypotheses.length, hypotheses }, null, 2));
+      } else {
+        if (hypotheses.length === 0) {
+          stdoutLine("No hypotheses found.");
+        } else {
+          for (const h of hypotheses) {
+            const state = h.state.padEnd(12);
+            const category = h.category.padEnd(16);
+            const stmt = h.statement.length > 60 ? h.statement.substring(0, 57) + "..." : h.statement;
+            stdoutLine(`[${state}] ${h.id} (${category}): ${stmt}`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: show
+    if (sub === "show") {
+      const hypothesisId = rest[0];
+      if (!hypothesisId) {
+        throw new Error("Usage: hypothesis show <id>");
+      }
+
+      const hypothesis = await storage.getHypothesisById(hypothesisId);
+      if (!hypothesis) {
+        throw new Error(`Hypothesis "${hypothesisId}" not found`);
+      }
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, hypothesis }, null, 2));
+      } else {
+        stdoutLine(`ID:             ${hypothesis.id}`);
+        stdoutLine(`Session:        ${hypothesis.sessionId}`);
+        stdoutLine(`State:          ${hypothesis.state}`);
+        stdoutLine(`Category:       ${hypothesis.category}`);
+        stdoutLine(`Confidence:     ${hypothesis.confidence}`);
+        stdoutLine(`Origin:         ${hypothesis.origin}`);
+        stdoutLine(`Statement:      ${hypothesis.statement}`);
+        if (hypothesis.mechanism) {
+          stdoutLine(`Mechanism:      ${hypothesis.mechanism}`);
+        }
+        if (hypothesis.parentId) {
+          stdoutLine(`Parent:         ${hypothesis.parentId}`);
+        }
+        if (hypothesis.spawnedFromAnomaly) {
+          stdoutLine(`From anomaly:   ${hypothesis.spawnedFromAnomaly}`);
+        }
+        if (hypothesis.testAnchors.length > 0) {
+          stdoutLine(`Test anchors:   ${hypothesis.testAnchors.join(", ")}`);
+        }
+        if (hypothesis.tags && hypothesis.tags.length > 0) {
+          stdoutLine(`Tags:           ${hypothesis.tags.join(", ")}`);
+        }
+        stdoutLine(`Critiques:      ${hypothesis.unresolvedCritiqueCount} unresolved`);
+        if (hypothesis.proposedBy) {
+          stdoutLine(`Proposed by:    ${hypothesis.proposedBy}`);
+        }
+        if (hypothesis.notes) {
+          stdoutLine(`Notes:          ${hypothesis.notes}`);
+        }
+        stdoutLine(`Created:        ${hypothesis.createdAt}`);
+        stdoutLine(`Updated:        ${hypothesis.updatedAt}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: create
+    if (sub === "create") {
+      const statement = asStringFlag(flags, "statement");
+      const categoryStr = asStringFlag(flags, "category") as HypothesisCategory | undefined;
+
+      if (!statement) {
+        throw new Error("--statement is required");
+      }
+      if (!categoryStr) {
+        throw new Error("--category is required");
+      }
+      if (!VALID_CATEGORIES.includes(categoryStr)) {
+        throw new Error(`Invalid --category "${categoryStr}" (expected one of: ${VALID_CATEGORIES.join(", ")})`);
+      }
+
+      const sessionId = asStringFlag(flags, "session-id") ?? `RS-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+      const mechanism = asStringFlag(flags, "mechanism");
+      const originStr = asStringFlag(flags, "origin") as HypothesisOrigin | undefined;
+      const confidenceStr = asStringFlag(flags, "confidence") as HypothesisConfidence | undefined;
+      const parentId = asStringFlag(flags, "parent");
+      const proposedBy = asStringFlag(flags, "by");
+      const anchorsStr = asStringFlag(flags, "anchors");
+      const tagsStr = asStringFlag(flags, "tags");
+      const notes = asStringFlag(flags, "notes");
+
+      if (originStr && !VALID_ORIGINS.includes(originStr)) {
+        throw new Error(`Invalid --origin "${originStr}" (expected one of: ${VALID_ORIGINS.join(", ")})`);
+      }
+      if (confidenceStr && !VALID_CONFIDENCES.includes(confidenceStr)) {
+        throw new Error(`Invalid --confidence "${confidenceStr}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
+      }
+
+      // Generate ID: H-{sessionId}-{seq}
+      const existingHypotheses = await storage.loadSessionHypotheses(sessionId);
+      const seq = String(existingHypotheses.length + 1).padStart(3, "0");
+      const id = `H-${sessionId}-${seq}`;
+
+      const hypothesis = createHypothesis({
+        id,
+        sessionId,
+        statement,
+        category: categoryStr,
+        mechanism,
+        origin: originStr ?? "proposed",
+        confidence: confidenceStr ?? "medium",
+        parentId,
+        proposedBy,
+        testAnchors: anchorsStr ? anchorsStr.split(",").map((s) => s.trim()) : [],
+        tags: tagsStr ? tagsStr.split(",").map((s) => s.trim()) : [],
+        notes,
+      });
+
+      await storage.saveHypothesis(hypothesis);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, hypothesis }, null, 2));
+      } else {
+        stdoutLine(`Created hypothesis: ${hypothesis.id}`);
+        stdoutLine(`  Category:   ${hypothesis.category}`);
+        stdoutLine(`  Statement:  ${hypothesis.statement}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: search
+    if (sub === "search") {
+      const query = rest[0];
+      if (!query) {
+        throw new Error("Usage: hypothesis search <query>");
+      }
+
+      const results = await storage.searchHypotheses(query);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: results.length, hypotheses: results }, null, 2));
+      } else {
+        if (results.length === 0) {
+          stdoutLine(`No hypotheses matching "${query}"`);
+        } else {
+          stdoutLine(`Found ${results.length} hypothesis(es):`);
+          for (const h of results) {
+            const state = h.state.padEnd(12);
+            const stmt = h.statement.length > 50 ? h.statement.substring(0, 47) + "..." : h.statement;
+            stdoutLine(`  [${state}] ${h.id}: ${stmt}`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: link
+    if (sub === "link") {
+      const childId = rest[0];
+      const parentId = rest[1];
+      if (!childId || !parentId) {
+        throw new Error("Usage: hypothesis link <child-id> <parent-id>");
+      }
+
+      const child = await storage.getHypothesisById(childId);
+      if (!child) {
+        throw new Error(`Hypothesis "${childId}" not found`);
+      }
+
+      const parent = await storage.getHypothesisById(parentId);
+      if (!parent) {
+        throw new Error(`Parent hypothesis "${parentId}" not found`);
+      }
+
+      const updated: Hypothesis = {
+        ...child,
+        parentId,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await storage.saveHypothesis(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, hypothesis: updated }, null, 2));
+      } else {
+        stdoutLine(`Linked ${childId} → ${parentId}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: stats
+    if (sub === "stats") {
+      const index = await storage.loadIndex();
+      const hypotheses = await storage.getAllHypotheses();
+
+      const byState: Record<HypothesisState, number> = {
+        proposed: 0,
+        active: 0,
+        confirmed: 0,
+        refuted: 0,
+        superseded: 0,
+        deferred: 0,
+      };
+
+      const byCategory: Record<HypothesisCategory, number> = {
+        mechanistic: 0,
+        phenomenological: 0,
+        boundary: 0,
+        auxiliary: 0,
+        third_alternative: 0,
+      };
+
+      const byConfidence: Record<HypothesisConfidence, number> = {
+        high: 0,
+        medium: 0,
+        low: 0,
+        speculative: 0,
+      };
+
+      let withMechanism = 0;
+      let withParent = 0;
+      let totalUnresolvedCritiques = 0;
+
+      for (const h of hypotheses) {
+        byState[h.state]++;
+        byCategory[h.category]++;
+        byConfidence[h.confidence]++;
+        if (h.mechanism) withMechanism++;
+        if (h.parentId) withParent++;
+        totalUnresolvedCritiques += h.unresolvedCritiqueCount;
+      }
+
+      const sessions = new Set(hypotheses.map((h) => h.sessionId)).size;
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({
+          ok: true,
+          total: hypotheses.length,
+          byState,
+          byCategory,
+          byConfidence,
+          withMechanism,
+          withParent,
+          totalUnresolvedCritiques,
+          sessions,
+        }, null, 2));
+      } else {
+        stdoutLine("Hypothesis Statistics:");
+        stdoutLine(`  Total:                 ${hypotheses.length}`);
+        stdoutLine("  By state:");
+        stdoutLine(`    Proposed:            ${byState.proposed}`);
+        stdoutLine(`    Active:              ${byState.active}`);
+        stdoutLine(`    Confirmed:           ${byState.confirmed}`);
+        stdoutLine(`    Refuted:             ${byState.refuted}`);
+        stdoutLine(`    Superseded:          ${byState.superseded}`);
+        stdoutLine(`    Deferred:            ${byState.deferred}`);
+        stdoutLine("  By category:");
+        stdoutLine(`    Mechanistic:         ${byCategory.mechanistic}`);
+        stdoutLine(`    Phenomenological:    ${byCategory.phenomenological}`);
+        stdoutLine(`    Boundary:            ${byCategory.boundary}`);
+        stdoutLine(`    Auxiliary:           ${byCategory.auxiliary}`);
+        stdoutLine(`    Third alternative:   ${byCategory.third_alternative}`);
+        stdoutLine("  By confidence:");
+        stdoutLine(`    High:                ${byConfidence.high}`);
+        stdoutLine(`    Medium:              ${byConfidence.medium}`);
+        stdoutLine(`    Low:                 ${byConfidence.low}`);
+        stdoutLine(`    Speculative:         ${byConfidence.speculative}`);
+        stdoutLine(`  With mechanism:        ${withMechanism}`);
+        stdoutLine(`  With parent:           ${withParent}`);
+        stdoutLine(`  Unresolved critiques:  ${totalUnresolvedCritiques}`);
+        stdoutLine(`  Sessions with data:    ${sessions}`);
+      }
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown hypothesis subcommand: ${sub ?? "(missing)"}`);
+  }
+
+  // ============================================================================
+  // Program Command
+  // ============================================================================
+  if (top === "program") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+    const storage = new ProgramStorage({ baseDir: projectKey });
+
+    const VALID_PROGRAM_STATUSES: ProgramStatus[] = ["active", "paused", "completed", "abandoned"];
+
+    // Subcommand: list
+    if (sub === "list") {
+      const statusFilter = asStringFlag(flags, "status") as ProgramStatus | undefined;
+
+      if (statusFilter && !VALID_PROGRAM_STATUSES.includes(statusFilter)) {
+        throw new Error(`Invalid --status "${statusFilter}" (expected one of: ${VALID_PROGRAM_STATUSES.join(", ")})`);
+      }
+
+      let programs: ResearchProgram[];
+      if (statusFilter) {
+        programs = await storage.getProgramsByStatus(statusFilter);
+      } else {
+        programs = await storage.loadPrograms();
+      }
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: programs.length, programs }, null, 2));
+      } else {
+        if (programs.length === 0) {
+          stdoutLine("No research programs found.");
+        } else {
+          for (const p of programs) {
+            const status = p.status.padEnd(10);
+            const sessions = p.sessions.length;
+            stdoutLine(`[${status}] ${p.id}: ${p.name} (${sessions} session${sessions !== 1 ? "s" : ""})`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: show
+    if (sub === "show") {
+      const programId = action;
+      if (!programId) throw new Error("Missing program ID. Usage: program show <id>");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program }, null, 2));
+      } else {
+        stdoutLine(`ID:          ${program.id}`);
+        stdoutLine(`Name:        ${program.name}`);
+        stdoutLine(`Status:      ${program.status}`);
+        stdoutLine(`Description: ${program.description}`);
+        stdoutLine(`Sessions:    ${program.sessions.length > 0 ? program.sessions.join(", ") : "(none)"}`);
+        if (program.notes) stdoutLine(`Notes:       ${program.notes}`);
+        if (program.abandonedReason) stdoutLine(`Abandoned:   ${program.abandonedReason}`);
+        stdoutLine(`Created:     ${program.createdAt}`);
+        stdoutLine(`Updated:     ${program.updatedAt}`);
+        if (program.closedAt) stdoutLine(`Closed:      ${program.closedAt}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: create
+    if (sub === "create") {
+      const name = asStringFlag(flags, "name");
+      const description = asStringFlag(flags, "description");
+      const sessionsRaw = asStringFlag(flags, "sessions");
+
+      if (!name) throw new Error("Missing --name.");
+      if (!description) throw new Error("Missing --description.");
+
+      // Generate slug from name
+      const slug = name.toUpperCase().replace(/[^A-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+      const existingPrograms = await storage.loadPrograms();
+      const existingIds = existingPrograms.map((p) => p.id);
+      const newId = generateProgramId(slug, existingIds);
+
+      const sessions = sessionsRaw ? splitCsv(sessionsRaw) : [];
+
+      const program = createResearchProgram({
+        id: newId,
+        name,
+        description,
+        sessions,
+      });
+
+      await storage.saveProgram(program);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program }, null, 2));
+      } else {
+        stdoutLine(`Created program: ${program.id}`);
+        stdoutLine(`Name: ${program.name}`);
+        if (sessions.length > 0) {
+          stdoutLine(`Sessions: ${sessions.join(", ")}`);
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: add-session
+    if (sub === "add-session") {
+      const programId = action;
+      const sessionId = asStringFlag(flags, "session") ?? positionalArgs[1];
+
+      if (!programId) throw new Error("Missing program ID. Usage: program add-session <program-id> --session <session-id>");
+      if (!sessionId) throw new Error("Missing --session <session-id>.");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const updated = addSessionToProgram(program, sessionId);
+      await storage.saveProgram(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: updated }, null, 2));
+      } else {
+        stdoutLine(`Added session ${sessionId} to program ${programId}`);
+        stdoutLine(`Total sessions: ${updated.sessions.length}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: remove-session
+    if (sub === "remove-session") {
+      const programId = action;
+      const sessionId = asStringFlag(flags, "session") ?? positionalArgs[1];
+
+      if (!programId) throw new Error("Missing program ID. Usage: program remove-session <program-id> --session <session-id>");
+      if (!sessionId) throw new Error("Missing --session <session-id>.");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const updated = removeSessionFromProgram(program, sessionId);
+      await storage.saveProgram(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: updated }, null, 2));
+      } else {
+        stdoutLine(`Removed session ${sessionId} from program ${programId}`);
+        stdoutLine(`Remaining sessions: ${updated.sessions.length}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: pause
+    if (sub === "pause") {
+      const programId = action;
+      const reason = asStringFlag(flags, "reason");
+
+      if (!programId) throw new Error("Missing program ID. Usage: program pause <id> [--reason <s>]");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const updated = pauseProgram(program, reason);
+      await storage.saveProgram(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: updated }, null, 2));
+      } else {
+        stdoutLine(`Paused program ${programId}`);
+        if (reason) stdoutLine(`Reason: ${reason}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: resume
+    if (sub === "resume") {
+      const programId = action;
+
+      if (!programId) throw new Error("Missing program ID. Usage: program resume <id>");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const updated = resumeProgram(program);
+      await storage.saveProgram(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: updated }, null, 2));
+      } else {
+        stdoutLine(`Resumed program ${programId}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: complete
+    if (sub === "complete") {
+      const programId = action;
+      const summary = asStringFlag(flags, "summary");
+
+      if (!programId) throw new Error("Missing program ID. Usage: program complete <id> [--summary <s>]");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const updated = completeProgram(program, summary);
+      await storage.saveProgram(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: updated }, null, 2));
+      } else {
+        stdoutLine(`Completed program ${programId}`);
+        if (summary) stdoutLine(`Summary: ${summary}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: abandon
+    if (sub === "abandon") {
+      const programId = action;
+      const reason = asStringFlag(flags, "reason");
+
+      if (!programId) throw new Error("Missing program ID. Usage: program abandon <id> --reason <s>");
+      if (!reason) throw new Error("Missing --reason (required for abandonment).");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const updated = abandonProgram(program, reason);
+      await storage.saveProgram(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: updated }, null, 2));
+      } else {
+        stdoutLine(`Abandoned program ${programId}`);
+        stdoutLine(`Reason: ${reason}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: stats
+    if (sub === "stats") {
+      const stats = await storage.getStatistics();
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, ...stats }, null, 2));
+      } else {
+        stdoutLine(`Program Statistics:`);
+        stdoutLine(`  Total:                    ${stats.total}`);
+        stdoutLine(`  By status:`);
+        stdoutLine(`    Active:                 ${stats.byStatus.active}`);
+        stdoutLine(`    Paused:                 ${stats.byStatus.paused}`);
+        stdoutLine(`    Completed:              ${stats.byStatus.completed}`);
+        stdoutLine(`    Abandoned:              ${stats.byStatus.abandoned}`);
+        stdoutLine(`  Total sessions:           ${stats.totalSessions}`);
+        stdoutLine(`  Avg sessions/program:     ${stats.avgSessionsPerProgram.toFixed(1)}`);
+      }
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown program subcommand: ${sub ?? "(missing)"}`);
   }
 
   if (top === "mail") {

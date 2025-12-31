@@ -223,7 +223,7 @@ describe("AnimatedCounter", () => {
         flushAnimationFrames(1);
       });
 
-      // With easeOutExpo, 10% time should result in >50% progress
+      // With easeOutExpo, early progress should exceed 50%
       // (because ease-out is fast at start, slow at end)
       const text = screen.getByText(/\d+/).textContent;
       const value = parseInt(text || "0", 10);
