@@ -2,11 +2,11 @@
  * search/hooks.ts Unit Tests
  *
  * Tests React hooks for search functionality.
- * Philosophy: NO mocks - test real implementations with real DOM.
+ * Philosophy: NO mocks for business logic - test real implementations with real DOM.
  *
- * Note: Tests that require the search index to be loaded are skipped since
- * index loading requires network access. The engine.test.ts file covers
- * index loading with mocked fetch using real index data.
+ * Approach: Uses mocked fetch that returns real index data from disk. This avoids
+ * network dependencies while testing against actual corpus data (same approach as
+ * engine.test.ts).
  *
  * Run with: cd apps/web && bun run test -- src/lib/search/hooks.test.ts
  */
