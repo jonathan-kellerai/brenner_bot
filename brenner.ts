@@ -1141,7 +1141,7 @@ Usage:
 
 Commands:
   version
-  doctor [--json] [--manifest <path>] [--agent-mail] [--skip-ntm] [--skip-cass] [--skip-cm]
+  doctor [--json] [--manifest <path>] [--agent-mail] [--skip-ntm] [--skip-cass] [--skip-cm] [--skip-agents]
   upgrade [--version <ver>]
   memory context <task> [--top <n>] [--history <n>] [--days <n>] [--workspace <path>] [--log-context] [--session <id>]
   excerpt build [--sections <A,B>] [--tags <A,B>] [--limit <n>] [--theme <s>] [--ordering <relevance|chronological>]
@@ -1460,6 +1460,7 @@ async function main(): Promise<void> {
     const skipNtm = asBoolFlag(flags, "skip-ntm");
     const skipCass = asBoolFlag(flags, "skip-cass");
     const skipCm = asBoolFlag(flags, "skip-cm");
+    const skipAgents = asBoolFlag(flags, "skip-agents");
 
     const buildInfo = getBrennerBuildInfo();
     const warnings: string[] = [];
@@ -1544,6 +1545,49 @@ async function main(): Promise<void> {
     checkTool("ntm", { skip: skipNtm || isWindows, required: !isWindows });
     checkTool("cass", { skip: skipCass, required: true });
     checkTool("cm", { skip: skipCm, required: true });
+
+    // Agent CLI checks (optional - presence only)
+    // Each agent may have multiple binary names depending on installation method
+    const agentCliBinaries: Record<string, string[]> = {
+      claude: ["claude", "claude-code"],
+      codex: ["codex", "codex-cli"],
+      gemini: ["gemini", "gemini-cli"],
+    };
+
+    const checkAgentCli = (name: string, binaries: string[]): void => {
+      if (skipAgents) {
+        checks[name] = { status: "skipped", path: null, verifyCommand: null, exitCode: null };
+        return;
+      }
+
+      // Try each binary name until one is found
+      for (const bin of binaries) {
+        const binPath = Bun.which(bin);
+        if (binPath) {
+          checks[name] = {
+            status: "ok",
+            path: binPath,
+            verifyCommand: `${bin} --version`,
+            exitCode: 0,
+            notes: `Found as '${bin}'`,
+          };
+          return;
+        }
+      }
+
+      // None found
+      checks[name] = {
+        status: "missing",
+        path: null,
+        verifyCommand: null,
+        exitCode: null,
+        notes: `Optional. Tried: ${binaries.join(", ")}`,
+      };
+    };
+
+    for (const [name, binaries] of Object.entries(agentCliBinaries)) {
+      checkAgentCli(name, binaries);
+    }
 
     if (checkAgentMail) {
       const baseUrl = runtimeConfig.agentMail.baseUrl;

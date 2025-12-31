@@ -1465,6 +1465,84 @@ describe("doctor command", () => {
     expect(parsed.checks.cm.status).toBe("skipped");
     expect(parsed.checks.agentMail.status).toBe("skipped");
   });
+
+  it("doctor --json includes agent CLI checks", async () => {
+    const result = await runCli([
+      "doctor",
+      "--json",
+      "--skip-ntm",
+      "--skip-cass",
+      "--skip-cm",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as {
+      status: string;
+      checks: Record<string, { status: string; path?: string | null; binaries?: string[] }>;
+    };
+
+    // Agent CLI checks should be present (ok, missing, or error - depending on what's installed)
+    expect(parsed.checks.claude).toBeDefined();
+    expect(parsed.checks.codex).toBeDefined();
+    expect(parsed.checks.gemini).toBeDefined();
+
+    // Each should have a status
+    expect(["ok", "missing", "error"]).toContain(parsed.checks.claude.status);
+    expect(["ok", "missing", "error"]).toContain(parsed.checks.codex.status);
+    expect(["ok", "missing", "error"]).toContain(parsed.checks.gemini.status);
+  });
+
+  it("doctor --json --skip-agents skips agent CLI checks", async () => {
+    const result = await runCli([
+      "doctor",
+      "--json",
+      "--skip-ntm",
+      "--skip-cass",
+      "--skip-cm",
+      "--skip-agents",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as {
+      status: string;
+      checks: Record<string, { status: string }>;
+    };
+
+    // Agent CLI checks should be skipped
+    expect(parsed.checks.claude.status).toBe("skipped");
+    expect(parsed.checks.codex.status).toBe("skipped");
+    expect(parsed.checks.gemini.status).toBe("skipped");
+  });
+
+  it("doctor without --skip-agents reports agent CLI presence", async () => {
+    const result = await runCli([
+      "doctor",
+      "--json",
+      "--skip-ntm",
+      "--skip-cass",
+      "--skip-cm",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as {
+      status: string;
+      checks: Record<string, { status: string; path?: string | null }>;
+    };
+
+    // If an agent CLI is found, it should have a path
+    if (parsed.checks.claude.status === "ok") {
+      expect(parsed.checks.claude.path).toBeTruthy();
+    }
+    if (parsed.checks.codex.status === "ok") {
+      expect(parsed.checks.codex.path).toBeTruthy();
+    }
+    if (parsed.checks.gemini.status === "ok") {
+      expect(parsed.checks.gemini.path).toBeTruthy();
+    }
+  });
 });
 
 // ============================================================================
