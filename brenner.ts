@@ -83,6 +83,7 @@ import {
   type CritiqueTargetType,
 } from "./apps/web/src/lib/schemas/critique";
 import { ProgramStorage } from "./apps/web/src/lib/storage/program-storage";
+import { DashboardAggregator } from "./apps/web/src/lib/storage/program-dashboard";
 import {
   createResearchProgram,
   generateProgramId,
@@ -98,6 +99,8 @@ import {
 import { HypothesisStorage } from "./apps/web/src/lib/storage/hypothesis-storage";
 import {
   createHypothesis,
+  generateHypothesisId,
+  HypothesisSchema,
   type Hypothesis,
   type HypothesisState,
   type HypothesisCategory,
@@ -1266,6 +1269,7 @@ Commands:
   program complete <id> [--summary <s>] [--project-key <abs-path>] [--json]
   program abandon <id> --reason <s> [--project-key <abs-path>] [--json]
   program stats [--project-key <abs-path>] [--json]
+  program dashboard <id> [--project-key <abs-path>] [--json]
 
   hypothesis list [--session-id <id>] [--state <proposed|active|confirmed|refuted|superseded|deferred>]
                  [--category <mechanistic|phenomenological|boundary|auxiliary|third_alternative>] [--project-key <abs-path>] [--json]
@@ -3559,43 +3563,45 @@ ${JSON.stringify(delta, null, 2)}
   // ============================================================================
   // Hypothesis Command
   // ============================================================================
-  if (top === "hypothesis") {
-    const jsonMode = asBoolFlag(flags, "json");
-    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
-    const storage = new HypothesisStorage({ baseDir: projectKey });
+	  if (top === "hypothesis") {
+	    const jsonMode = asBoolFlag(flags, "json");
+	    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+	    const storage = new HypothesisStorage({ baseDir: projectKey });
 
-    const VALID_STATES: HypothesisState[] = ["proposed", "active", "confirmed", "refuted", "superseded", "deferred"];
-    const VALID_CATEGORIES: HypothesisCategory[] = ["mechanistic", "phenomenological", "boundary", "auxiliary", "third_alternative"];
-    const VALID_ORIGINS: HypothesisOrigin[] = ["proposed", "third_alternative", "refinement", "anomaly_spawned"];
-    const VALID_CONFIDENCES: HypothesisConfidence[] = ["high", "medium", "low", "speculative"];
+	    const VALID_STATES: HypothesisState[] = ["proposed", "active", "confirmed", "refuted", "superseded", "deferred"];
+	    const VALID_CATEGORIES: HypothesisCategory[] = ["mechanistic", "phenomenological", "boundary", "auxiliary", "third_alternative"];
+	    const VALID_ORIGINS: HypothesisOrigin[] = ["proposed", "third_alternative", "refinement", "anomaly_spawned"];
+	    const VALID_CONFIDENCES: HypothesisConfidence[] = ["high", "medium", "low", "speculative"];
 
-    // Subcommand: list
-    if (sub === "list") {
-      const sessionFilter = asStringFlag(flags, "session-id");
-      const stateFilter = asStringFlag(flags, "state") as HypothesisState | undefined;
-      const categoryFilter = asStringFlag(flags, "category") as HypothesisCategory | undefined;
+	    // Subcommand: list
+	    if (sub === "list") {
+	      const sessionFilter = asStringFlag(flags, "session-id") ?? asStringFlag(flags, "session");
+	      const stateFilterRaw = asStringFlag(flags, "state");
+      const stateFilter =
+        stateFilterRaw === "killed"
+          ? ("refuted" as HypothesisState)
+          : (stateFilterRaw as HypothesisState | undefined);
+	      const categoryFilter = asStringFlag(flags, "category") as HypothesisCategory | undefined;
 
-      if (stateFilter && !VALID_STATES.includes(stateFilter)) {
-        throw new Error(`Invalid --state "${stateFilter}" (expected one of: ${VALID_STATES.join(", ")})`);
-      }
+	      if (stateFilter && !VALID_STATES.includes(stateFilter)) {
+	        throw new Error(`Invalid --state "${stateFilter}" (expected one of: ${VALID_STATES.join(", ")})`);
+	      }
       if (categoryFilter && !VALID_CATEGORIES.includes(categoryFilter)) {
         throw new Error(`Invalid --category "${categoryFilter}" (expected one of: ${VALID_CATEGORIES.join(", ")})`);
       }
 
       let hypotheses: Hypothesis[];
 
-      if (sessionFilter) {
-        hypotheses = await storage.loadSessionHypotheses(sessionFilter);
-      } else if (stateFilter) {
-        hypotheses = await storage.getHypothesesByState(stateFilter);
-      } else {
-        hypotheses = await storage.getAllHypotheses();
-      }
+	      if (sessionFilter) hypotheses = await storage.loadSessionHypotheses(sessionFilter);
+	      else if (stateFilter) hypotheses = await storage.getHypothesesByState(stateFilter);
+	      else hypotheses = await storage.getAllHypotheses();
 
-      // Apply category filter if provided
-      if (categoryFilter) {
-        hypotheses = hypotheses.filter((h) => h.category === categoryFilter);
-      }
+	      if (stateFilter) hypotheses = hypotheses.filter((h) => h.state === stateFilter);
+
+	      // Apply category filter if provided
+	      if (categoryFilter) {
+	        hypotheses = hypotheses.filter((h) => h.category === categoryFilter);
+	      }
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, count: hypotheses.length, hypotheses }, null, 2));
@@ -3612,62 +3618,68 @@ ${JSON.stringify(delta, null, 2)}
         }
       }
       process.exit(0);
-    }
+	    }
 
-    // Subcommand: show
-    if (sub === "show") {
-      const hypothesisId = rest[0];
-      if (!hypothesisId) {
-        throw new Error("Usage: hypothesis show <id>");
-      }
+	    // Subcommand: show
+	    if (sub === "show") {
+	      const hypothesisId = action;
+	      if (!hypothesisId) throw new Error("Missing hypothesis ID. Usage: hypothesis show <id>");
 
-      const hypothesis = await storage.getHypothesisById(hypothesisId);
-      if (!hypothesis) {
-        throw new Error(`Hypothesis "${hypothesisId}" not found`);
-      }
+	      const hypothesis = await storage.getHypothesisById(hypothesisId);
+	      if (!hypothesis) {
+	        throw new Error(`Hypothesis not found: ${hypothesisId}`);
+	      }
 
-      if (jsonMode) {
-        stdoutLine(JSON.stringify({ ok: true, hypothesis }, null, 2));
-      } else {
-        stdoutLine(`ID:             ${hypothesis.id}`);
-        stdoutLine(`Session:        ${hypothesis.sessionId}`);
-        stdoutLine(`State:          ${hypothesis.state}`);
-        stdoutLine(`Category:       ${hypothesis.category}`);
-        stdoutLine(`Confidence:     ${hypothesis.confidence}`);
-        stdoutLine(`Origin:         ${hypothesis.origin}`);
-        stdoutLine(`Statement:      ${hypothesis.statement}`);
-        if (hypothesis.mechanism) {
-          stdoutLine(`Mechanism:      ${hypothesis.mechanism}`);
-        }
-        if (hypothesis.parentId) {
-          stdoutLine(`Parent:         ${hypothesis.parentId}`);
-        }
-        if (hypothesis.spawnedFromAnomaly) {
-          stdoutLine(`From anomaly:   ${hypothesis.spawnedFromAnomaly}`);
-        }
-        if (hypothesis.testAnchors.length > 0) {
-          stdoutLine(`Test anchors:   ${hypothesis.testAnchors.join(", ")}`);
-        }
-        if (hypothesis.tags && hypothesis.tags.length > 0) {
-          stdoutLine(`Tags:           ${hypothesis.tags.join(", ")}`);
-        }
-        stdoutLine(`Critiques:      ${hypothesis.unresolvedCritiqueCount} unresolved`);
-        if (hypothesis.proposedBy) {
-          stdoutLine(`Proposed by:    ${hypothesis.proposedBy}`);
-        }
-        if (hypothesis.notes) {
-          stdoutLine(`Notes:          ${hypothesis.notes}`);
-        }
-        stdoutLine(`Created:        ${hypothesis.createdAt}`);
+	      const children = (await storage.getAllHypotheses())
+	        .filter((h) => h.parentId === hypothesis.id)
+	        .map((h) => h.id)
+	        .sort();
+
+	      if (jsonMode) {
+	        stdoutLine(JSON.stringify({ ok: true, hypothesis, children }, null, 2));
+	      } else {
+	        stdoutLine(`ID:             ${hypothesis.id}`);
+	        stdoutLine(`Session:        ${hypothesis.sessionId}`);
+	        stdoutLine(`State:          ${hypothesis.state}`);
+	        stdoutLine(`Category:       ${hypothesis.category}`);
+	        stdoutLine(`Confidence:     ${hypothesis.confidence}`);
+	        stdoutLine(`Origin:         ${hypothesis.origin}`);
+	        stdoutLine(`Statement:      ${hypothesis.statement}`);
+	        if (hypothesis.mechanism) {
+	          stdoutLine(`Mechanism:      ${hypothesis.mechanism}`);
+	        }
+	        if (hypothesis.parentId) {
+	          stdoutLine(`Parent:         ${hypothesis.parentId}`);
+	        }
+	        if (hypothesis.spawnedFromAnomaly) {
+	          stdoutLine(`From anomaly:   ${hypothesis.spawnedFromAnomaly}`);
+	        }
+	        if (hypothesis.anchors?.length) {
+	          stdoutLine(`Anchors:        ${hypothesis.anchors.join(", ")}`);
+	        }
+	        if (hypothesis.tags && hypothesis.tags.length > 0) {
+	          stdoutLine(`Tags:           ${hypothesis.tags.join(", ")}`);
+	        }
+	        stdoutLine(`Critiques:      ${hypothesis.unresolvedCritiqueCount} unresolved`);
+	        if (hypothesis.proposedBy) {
+	          stdoutLine(`Proposed by:    ${hypothesis.proposedBy}`);
+	        }
+	        if (children.length > 0) {
+	          stdoutLine(`Children:       ${children.join(", ")}`);
+	        }
+	        if (hypothesis.notes) {
+	          stdoutLine(`Notes:          ${hypothesis.notes}`);
+	        }
+	        stdoutLine(`Created:        ${hypothesis.createdAt}`);
         stdoutLine(`Updated:        ${hypothesis.updatedAt}`);
       }
       process.exit(0);
-    }
+	    }
 
-    // Subcommand: create
-    if (sub === "create") {
-      const statement = asStringFlag(flags, "statement");
-      const categoryStr = asStringFlag(flags, "category") as HypothesisCategory | undefined;
+	    // Subcommand: create
+	    if (sub === "create") {
+	      const statement = asStringFlag(flags, "statement");
+	      const categoryStr = asStringFlag(flags, "category") as HypothesisCategory | undefined;
 
       if (!statement) {
         throw new Error("--statement is required");
@@ -3679,7 +3691,8 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Invalid --category "${categoryStr}" (expected one of: ${VALID_CATEGORIES.join(", ")})`);
       }
 
-      const sessionId = asStringFlag(flags, "session-id") ?? `RS-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+      const sessionIdFromFlag = asStringFlag(flags, "session-id");
+      let sessionId = sessionIdFromFlag ?? `RS-${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
       const mechanism = asStringFlag(flags, "mechanism");
       const originStr = asStringFlag(flags, "origin") as HypothesisOrigin | undefined;
       const confidenceStr = asStringFlag(flags, "confidence") as HypothesisConfidence | undefined;
@@ -3692,48 +3705,76 @@ ${JSON.stringify(delta, null, 2)}
       if (originStr && !VALID_ORIGINS.includes(originStr)) {
         throw new Error(`Invalid --origin "${originStr}" (expected one of: ${VALID_ORIGINS.join(", ")})`);
       }
-      if (confidenceStr && !VALID_CONFIDENCES.includes(confidenceStr)) {
-        throw new Error(`Invalid --confidence "${confidenceStr}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
-      }
+	      if (confidenceStr && !VALID_CONFIDENCES.includes(confidenceStr)) {
+	        throw new Error(`Invalid --confidence "${confidenceStr}" (expected one of: ${VALID_CONFIDENCES.join(", ")})`);
+	      }
 
-      // Generate ID: H-{sessionId}-{seq}
-      const existingHypotheses = await storage.loadSessionHypotheses(sessionId);
-      const seq = String(existingHypotheses.length + 1).padStart(3, "0");
-      const id = `H-${sessionId}-${seq}`;
+	      if (originStr === "refinement" && !parentId) {
+	        throw new Error('Missing --parent (required when --origin is "refinement").');
+	      }
 
-      const hypothesis = createHypothesis({
-        id,
-        sessionId,
-        statement,
-        category: categoryStr,
-        mechanism,
-        origin: originStr ?? "proposed",
-        confidence: confidenceStr ?? "medium",
-        parentId,
-        proposedBy,
-        testAnchors: anchorsStr ? anchorsStr.split(",").map((s) => s.trim()) : [],
-        tags: tagsStr ? tagsStr.split(",").map((s) => s.trim()) : [],
-        notes,
-      });
+	      if (parentId) {
+	        const parent = await storage.getHypothesisById(parentId);
+	        if (!parent) throw new Error(`Parent hypothesis not found: ${parentId}`);
+	      }
 
-      await storage.saveHypothesis(hypothesis);
+	      const anchors = splitCsv(anchorsStr);
+	      const tags = splitCsv(tagsStr);
 
-      if (jsonMode) {
-        stdoutLine(JSON.stringify({ ok: true, hypothesis }, null, 2));
+      const idOverride = asStringFlag(flags, "id");
+      let id = idOverride;
+      if (id) {
+        const match = id.match(/^H-(.+)-\d{3}$/);
+        if (!match) throw new Error(`Invalid --id "${id}" (expected H-{session}-{seq})`);
+        const idSessionId = match[1];
+        if (sessionIdFromFlag && sessionIdFromFlag !== idSessionId) {
+          throw new Error(`--session-id "${sessionIdFromFlag}" does not match --id session "${idSessionId}"`);
+        }
+        sessionId = idSessionId;
+        const existing = await storage.getHypothesisById(id);
+        if (existing) throw new Error(`Hypothesis already exists: ${id}`);
       } else {
+        const existingHypotheses = await storage.loadSessionHypotheses(sessionId);
+        id = generateHypothesisId(sessionId, existingHypotheses.map((h) => h.id));
+	      }
+
+	      const hypothesisBase = createHypothesis({
+	        id,
+	        sessionId,
+	        statement,
+	        category: categoryStr,
+	        mechanism,
+	        origin: originStr ?? "proposed",
+	        confidence: confidenceStr ?? "medium",
+	        proposedBy,
+	        anchors: anchors.length > 0 ? anchors : undefined,
+	      });
+
+	      const hypothesis = HypothesisSchema.parse({
+	        ...hypothesisBase,
+	        parentId: parentId || undefined,
+	        tags: tags.length > 0 ? tags : undefined,
+	        notes: notes || undefined,
+	      });
+
+	      await storage.saveHypothesis(hypothesis);
+
+	      if (jsonMode) {
+	        stdoutLine(JSON.stringify({ ok: true, hypothesis }, null, 2));
+	      } else {
         stdoutLine(`Created hypothesis: ${hypothesis.id}`);
         stdoutLine(`  Category:   ${hypothesis.category}`);
         stdoutLine(`  Statement:  ${hypothesis.statement}`);
       }
       process.exit(0);
-    }
+	    }
 
-    // Subcommand: search
-    if (sub === "search") {
-      const query = rest[0];
-      if (!query) {
-        throw new Error("Usage: hypothesis search <query>");
-      }
+	    // Subcommand: search
+	    if (sub === "search") {
+	      const query = positional.slice(2).join(" ").trim();
+	      if (!query) {
+	        throw new Error("Usage: hypothesis search <query>");
+	      }
 
       const results = await storage.searchHypotheses(query);
 
@@ -3752,15 +3793,18 @@ ${JSON.stringify(delta, null, 2)}
         }
       }
       process.exit(0);
-    }
+	    }
 
-    // Subcommand: link
-    if (sub === "link") {
-      const childId = rest[0];
-      const parentId = rest[1];
-      if (!childId || !parentId) {
-        throw new Error("Usage: hypothesis link <child-id> <parent-id>");
-      }
+	    // Subcommand: link
+	    if (sub === "link") {
+	      const childId = action;
+	      const parentId = positional[3];
+	      if (!childId || !parentId) {
+	        throw new Error("Usage: hypothesis link <child-id> <parent-id>");
+	      }
+	      if (childId === parentId) {
+	        throw new Error("Cannot link a hypothesis to itself.");
+	      }
 
       const child = await storage.getHypothesisById(childId);
       if (!child) {
@@ -3786,12 +3830,11 @@ ${JSON.stringify(delta, null, 2)}
         stdoutLine(`Linked ${childId} → ${parentId}`);
       }
       process.exit(0);
-    }
+	    }
 
-    // Subcommand: stats
-    if (sub === "stats") {
-      const index = await storage.loadIndex();
-      const hypotheses = await storage.getAllHypotheses();
+	    // Subcommand: stats
+	    if (sub === "stats") {
+	      const hypotheses = await storage.getAllHypotheses();
 
       const byState: Record<HypothesisState, number> = {
         proposed: 0,
@@ -4129,6 +4172,87 @@ ${JSON.stringify(delta, null, 2)}
         stdoutLine(`    Abandoned:              ${stats.byStatus.abandoned}`);
         stdoutLine(`  Total sessions:           ${stats.totalSessions}`);
         stdoutLine(`  Avg sessions/program:     ${stats.avgSessionsPerProgram.toFixed(1)}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: dashboard
+    if (sub === "dashboard") {
+      const programId = action;
+
+      if (!programId) throw new Error("Missing program ID. Usage: program dashboard <id>");
+
+      const program = await storage.getProgramById(programId);
+      if (!program) throw new Error(`Program not found: ${programId}`);
+
+      const aggregator = new DashboardAggregator({ baseDir: projectKey });
+      const dashboard = await aggregator.generateDashboard(program);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, program: { id: program.id, name: program.name }, dashboard }, null, 2));
+      } else {
+        stdoutLine(`Dashboard for ${program.name} (${program.id})`);
+        stdoutLine(`Generated at: ${dashboard.generatedAt}`);
+        stdoutLine(``);
+
+        // Hypothesis funnel
+        stdoutLine(`Hypothesis Funnel:`);
+        stdoutLine(`  Proposed:              ${dashboard.hypothesisFunnel.proposed}`);
+        stdoutLine(`  Active:                ${dashboard.hypothesisFunnel.active}`);
+        stdoutLine(`  Under Attack:          ${dashboard.hypothesisFunnel.underAttack}`);
+        stdoutLine(`  Assumption Undermined: ${dashboard.hypothesisFunnel.assumptionUndermined}`);
+        stdoutLine(`  Killed:                ${dashboard.hypothesisFunnel.killed}`);
+        stdoutLine(`  Validated:             ${dashboard.hypothesisFunnel.validated}`);
+        stdoutLine(`  Dormant:               ${dashboard.hypothesisFunnel.dormant}`);
+        stdoutLine(`  Refined:               ${dashboard.hypothesisFunnel.refined}`);
+        stdoutLine(`  By Origin:`);
+        stdoutLine(`    Original:            ${dashboard.hypothesisFunnel.byOrigin.original}`);
+        stdoutLine(`    Third Alternative:   ${dashboard.hypothesisFunnel.byOrigin.thirdAlternative}`);
+        stdoutLine(`    Anomaly Spawned:     ${dashboard.hypothesisFunnel.byOrigin.anomalySpawned}`);
+        stdoutLine(``);
+
+        // Registry health
+        stdoutLine(`Registry Health:`);
+        stdoutLine(`  Hypotheses:  ${dashboard.registryHealth.hypotheses.total} total`);
+        stdoutLine(`  Assumptions: ${dashboard.registryHealth.assumptions.total} total`);
+        stdoutLine(`  Anomalies:   ${dashboard.registryHealth.anomalies.total} total`);
+        stdoutLine(`  Critiques:   ${dashboard.registryHealth.critiques.total} total`);
+        stdoutLine(``);
+
+        // Test execution
+        stdoutLine(`Test Execution:`);
+        stdoutLine(`  Designed:              ${dashboard.testExecution.designed}`);
+        stdoutLine(`  In Progress:           ${dashboard.testExecution.inProgress}`);
+        stdoutLine(`  Completed:             ${dashboard.testExecution.completed}`);
+        stdoutLine(`  Blocked:               ${dashboard.testExecution.blocked}`);
+        stdoutLine(`  Potency Coverage:      ${(dashboard.testExecution.potencyCoverage * 100).toFixed(0)}%`);
+        if (dashboard.testExecution.avgEvidenceScore !== undefined) {
+          stdoutLine(`  Avg Evidence Score:    ${dashboard.testExecution.avgEvidenceScore}/12`);
+        }
+        stdoutLine(``);
+
+        // Warnings
+        if (dashboard.warnings.length > 0) {
+          stdoutLine(`Health Warnings (${dashboard.warnings.length}):`);
+          for (const w of dashboard.warnings) {
+            const icon = w.severity === "critical" ? "!!" : w.severity === "warning" ? "!" : "*";
+            stdoutLine(`  [${icon}] ${w.code}: ${w.message}`);
+            if (w.suggestion) stdoutLine(`      -> ${w.suggestion}`);
+          }
+        } else {
+          stdoutLine(`Health: OK (no warnings)`);
+        }
+        stdoutLine(``);
+
+        // Recent events
+        if (dashboard.recentEvents.length > 0) {
+          const eventsToShow = dashboard.recentEvents.slice(0, 10);
+          stdoutLine(`Recent Events (${eventsToShow.length} of ${dashboard.recentEvents.length}):`);
+          for (const e of eventsToShow) {
+            const date = e.timestamp.substring(0, 10);
+            stdoutLine(`  ${date} ${e.eventType}: ${e.description.substring(0, 60)}`);
+          }
+        }
       }
       process.exit(0);
     }
