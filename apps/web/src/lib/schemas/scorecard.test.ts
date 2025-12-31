@@ -896,3 +896,922 @@ describe("Composite Score Schemas", () => {
     });
   });
 });
+
+// ============================================================================
+// Session-Level Warning Tests
+// ============================================================================
+
+describe("Session-Level Warnings", () => {
+  // Helper to create a minimal session score
+  function createSessionScore(overrides: Partial<SessionScore> = {}): SessionScore {
+    return {
+      sessionId: "RS20251230",
+      contributions: [],
+      roleAggregations: {},
+      sessionMetrics: {
+        totalContributions: 0,
+        progression: "stable" as const,
+        convergence: {
+          addCount: 0,
+          killCount: 0,
+          converging: true,
+        },
+        operatorCoverage: {
+          used: [],
+          missing: [],
+          coveragePercentage: 100,
+        },
+      },
+      overallScore: 0,
+      overallPercentage: 0,
+      scoredAt: new Date().toISOString(),
+      ...overrides,
+    };
+  }
+
+  describe("SESSION_WARNING_THRESHOLDS", () => {
+    describe("hypothesisSprawl", () => {
+      it("triggers when > 3 ADDs and 0 KILLs", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 4,
+            progression: "stable",
+            convergence: {
+              addCount: 4,
+              killCount: 0,
+              converging: false,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.hypothesisSprawl.check(session)).toBe(true);
+      });
+
+      it("does not trigger when killCount > 0", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 5,
+            progression: "stable",
+            convergence: {
+              addCount: 4,
+              killCount: 1,
+              converging: false,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.hypothesisSprawl.check(session)).toBe(false);
+      });
+
+      it("does not trigger when addCount <= 3", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 3,
+            progression: "stable",
+            convergence: {
+              addCount: 3,
+              killCount: 0,
+              converging: false,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.hypothesisSprawl.check(session)).toBe(false);
+      });
+    });
+
+    describe("lowConvergence", () => {
+      it("triggers when >= 5 contributions and not converging", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 5,
+            progression: "stable",
+            convergence: {
+              addCount: 3,
+              killCount: 2,
+              converging: false,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.lowConvergence.check(session)).toBe(true);
+      });
+
+      it("does not trigger when converging", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 5,
+            progression: "stable",
+            convergence: {
+              addCount: 2,
+              killCount: 3,
+              converging: true,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.lowConvergence.check(session)).toBe(false);
+      });
+
+      it("does not trigger when < 5 contributions", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 4,
+            progression: "stable",
+            convergence: {
+              addCount: 3,
+              killCount: 1,
+              converging: false,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.lowConvergence.check(session)).toBe(false);
+      });
+    });
+
+    describe("lowOperatorCoverage", () => {
+      it("triggers when coverage < 50%", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 3,
+            progression: "stable",
+            convergence: {
+              addCount: 2,
+              killCount: 1,
+              converging: true,
+            },
+            operatorCoverage: {
+              used: ["⊘"],
+              missing: ["⊕", "⊙"],
+              coveragePercentage: 33.3,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.lowOperatorCoverage.check(session)).toBe(true);
+      });
+
+      it("does not trigger when coverage >= 50%", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 3,
+            progression: "stable",
+            convergence: {
+              addCount: 2,
+              killCount: 1,
+              converging: true,
+            },
+            operatorCoverage: {
+              used: ["⊘", "⊕"],
+              missing: ["⊙"],
+              coveragePercentage: 66.7,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.lowOperatorCoverage.check(session)).toBe(false);
+      });
+    });
+
+    describe("decliningQuality", () => {
+      it("triggers when progression is declining", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 5,
+            progression: "declining",
+            convergence: {
+              addCount: 3,
+              killCount: 2,
+              converging: true,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.decliningQuality.check(session)).toBe(true);
+      });
+
+      it("does not trigger when progression is improving", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 5,
+            progression: "improving",
+            convergence: {
+              addCount: 3,
+              killCount: 2,
+              converging: true,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.decliningQuality.check(session)).toBe(false);
+      });
+
+      it("does not trigger when progression is stable", () => {
+        const session = createSessionScore({
+          sessionMetrics: {
+            totalContributions: 5,
+            progression: "stable",
+            convergence: {
+              addCount: 3,
+              killCount: 2,
+              converging: true,
+            },
+            operatorCoverage: {
+              used: [],
+              missing: [],
+              coveragePercentage: 100,
+            },
+          },
+        });
+
+        expect(SESSION_WARNING_THRESHOLDS.decliningQuality.check(session)).toBe(false);
+      });
+    });
+  });
+
+  describe("generateSessionWarnings", () => {
+    it("returns empty array when no warnings triggered", () => {
+      const session = createSessionScore({
+        sessionMetrics: {
+          totalContributions: 3,
+          progression: "improving",
+          convergence: {
+            addCount: 2,
+            killCount: 1,
+            converging: true,
+          },
+          operatorCoverage: {
+            used: ["⊘", "⊕", "⊙"],
+            missing: [],
+            coveragePercentage: 100,
+          },
+        },
+      });
+
+      const warnings = generateSessionWarnings(session);
+      expect(warnings).toEqual([]);
+    });
+
+    it("returns single warning when one threshold triggered", () => {
+      const session = createSessionScore({
+        sessionMetrics: {
+          totalContributions: 3,
+          progression: "declining",
+          convergence: {
+            addCount: 2,
+            killCount: 1,
+            converging: true,
+          },
+          operatorCoverage: {
+            used: ["⊘", "⊕", "⊙"],
+            missing: [],
+            coveragePercentage: 100,
+          },
+        },
+      });
+
+      const warnings = generateSessionWarnings(session);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0].criterion).toBe("progression");
+      expect(warnings[0].message).toContain("declining");
+    });
+
+    it("returns multiple warnings when multiple thresholds triggered", () => {
+      const session = createSessionScore({
+        sessionMetrics: {
+          totalContributions: 6,
+          progression: "declining",
+          convergence: {
+            addCount: 5,
+            killCount: 0,
+            converging: false,
+          },
+          operatorCoverage: {
+            used: ["⊘"],
+            missing: ["⊕", "⊙"],
+            coveragePercentage: 33.3,
+          },
+        },
+      });
+
+      const warnings = generateSessionWarnings(session);
+      // Should trigger: hypothesisSprawl, lowConvergence, lowOperatorCoverage, decliningQuality
+      expect(warnings.length).toBeGreaterThanOrEqual(3);
+
+      const criteria = warnings.map((w) => w.criterion);
+      expect(criteria).toContain("convergence"); // hypothesisSprawl or lowConvergence
+      expect(criteria).toContain("operatorCoverage");
+      expect(criteria).toContain("progression");
+    });
+
+    it("warnings have correct structure", () => {
+      const session = createSessionScore({
+        sessionMetrics: {
+          totalContributions: 5,
+          progression: "declining",
+          convergence: {
+            addCount: 2,
+            killCount: 1,
+            converging: true,
+          },
+          operatorCoverage: {
+            used: ["⊘", "⊕"],
+            missing: ["⊙"],
+            coveragePercentage: 66.7,
+          },
+        },
+      });
+
+      const warnings = generateSessionWarnings(session);
+      expect(warnings).toHaveLength(1);
+      expect(warnings[0]).toHaveProperty("criterion");
+      expect(warnings[0]).toHaveProperty("message");
+      expect(typeof warnings[0].criterion).toBe("string");
+      expect(typeof warnings[0].message).toBe("string");
+    });
+  });
+});
+
+// ============================================================================
+// Session-Level Dimension Scoring Tests (7 Dimensions)
+// ============================================================================
+
+import {
+  scoreParadoxGrounding,
+  scoreHypothesisKillRate,
+  scoreTestDiscriminability,
+  scoreAssumptionTracking,
+  scoreThirdAlternativeDiscovery,
+  scoreExperimentalFeasibility,
+  scoreAdversarialPressure,
+  scoreSession,
+  computeGrade,
+  type SessionData,
+} from "./scorecard";
+import type { Artifact } from "../artifact-merge";
+
+function createEmptyArtifact(): Artifact {
+  return {
+    metadata: {
+      session_id: "test-session",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      version: 1,
+      contributors: [],
+      status: "active",
+    },
+    sections: {
+      research_thread: null,
+      hypothesis_slate: [],
+      predictions_table: [],
+      discriminative_tests: [],
+      assumption_ledger: [],
+      anomaly_register: [],
+      adversarial_critique: [],
+    },
+  };
+}
+
+function createTestSession(overrides: Partial<SessionData> = {}): SessionData {
+  return {
+    sessionId: "test-session-001",
+    artifact: createEmptyArtifact(),
+    ...overrides,
+  };
+}
+
+describe("Session-Level Dimension Scoring", () => {
+  describe("scoreParadoxGrounding", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreParadoxGrounding(session);
+
+      expect(result.dimension).toBe("paradoxGrounding");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(20);
+      expect(result.signals).toHaveLength(4);
+    });
+
+    it("detects paradox keywords in research question", () => {
+      const session = createTestSession({
+        researchQuestion: "A surprising paradox: cells differentiate despite identical genomes",
+      });
+      const result = scoreParadoxGrounding(session);
+
+      expect(result.signals.find((s) => s.signal.includes("paradox/puzzle"))?.found).toBe(true);
+      expect(result.points).toBeGreaterThan(0);
+    });
+
+    it("detects paradigm challenge language", () => {
+      const session = createTestSession({
+        researchQuestion: "We challenge the assumption that DNA alone determines cell fate",
+      });
+      const result = scoreParadoxGrounding(session);
+
+      expect(result.signals.find((s) => s.signal.includes("paradigm"))?.found).toBe(true);
+    });
+
+    it("detects anomalies in artifact", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.anomaly_register = [
+        { id: "X-1", name: "Anomaly 1", observation: "Unexpected behavior", conflicts_with: ["H1"] },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreParadoxGrounding(session);
+
+      expect(result.signals.find((s) => s.signal.includes("surprising observation"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("surprising observation"))?.evidence).toContain("1 anomalies");
+    });
+
+    it("detects falsified assumptions", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.assumption_ledger = [
+        { id: "A-1", name: "Test assumption", statement: "We assume X", load: "H1", test: "Check X", status: "falsified" },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreParadoxGrounding(session);
+
+      expect(result.signals.find((s) => s.signal.includes("assumptions questioned"))?.found).toBe(true);
+    });
+
+    it("achieves max score with all signals", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.anomaly_register = [
+        { id: "X-1", name: "Anomaly 1", observation: "Test", conflicts_with: [] },
+      ];
+      artifact.sections.assumption_ledger = [
+        { id: "A-1", name: "Test", statement: "Test", load: "H1", test: "Test", status: "falsified" },
+      ];
+
+      const session = createTestSession({
+        researchQuestion: "A surprising paradox that challenges existing assumptions",
+        artifact,
+      });
+      const result = scoreParadoxGrounding(session);
+
+      expect(result.points).toBe(20);
+      expect(result.percentage).toBe(100);
+    });
+  });
+
+  describe("scoreHypothesisKillRate", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreHypothesisKillRate(session);
+
+      expect(result.dimension).toBe("hypothesisKillRate");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(20);
+    });
+
+    it("penalizes static sessions with hypotheses but no transitions", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Test", mechanism: "Test" },
+        { id: "H-2", name: "H2", claim: "Test", mechanism: "Test" },
+      ];
+
+      const session = createTestSession({ artifact, hypothesisTransitions: [] });
+      const result = scoreHypothesisKillRate(session);
+
+      expect(result.signals.some((s) => s.signal.includes("static session") && s.found)).toBe(true);
+      expect(result.points).toBeLessThan(0);
+    });
+
+    it("detects kills from killed flag on hypotheses", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Test", mechanism: "Test", killed: true, kill_reason: "Refuted by test T-1 results" },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreHypothesisKillRate(session);
+
+      expect(result.signals.find((s) => s.signal.includes("killed in session"))?.found).toBe(true);
+      expect(result.points).toBeGreaterThan(0);
+    });
+
+    it("detects kills from transitions", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Test", mechanism: "Test" },
+      ];
+
+      const session = createTestSession({
+        artifact,
+        hypothesisTransitions: [
+          {
+            hypothesisId: "H-1",
+            fromState: "active",
+            toState: "refuted",
+            triggeredBy: "T-1",
+            reason: "Test T-1 showed no effect, contradicting H1 prediction",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+      const result = scoreHypothesisKillRate(session);
+
+      expect(result.signals.find((s) => s.signal.includes("killed in session"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("test result"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("reasoning documented"))?.found).toBe(true);
+    });
+  });
+
+  describe("scoreTestDiscriminability", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreTestDiscriminability(session);
+
+      expect(result.dimension).toBe("testDiscriminability");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(20);
+    });
+
+    it("detects tests with different predictions", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.discriminative_tests = [
+        {
+          id: "T-1",
+          name: "Test 1",
+          procedure: "Measure protein levels via Western blot",
+          discriminates: "H1 vs H2",
+          expected_outcomes: { H1: "High expression", H2: "Low expression" },
+          potency_check: "Include positive control with known high expression",
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreTestDiscriminability(session);
+
+      expect(result.signals.find((s) => s.signal.includes("different predictions"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("observable"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("Potency checks"))?.found).toBe(true);
+    });
+
+    it("requires all tests to have potency checks for full score", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.discriminative_tests = [
+        {
+          id: "T-1",
+          name: "Test 1",
+          procedure: "Test procedure",
+          discriminates: "H1 vs H2",
+          expected_outcomes: { H1: "A", H2: "B" },
+          potency_check: "Positive control included",
+        },
+        {
+          id: "T-2",
+          name: "Test 2",
+          procedure: "Test procedure",
+          discriminates: "H1 vs H2",
+          expected_outcomes: { H1: "C", H2: "D" },
+          potency_check: "", // Missing potency check
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreTestDiscriminability(session);
+
+      // Should not get full potency points since T-2 lacks potency check
+      expect(result.signals.find((s) => s.signal.includes("Potency checks"))?.found).toBe(false);
+    });
+  });
+
+  describe("scoreAssumptionTracking", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreAssumptionTracking(session);
+
+      expect(result.dimension).toBe("assumptionTracking");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(15);
+    });
+
+    it("detects recorded assumptions", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.assumption_ledger = [
+        { id: "A-1", name: "Assumption 1", statement: "We assume X", load: "H1, H2", test: "Check X" },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreAssumptionTracking(session);
+
+      expect(result.signals.find((s) => s.signal.includes("recorded"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("linked to hypotheses"))?.found).toBe(true);
+    });
+
+    it("detects scale/physics checks", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.assumption_ledger = [
+        {
+          id: "A-1",
+          name: "Diffusion time scale",
+          statement: "Morphogen diffuses fast enough",
+          load: "H1",
+          test: "Calculate diffusion time",
+          scale_check: true,
+          calculation: "D = 10 μm²/s, L = 100 μm, τ = L²/D = 1000s",
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreAssumptionTracking(session);
+
+      expect(result.signals.find((s) => s.signal.includes("Scale/physics"))?.found).toBe(true);
+    });
+  });
+
+  describe("scoreThirdAlternativeDiscovery", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreThirdAlternativeDiscovery(session);
+
+      expect(result.dimension).toBe("thirdAlternativeDiscovery");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(15);
+    });
+
+    it("detects third alternatives", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Position determines fate", mechanism: "Gradient signals" },
+        { id: "H-2", name: "H2", claim: "Lineage determines fate", mechanism: "Division counting" },
+        {
+          id: "H-3",
+          name: "H3",
+          claim: "Chromatin state determines fate",
+          mechanism: "Epigenetic marks causes persistent gene silencing",
+          third_alternative: true,
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreThirdAlternativeDiscovery(session);
+
+      expect(result.signals.find((s) => s.signal.includes("Third alternatives proposed"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("causal structure"))?.found).toBe(true);
+    });
+  });
+
+  describe("scoreExperimentalFeasibility", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreExperimentalFeasibility(session);
+
+      expect(result.dimension).toBe("experimentalFeasibility");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(10);
+    });
+
+    it("detects feasibility assessments", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.discriminative_tests = [
+        {
+          id: "T-1",
+          name: "Test 1",
+          procedure: "Test",
+          discriminates: "H1 vs H2",
+          expected_outcomes: {},
+          potency_check: "Test",
+          feasibility: "Requires standard lab equipment, can be completed in 2 weeks",
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreExperimentalFeasibility(session);
+
+      expect(result.signals.find((s) => s.signal.includes("feasibility assessment"))?.found).toBe(true);
+    });
+
+    it("detects executed tests", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.discriminative_tests = [
+        {
+          id: "T-1",
+          name: "Test 1",
+          procedure: "Test",
+          discriminates: "H1 vs H2",
+          expected_outcomes: {},
+          potency_check: "Test",
+          status: "passed",
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreExperimentalFeasibility(session);
+
+      expect(result.signals.find((s) => s.signal.includes("executed"))?.found).toBe(true);
+    });
+  });
+
+  describe("scoreAdversarialPressure", () => {
+    it("scores 0 for empty session", () => {
+      const session = createTestSession();
+      const result = scoreAdversarialPressure(session);
+
+      expect(result.dimension).toBe("adversarialPressure");
+      expect(result.points).toBe(0);
+      expect(result.maxPoints).toBe(20);
+    });
+
+    it("detects logged critiques", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.adversarial_critique = [
+        {
+          id: "C-1",
+          name: "Scale critique",
+          attack: "H1 cannot work at observed timescales",
+          evidence: "Diffusion time is 1000s but differentiation occurs in 100s - this is a fundamental physical constraint",
+          current_status: "active",
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreAdversarialPressure(session);
+
+      expect(result.signals.find((s) => s.signal.includes("logged"))?.found).toBe(true);
+      expect(result.signals.find((s) => s.signal.includes("evidence backing"))?.found).toBe(true);
+    });
+
+    it("detects real third alternatives from critique", () => {
+      const artifact = createEmptyArtifact();
+      artifact.sections.adversarial_critique = [
+        {
+          id: "C-1",
+          name: "Alternative mechanism",
+          attack: "Both H1 and H2 assume morphogen gradients",
+          evidence: "Contact-dependent signaling would explain the observed pattern",
+          current_status: "active",
+          real_third_alternative: true,
+        },
+      ];
+
+      const session = createTestSession({ artifact });
+      const result = scoreAdversarialPressure(session);
+
+      expect(result.signals.find((s) => s.signal.includes("Real third alternatives"))?.found).toBe(true);
+    });
+  });
+
+  describe("computeGrade", () => {
+    it("returns A for 90%+", () => {
+      expect(computeGrade(90, 100)).toBe("A");
+      expect(computeGrade(100, 100)).toBe("A");
+      expect(computeGrade(95, 100)).toBe("A");
+    });
+
+    it("returns B for 80-89%", () => {
+      expect(computeGrade(80, 100)).toBe("B");
+      expect(computeGrade(89, 100)).toBe("B");
+    });
+
+    it("returns C for 70-79%", () => {
+      expect(computeGrade(70, 100)).toBe("C");
+      expect(computeGrade(79, 100)).toBe("C");
+    });
+
+    it("returns D for 60-69%", () => {
+      expect(computeGrade(60, 100)).toBe("D");
+      expect(computeGrade(69, 100)).toBe("D");
+    });
+
+    it("returns F for below 60%", () => {
+      expect(computeGrade(59, 100)).toBe("F");
+      expect(computeGrade(0, 100)).toBe("F");
+    });
+
+    it("handles edge case of zero max score", () => {
+      expect(computeGrade(0, 0)).toBe("F");
+    });
+  });
+
+  describe("scoreSession", () => {
+    it("scores empty session with low grade", () => {
+      const session = createTestSession();
+      const result = scoreSession(session);
+
+      expect(result.sessionId).toBe("test-session-001");
+      expect(result.totalScore).toBe(0);
+      expect(result.maxScore).toBe(120); // Sum of all dimension max scores
+      expect(result.grade).toBe("F");
+      expect(result.dimensions.paradoxGrounding).toBeDefined();
+      expect(result.dimensions.hypothesisKillRate).toBeDefined();
+      expect(result.dimensions.testDiscriminability).toBeDefined();
+      expect(result.dimensions.assumptionTracking).toBeDefined();
+      expect(result.dimensions.thirdAlternativeDiscovery).toBeDefined();
+      expect(result.dimensions.experimentalFeasibility).toBeDefined();
+      expect(result.dimensions.adversarialPressure).toBeDefined();
+    });
+
+    it("scores high-quality session with high grade", () => {
+      const artifact = createEmptyArtifact();
+
+      // Add anomalies for paradox grounding
+      artifact.sections.anomaly_register = [
+        { id: "X-1", name: "Anomaly", observation: "Surprising result", conflicts_with: ["H1"] },
+      ];
+
+      // Add falsified assumption
+      artifact.sections.assumption_ledger = [
+        { id: "A-1", name: "A1", statement: "Test", load: "H1, H2", test: "Test", status: "falsified", scale_check: true },
+      ];
+
+      // Add hypotheses with third alternative
+      artifact.sections.hypothesis_slate = [
+        { id: "H-1", name: "H1", claim: "Test", mechanism: "Mechanism A", killed: true, kill_reason: "Refuted by T-1 results" },
+        { id: "H-2", name: "H2", claim: "Test", mechanism: "Mechanism B" },
+        { id: "H-3", name: "H3", claim: "Test", mechanism: "Different approach causes different outcome", third_alternative: true },
+      ];
+
+      // Add discriminative tests
+      artifact.sections.discriminative_tests = [
+        {
+          id: "T-1",
+          name: "Test 1",
+          procedure: "Measure and quantify protein levels",
+          discriminates: "H1 vs H2",
+          expected_outcomes: { H1: "High", H2: "Low" },
+          potency_check: "Include positive control samples",
+          feasibility: "Standard equipment available",
+          status: "passed",
+        },
+      ];
+
+      // Add critiques
+      artifact.sections.adversarial_critique = [
+        {
+          id: "C-1",
+          name: "Critique",
+          attack: "H1 timing is off",
+          evidence: "Calculation shows diffusion time exceeds observed timescale by 10x",
+          current_status: "active",
+          real_third_alternative: true,
+        },
+      ];
+
+      const session = createTestSession({
+        researchQuestion: "A surprising paradox: how can cells challenge the central dogma?",
+        artifact,
+        hypothesisTransitions: [
+          {
+            hypothesisId: "H-1",
+            fromState: "active",
+            toState: "refuted",
+            triggeredBy: "T-1",
+            reason: "Test results contradicted H1 prediction",
+            timestamp: new Date().toISOString(),
+          },
+        ],
+      });
+
+      const result = scoreSession(session);
+
+      expect(result.totalScore).toBeGreaterThan(60);
+      expect(result.grade).not.toBe("F");
+    });
+  });
+});
