@@ -420,8 +420,16 @@ export function validateThirdAlternative(hypotheses: Hypothesis[]): {
 }
 
 /**
+ * Maximum sequence number for hypothesis IDs.
+ * IDs use 3-digit sequences (001-999).
+ */
+const MAX_HYPOTHESIS_SEQUENCE = 999;
+
+/**
  * Generate a new hypothesis ID for a session.
  * IDs are monotonically increasing within a session.
+ *
+ * @throws Error if the session already has 999 hypotheses (sequence overflow)
  */
 export function generateHypothesisId(
   sessionId: string,
@@ -437,6 +445,13 @@ export function generateHypothesisId(
     });
 
   const nextSeq = sequences.length > 0 ? Math.max(...sequences) + 1 : 1;
+
+  if (nextSeq > MAX_HYPOTHESIS_SEQUENCE) {
+    throw new Error(
+      `Hypothesis sequence overflow for session "${sessionId}": maximum ${MAX_HYPOTHESIS_SEQUENCE} hypotheses per session exceeded`
+    );
+  }
+
   return `${prefix}${nextSeq.toString().padStart(3, "0")}`;
 }
 

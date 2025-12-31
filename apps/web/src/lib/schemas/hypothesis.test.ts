@@ -327,6 +327,19 @@ describe("generateHypothesisId", () => {
     const id = generateHypothesisId("TEST", []);
     expect(id).toMatch(/-\d{3}$/);
   });
+
+  it("throws error on sequence overflow (>999)", () => {
+    const existing = ["H-TEST-999"];
+    expect(() => generateHypothesisId("TEST", existing)).toThrow(
+      /sequence overflow/i
+    );
+  });
+
+  it("handles sequence 999 as valid (boundary case)", () => {
+    const existing = ["H-TEST-998"];
+    const id = generateHypothesisId("TEST", existing);
+    expect(id).toBe("H-TEST-999");
+  });
 });
 
 describe("isValidHypothesisId", () => {
