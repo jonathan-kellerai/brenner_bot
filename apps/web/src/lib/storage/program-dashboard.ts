@@ -12,11 +12,11 @@ import { AssumptionStorage } from "./assumption-storage";
 import { AnomalyStorage } from "./anomaly-storage";
 import { CritiqueStorage } from "./critique-storage";
 import { TestStorage } from "./test-storage";
-import type { Hypothesis, HypothesisState } from "../schemas/hypothesis";
-import type { Assumption, AssumptionStatus } from "../schemas/assumption";
-import type { Anomaly, QuarantineStatus } from "../schemas/anomaly";
-import type { Critique, CritiqueStatus } from "../schemas/critique";
-import type { TestRecord, TestStatus } from "../schemas/test-record";
+import type { Hypothesis } from "../schemas/hypothesis";
+import type { Assumption } from "../schemas/assumption";
+import type { Anomaly } from "../schemas/anomaly";
+import type { Critique } from "../schemas/critique";
+import type { TestRecord } from "../schemas/test-record";
 import { calculateTotalScore } from "../schemas/test-record";
 
 /**
@@ -27,6 +27,16 @@ import { calculateTotalScore } from "../schemas/test-record";
  *
  * @see brenner_bot-2qyl (bead)
  */
+
+/**
+ * Truncate a string with ellipsis only if it exceeds maxLength.
+ */
+function truncate(str: string, maxLength: number): string {
+  if (str.length <= maxLength) {
+    return str;
+  }
+  return str.substring(0, maxLength) + "...";
+}
 
 // ============================================================================
 // Types
@@ -84,7 +94,7 @@ export class DashboardAggregator {
     ]);
 
     // Build dashboard components
-    const hypothesisFunnel = this.buildHypothesisFunnel(hypotheses);
+    const hypothesisFunnel = this.buildHypothesisFunnel(hypotheses, assumptions);
     const registryHealth = this.buildRegistryHealth(hypotheses, assumptions, anomalies, critiques);
     const testExecution = this.buildTestExecutionSummary(tests);
     const recentEvents = this.buildTimelineEvents(hypotheses, assumptions, anomalies, critiques, tests);
@@ -160,7 +170,17 @@ export class DashboardAggregator {
   // Hypothesis Funnel
   // ============================================================================
 
-  private buildHypothesisFunnel(hypotheses: Hypothesis[]): HypothesisFunnel {
+  private buildHypothesisFunnel(hypotheses: Hypothesis[], assumptions: Assumption[]): HypothesisFunnel {
+    // Build set of hypothesis IDs affected by falsified assumptions
+    const underminedByAssumption = new Set<string>();
+    for (const a of assumptions) {
+      if (a.status === "falsified") {
+        for (const hId of a.load.affectedHypotheses) {
+          underminedByAssumption.add(hId);
+        }
+      }
+    }
+
     const funnel: HypothesisFunnel = {
       proposed: 0,
       active: 0,
@@ -178,39 +198,45 @@ export class DashboardAggregator {
     };
 
     for (const h of hypotheses) {
-      // Map actual hypothesis states to funnel categories
-      // Actual states: proposed, active, confirmed, refuted, superseded, deferred
-      switch (h.state) {
-        case "proposed":
-          funnel.proposed++;
-          break;
-        case "active":
-          // Check if under attack (has unresolved critiques)
-          if (h.unresolvedCritiqueCount > 0) {
-            funnel.underAttack++;
-          } else {
-            funnel.active++;
-          }
-          break;
-        case "refuted":
-          // Refuted maps to killed
-          funnel.killed++;
-          break;
-        case "confirmed":
-          // Confirmed maps to validated
-          funnel.validated++;
-          break;
-        case "superseded":
-          // Superseded maps to refined
-          funnel.refined++;
-          break;
-        case "deferred":
-          // Deferred maps to dormant
-          funnel.dormant++;
-          break;
+      // Check if this hypothesis is undermined by a falsified assumption
+      // This takes precedence over other states for funnel counting
+      if (underminedByAssumption.has(h.id) && h.state !== "refuted" && h.state !== "confirmed") {
+        funnel.assumptionUndermined++;
+      } else {
+        // Map actual hypothesis states to funnel categories
+        // Actual states: proposed, active, confirmed, refuted, superseded, deferred
+        switch (h.state) {
+          case "proposed":
+            funnel.proposed++;
+            break;
+          case "active":
+            // Check if under attack (has unresolved critiques)
+            if (h.unresolvedCritiqueCount > 0) {
+              funnel.underAttack++;
+            } else {
+              funnel.active++;
+            }
+            break;
+          case "refuted":
+            // Refuted maps to killed
+            funnel.killed++;
+            break;
+          case "confirmed":
+            // Confirmed maps to validated
+            funnel.validated++;
+            break;
+          case "superseded":
+            // Superseded maps to refined
+            funnel.refined++;
+            break;
+          case "deferred":
+            // Deferred maps to dormant
+            funnel.dormant++;
+            break;
+        }
       }
 
-      // Count by origin
+      // Count by origin (always count, regardless of assumption status)
       if (h.spawnedFromAnomaly) {
         funnel.byOrigin.anomalySpawned++;
       } else if (h.parentId) {
@@ -601,8 +627,8 @@ export class DashboardAggregator {
       warnings.push({
         code: "NO_ACTIVE_HYPOTHESES",
         severity: "info",
-        message: "No active hypotheses. All hypotheses are either validated, killed, or dormant.",
-        suggestion: "Consider proposing new hypotheses or revisiting dormant ones.",
+        message: "No active hypotheses. All hypotheses are confirmed, refuted, deferred, or superseded.",
+        suggestion: "Consider proposing new hypotheses or revisiting deferred ones.",
       });
     }
 
@@ -631,7 +657,7 @@ export class DashboardAggregator {
           severity: "warning",
           message: `${falsified.length} falsified assumption(s) may affect ${affectedHypotheses.size} hypothesis(es).`,
           relatedIds: Array.from(affectedHypotheses),
-          suggestion: "Review affected hypotheses for assumption_undermined state.",
+          suggestion: "Review affected hypotheses - they may need to be re-evaluated due to falsified dependencies.",
         });
       }
     }
