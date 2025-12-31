@@ -32,6 +32,7 @@
  */
 
 import { useMutation, type UseMutationOptions } from "@tanstack/react-query";
+import type { AgentRole } from "@/lib/schemas/session";
 
 // ============================================================================
 // Types
@@ -42,6 +43,12 @@ export interface OperatorSelection {
   hypothesis_generator: string[];
   test_designer: string[];
   adversarial_critic: string[];
+}
+
+/** A single recipient-to-role mapping */
+export interface RecipientRole {
+  agentName: string;
+  role: AgentRole;
 }
 
 export interface SessionKickoffInput {
@@ -67,6 +74,10 @@ export interface SessionKickoffInput {
   ackRequired?: boolean;
   /** Custom operator selection per role (from prompt builder UI) */
   operatorSelection?: OperatorSelection;
+  /** Roster mode: role_separated (each agent gets role-specific prompt) or unified */
+  rosterMode?: "role_separated" | "unified";
+  /** Explicit roster entries mapping agents to roles */
+  roster?: RecipientRole[];
 }
 
 export interface SessionKickoffResult {

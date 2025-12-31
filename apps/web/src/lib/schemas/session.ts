@@ -10,6 +10,38 @@ import { z } from "zod";
 // Thread ID format: alphanumeric with optional dashes (e.g., FEAT-123, RS-20251230-topic)
 const threadIdPattern = /^[A-Za-z0-9][\w-]*$/;
 
+/** The three canonical roles in the Brenner Protocol */
+export const AGENT_ROLE_VALUES = [
+  "hypothesis_generator",
+  "test_designer",
+  "adversarial_critic",
+] as const;
+
+export type AgentRole = (typeof AGENT_ROLE_VALUES)[number];
+
+/** Role display names for UI */
+export const AGENT_ROLE_LABELS: Record<AgentRole, string> = {
+  hypothesis_generator: "Hypothesis Generator",
+  test_designer: "Test Designer",
+  adversarial_critic: "Adversarial Critic",
+};
+
+/** Single recipient with role assignment */
+export const recipientRoleEntrySchema = z.object({
+  agentName: z.string().min(1, "Agent name required"),
+  role: z.enum(AGENT_ROLE_VALUES),
+});
+
+export type RecipientRoleEntry = z.infer<typeof recipientRoleEntrySchema>;
+
+/** Roster of recipients with role assignments */
+export const rosterSchema = z.object({
+  entries: z.array(recipientRoleEntrySchema).min(1, "At least one recipient required"),
+  mode: z.enum(["role_separated", "unified"]).default("role_separated"),
+});
+
+export type RosterFormData = z.infer<typeof rosterSchema>;
+
 export const sessionFormSchema = z.object({
   threadId: z
     .string()
@@ -48,6 +80,12 @@ export const sessionFormSchema = z.object({
   question: z.string().max(256, "Question must be 256 characters or less").optional(),
 
   ackRequired: z.boolean().default(false),
+
+  /** Roster mode: role_separated (default) or unified */
+  rosterMode: z.enum(["role_separated", "unified"]).default("role_separated"),
+
+  /** Roster entries: agent name to role mapping */
+  roster: z.array(recipientRoleEntrySchema).optional(),
 });
 
 export type SessionFormData = z.infer<typeof sessionFormSchema>;

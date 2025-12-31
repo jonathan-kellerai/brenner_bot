@@ -26,6 +26,7 @@ import {
 import { sessionFormSchema, sessionFieldValidators } from "@/lib/schemas/session";
 import { Jargon } from "@/components/jargon";
 import { OperatorSelector, DEFAULT_OPERATORS, type OperatorSelection } from "./OperatorSelector";
+import { RosterAssignment, type RosterEntry } from "./RosterAssignment";
 
 // ============================================================================
 // Icons
@@ -111,6 +112,13 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
   // Operator selection state (for prompt builder)
   const [operatorSelection, setOperatorSelection] = React.useState<OperatorSelection>(DEFAULT_OPERATORS);
 
+  // Roster state for role assignment
+  const [roster, setRoster] = React.useState<RosterEntry[]>([]);
+  const [rosterMode, setRosterMode] = React.useState<"role_separated" | "unified">("role_separated");
+
+  // Parse recipients from form value to array
+  const [parsedRecipients, setParsedRecipients] = React.useState<string[]>([]);
+
   const form = useForm({
     defaultValues: {
       threadId: "",
@@ -143,6 +151,8 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
           question: parsed.data.question || undefined,
           ackRequired: parsed.data.ackRequired,
           operatorSelection,
+          rosterMode,
+          roster: rosterMode === "role_separated" ? roster : undefined,
         },
         {
           onSuccess: (result) => {
@@ -260,7 +270,16 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
               <Input
                 name={field.name}
                 value={field.state.value}
-                onChange={(e) => field.handleChange(e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  field.handleChange(value);
+                  // Parse recipients for roster assignment
+                  const parsed = value
+                    .split(",")
+                    .map((s) => s.trim())
+                    .filter(Boolean);
+                  setParsedRecipients(parsed);
+                }}
                 onBlur={field.handleBlur}
                 label="Recipients"
                 placeholder="BlueMountain, RedForest"
@@ -272,6 +291,18 @@ export function SessionForm({ defaultSender = "", defaultProjectKey = "" }: Sess
             </div>
           )}
         </form.Field>
+
+        {/* Role Assignment Section */}
+        {parsedRecipients.length > 0 && (
+          <RosterAssignment
+            recipients={parsedRecipients}
+            roster={roster}
+            onRosterChange={setRoster}
+            rosterMode={rosterMode}
+            onRosterModeChange={setRosterMode}
+            disabled={mutation.isPending}
+          />
+        )}
 
         <form.Field
           name="subject"

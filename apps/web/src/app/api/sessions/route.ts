@@ -4,6 +4,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { AgentMailClient } from "@/lib/agentMail";
 import { checkOrchestrationAuth } from "@/lib/auth";
 import { composePrompt } from "@/lib/prompts";
+import { composeKickoffMessages, type AgentRole as SessionAgentRole } from "@/lib/session-kickoff";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,12 @@ interface OperatorSelection {
   hypothesis_generator: string[];
   test_designer: string[];
   adversarial_critic: string[];
+}
+
+/** Single recipient-to-role mapping */
+interface RecipientRole {
+  agentName: string;
+  role: SessionAgentRole;
 }
 
 interface SessionKickoffRequest {
@@ -30,6 +37,10 @@ interface SessionKickoffRequest {
   ackRequired?: boolean;
   /** Custom operator selection per role (from prompt builder UI) */
   operatorSelection?: OperatorSelection;
+  /** Roster mode: role_separated (each agent gets role-specific prompt) or unified */
+  rosterMode?: "role_separated" | "unified";
+  /** Explicit roster entries mapping agents to roles */
+  roster?: RecipientRole[];
 }
 
 interface SessionKickoffResponse {
@@ -228,18 +239,57 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
       task_description: `Brenner Bot session: ${cleanThreadId}`,
     });
 
-    // Send message
-    const sendResult = await client.toolsCall("send_message", {
-      project_key: projectKey,
-      sender_name: cleanSender,
-      to: normalizedRecipients,
-      subject,
-      body_md: composedBody,
-      thread_id: cleanThreadId,
-      ack_required: Boolean(body.ackRequired),
-    });
+    let messageId: number | undefined;
 
-    const messageId = extractMessageId(sendResult);
+    // Check if using role-separated mode with explicit roster
+    const useRoleSeparated = body.rosterMode === "role_separated" && body.roster && body.roster.length > 0;
+
+    if (useRoleSeparated) {
+      // Build recipientRoles mapping from roster
+      const recipientRoles: Record<string, SessionAgentRole> = {};
+      for (const entry of body.roster!) {
+        recipientRoles[entry.agentName] = entry.role;
+      }
+
+      // Compose role-specific kickoff messages
+      const kickoffMessages = composeKickoffMessages({
+        threadId: cleanThreadId,
+        researchQuestion: body.question?.trim() || "Analyze the provided transcript excerpt",
+        context: body.theme?.trim() || body.domain?.trim() || "Brenner Protocol research session",
+        excerpt: excerpt.trim(),
+        recipients: normalizedRecipients,
+        recipientRoles,
+      });
+
+      // Send role-specific message to each recipient
+      for (const msg of kickoffMessages) {
+        const sendResult = await client.toolsCall("send_message", {
+          project_key: projectKey,
+          sender_name: cleanSender,
+          to: [msg.to],
+          subject: msg.subject,
+          body_md: msg.body,
+          thread_id: cleanThreadId,
+          ack_required: Boolean(body.ackRequired),
+        });
+        // Capture first message ID
+        if (messageId === undefined) {
+          messageId = extractMessageId(sendResult);
+        }
+      }
+    } else {
+      // Unified mode: send same message to all recipients
+      const sendResult = await client.toolsCall("send_message", {
+        project_key: projectKey,
+        sender_name: cleanSender,
+        to: normalizedRecipients,
+        subject,
+        body_md: composedBody,
+        thread_id: cleanThreadId,
+        ack_required: Boolean(body.ackRequired),
+      });
+      messageId = extractMessageId(sendResult);
+    }
 
     return NextResponse.json({
       success: true,
