@@ -339,11 +339,10 @@ function stderrLine(message: string): void {
 
 async function confirmDestructiveAction(message: string, assumeYes: boolean): Promise<void> {
   if (assumeYes) return;
-  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+  const promptOut = process.stderr;
+  if (!process.stdin.isTTY || !promptOut.isTTY) {
     throw new Error(`${message} Pass --yes to confirm in non-interactive mode.`);
   }
-
-  const promptOut = process.stderr;
   const rl = createInterface({ input: process.stdin, output: promptOut });
   const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
 
@@ -1750,7 +1749,7 @@ async function buildSessionDataFromStorage(sessionId: string, baseDir: string): 
     name: t.name,
     procedure: t.procedure,
     discriminates: t.discriminates.join(", "),
-    expected_outcomes: t.expectedOutcomes,
+    expected_outcomes: Object.fromEntries(t.expectedOutcomes.map((o) => [o.hypothesisId, o.outcome])),
     potency_check: t.potencyCheck?.positiveControl ?? "",
     feasibility: t.feasibility ? `${t.feasibility.difficulty}: ${t.feasibility.requirements}` : "",
     status: t.status === "completed" ? ("passed" as const) : (t.status as "untested" | "passed" | "failed" | "blocked" | "error"),
