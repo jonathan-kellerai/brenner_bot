@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "vitest";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -57,7 +58,7 @@ function createTestHypothesisData(
 beforeEach(async () => {
   testDir = join(
     tmpdir(),
-    `hypothesis-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
+    `hypothesis-storage-test-${randomUUID()}`
   );
   await fs.mkdir(testDir, { recursive: true });
   storage = new HypothesisStorage({ baseDir: testDir, autoRebuildIndex: false });

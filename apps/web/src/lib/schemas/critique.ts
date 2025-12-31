@@ -672,7 +672,7 @@ export function addressCritique(
   }
 
   const now = new Date().toISOString();
-  return {
+  const updated = {
     ...critique,
     status: "addressed",
     response: {
@@ -681,6 +681,8 @@ export function addressCritique(
     },
     updatedAt: now,
   };
+
+  return CritiqueSchema.parse(updated);
 }
 
 /**
@@ -696,7 +698,7 @@ export function dismissCritique(
   }
 
   const now = new Date().toISOString();
-  return {
+  const updated = {
     ...critique,
     status: "dismissed",
     dismissalReason: reason,
@@ -707,6 +709,8 @@ export function dismissCritique(
     },
     updatedAt: now,
   };
+
+  return CritiqueSchema.parse(updated);
 }
 
 /**
@@ -724,7 +728,7 @@ export function acceptCritique(
   }
 
   const now = new Date().toISOString();
-  return {
+  const updated = {
     ...critique,
     status: "accepted",
     response: {
@@ -736,6 +740,8 @@ export function acceptCritique(
     },
     updatedAt: now,
   };
+
+  return CritiqueSchema.parse(updated);
 }
 
 /**

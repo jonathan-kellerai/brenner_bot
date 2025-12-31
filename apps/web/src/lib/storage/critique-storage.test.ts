@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "vitest";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -71,7 +72,7 @@ async function createTestCritiqueData(
 
 beforeEach(async () => {
   // Create a unique temp directory for each test
-  testDir = join(tmpdir(), `critique-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  testDir = join(tmpdir(), `critique-storage-test-${randomUUID()}`);
   await fs.mkdir(testDir, { recursive: true });
   storage = new CritiqueStorage({ baseDir: testDir, autoRebuildIndex: false });
 });
