@@ -1100,6 +1100,7 @@ Commands:
   experiment record --thread-id <id> --test-id <id> --exit-code <n>
                    [--stdout-file <path>] [--stderr-file <path>] [--stdout <text>] [--stderr <text>]
                    [--cwd <path>] [--command <s>] [--out-file <path>] [--json]
+  experiment encode --result-file <path> [--out-file <path>] [--project-key <abs-path>] [--json]
   mail health
   mail tools
   mail agents [--project-key <abs-path>]
@@ -1598,6 +1599,124 @@ async function main(): Promise<void> {
 
   if (top === "experiment") {
     const jsonMode = asBoolFlag(flags, "json");
+
+    // Handle encode subcommand separately (thread-id and test-id come from result file)
+    if (sub === "encode") {
+      const resultFilePath = asStringFlag(flags, "result-file");
+      if (!resultFilePath) throw new Error("Missing --result-file.");
+
+      const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+      const resolvedResultFile = resolve(projectKey, resultFilePath);
+
+      // Read and parse the result file
+      let resultJson: string;
+      try {
+        resultJson = readTextFile(resolvedResultFile);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Cannot read result file "${resolvedResultFile}": ${msg}`);
+      }
+
+      let result: ExperimentResultV01;
+      try {
+        result = JSON.parse(resultJson) as ExperimentResultV01;
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Invalid JSON in result file: ${msg}`);
+      }
+
+      // Validate required fields
+      if (!result.result_id) throw new Error("Result file missing required field: result_id");
+      if (!result.test_id) throw new Error("Result file missing required field: test_id");
+      if (!result.thread_id) throw new Error("Result file missing required field: thread_id");
+      if (typeof result.exit_code !== "number") throw new Error("Result file missing required field: exit_code");
+      if (typeof result.timed_out !== "boolean") throw new Error("Result file missing required field: timed_out");
+
+      // Compute relative path for result_path (relative to project key)
+      const resultPath = resultFilePath.startsWith("/")
+        ? resultFilePath.replace(projectKey + "/", "")
+        : resultFilePath;
+
+      // Determine status based on exit code and timeout
+      let status: "passed" | "failed" | "blocked";
+      if (result.timed_out) {
+        status = "blocked";
+      } else if (result.exit_code === 0) {
+        status = "passed";
+      } else {
+        status = "failed";
+      }
+
+      // Generate summary
+      let summary: string;
+      if (result.timed_out) {
+        const timeoutSec = result.timeout_seconds ?? "unknown";
+        summary = `Test blocked: timed out after ${timeoutSec}s`;
+      } else if (result.duration_ms != null) {
+        const durationSec = (result.duration_ms / 1000).toFixed(1);
+        summary = `Test completed: exit ${result.exit_code} in ${durationSec}s`;
+      } else {
+        summary = `Test completed: exit ${result.exit_code}`;
+      }
+
+      // Build the DELTA object
+      const delta = {
+        operation: "EDIT",
+        section: "discriminative_tests",
+        target_id: result.test_id,
+        payload: {
+          test_id: result.test_id,
+          last_run: {
+            result_id: result.result_id,
+            result_path: resultPath,
+            run_at: result.started_at ?? result.created_at,
+            exit_code: result.exit_code,
+            timed_out: result.timed_out,
+            ...(result.duration_ms != null ? { duration_ms: result.duration_ms } : {}),
+            summary,
+          },
+          status,
+        },
+        rationale: `Recording result of experiment run ${result.result_id.slice(0, 8)} for ${result.test_id}`,
+      };
+
+      // Build markdown output
+      const markdown = `## Deltas
+
+Recording experiment result for test **${result.test_id}** in thread \`${result.thread_id}\`.
+
+- **Status**: ${status}
+- **Exit code**: ${result.exit_code}
+- **Result file**: \`${resultPath}\`
+
+\`\`\`delta
+${JSON.stringify(delta, null, 2)}
+\`\`\`
+`;
+
+      // Output
+      const outFileRaw = asStringFlag(flags, "out-file");
+      if (outFileRaw) {
+        const outFile = resolve(projectKey, outFileRaw);
+        mkdirSync(dirname(outFile), { recursive: true });
+        writeFileSync(outFile, markdown, "utf8");
+        if (jsonMode) {
+          stdoutLine(JSON.stringify({ ok: true, out_file: outFile, delta }, null, 2));
+        } else {
+          stdoutLine(outFile);
+        }
+      } else {
+        if (jsonMode) {
+          stdoutLine(JSON.stringify({ ok: true, delta, markdown }, null, 2));
+        } else {
+          stdoutLine(markdown);
+        }
+      }
+
+      process.exit(0);
+    }
+
+    // For run and record, thread-id and test-id are required
     const threadId = asStringFlag(flags, "thread-id");
     const testId = asStringFlag(flags, "test-id");
     if (!threadId) throw new Error("Missing --thread-id.");

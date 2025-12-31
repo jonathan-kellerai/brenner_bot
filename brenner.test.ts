@@ -427,6 +427,331 @@ describe("experiment capture", () => {
     expect(parsed.stdout).toBe("output text");
     expect(parsed.stderr).toBe("error text");
   });
+
+  it("encodes experiment result to DELTA block (passing)", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-pass-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    // Create a mock experiment result file
+    const resultId = randomUUID();
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T1";
+    const resultFile = join(cwd, "result.json");
+
+    const mockResult = {
+      schema_version: "experiment_result_v0.1",
+      result_id: resultId,
+      capture_mode: "run",
+      thread_id: threadId,
+      test_id: testId,
+      created_at: "2025-12-31T04:00:00.000Z",
+      started_at: "2025-12-31T04:00:00.000Z",
+      finished_at: "2025-12-31T04:00:05.123Z",
+      duration_ms: 5123,
+      exit_code: 0,
+      timed_out: false,
+      stdout: "All tests passed",
+      stderr: "",
+      cwd,
+      argv: ["bun", "test"],
+      timeout_seconds: 60,
+    };
+    writeFileSync(resultFile, JSON.stringify(mockResult, null, 2), "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    let parsed: {
+      ok: boolean;
+      delta: {
+        operation: string;
+        section: string;
+        target_id: string;
+        payload: {
+          test_id: string;
+          status: string;
+          last_run: {
+            result_id: string;
+            exit_code: number;
+            timed_out: boolean;
+            duration_ms: number;
+            summary: string;
+          };
+        };
+        rationale: string;
+      };
+      markdown: string;
+    };
+    try {
+      parsed = JSON.parse(result.stdout) as typeof parsed;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid JSON output from experiment encode. Parse failed: ${msg}\n\nstdout:\n${result.stdout}`);
+    }
+
+    expect(parsed.ok).toBe(true);
+    expect(parsed.delta.operation).toBe("EDIT");
+    expect(parsed.delta.section).toBe("discriminative_tests");
+    expect(parsed.delta.target_id).toBe(testId);
+    expect(parsed.delta.payload.test_id).toBe(testId);
+    expect(parsed.delta.payload.status).toBe("passed");
+    expect(parsed.delta.payload.last_run.result_id).toBe(resultId);
+    expect(parsed.delta.payload.last_run.exit_code).toBe(0);
+    expect(parsed.delta.payload.last_run.timed_out).toBe(false);
+    expect(parsed.delta.payload.last_run.duration_ms).toBe(5123);
+    expect(parsed.delta.payload.last_run.summary).toContain("exit 0");
+    expect(parsed.delta.payload.last_run.summary).toContain("5.1s");
+    expect(parsed.markdown).toContain("```delta");
+    expect(parsed.markdown).toContain("## Deltas");
+  });
+
+  it("encodes experiment result to DELTA block (failed)", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-fail-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const resultId = randomUUID();
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T2";
+    const resultFile = join(cwd, "result.json");
+
+    const mockResult = {
+      schema_version: "experiment_result_v0.1",
+      result_id: resultId,
+      capture_mode: "run",
+      thread_id: threadId,
+      test_id: testId,
+      created_at: "2025-12-31T04:00:00.000Z",
+      started_at: "2025-12-31T04:00:00.000Z",
+      finished_at: "2025-12-31T04:00:03.500Z",
+      duration_ms: 3500,
+      exit_code: 1,
+      timed_out: false,
+      stdout: "",
+      stderr: "AssertionError",
+      cwd,
+      argv: ["bun", "test"],
+      timeout_seconds: 60,
+    };
+    writeFileSync(resultFile, JSON.stringify(mockResult, null, 2), "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    let parsed: {
+      ok: boolean;
+      delta: {
+        payload: {
+          status: string;
+          last_run: {
+            exit_code: number;
+            summary: string;
+          };
+        };
+      };
+    };
+    try {
+      parsed = JSON.parse(result.stdout) as typeof parsed;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid JSON output. Parse failed: ${msg}\n\nstdout:\n${result.stdout}`);
+    }
+
+    expect(parsed.ok).toBe(true);
+    expect(parsed.delta.payload.status).toBe("failed");
+    expect(parsed.delta.payload.last_run.exit_code).toBe(1);
+    expect(parsed.delta.payload.last_run.summary).toContain("exit 1");
+  });
+
+  it("encodes experiment result to DELTA block (timed out)", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-timeout-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const resultId = randomUUID();
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T3";
+    const resultFile = join(cwd, "result.json");
+
+    const mockResult = {
+      schema_version: "experiment_result_v0.1",
+      result_id: resultId,
+      capture_mode: "run",
+      thread_id: threadId,
+      test_id: testId,
+      created_at: "2025-12-31T04:00:00.000Z",
+      started_at: "2025-12-31T04:00:00.000Z",
+      finished_at: "2025-12-31T04:01:00.000Z",
+      duration_ms: 60000,
+      exit_code: 143,
+      timed_out: true,
+      timeout_seconds: 60,
+      stdout: "",
+      stderr: "",
+      cwd,
+      argv: ["long-running-test"],
+    };
+    writeFileSync(resultFile, JSON.stringify(mockResult, null, 2), "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    let parsed: {
+      ok: boolean;
+      delta: {
+        payload: {
+          status: string;
+          last_run: {
+            timed_out: boolean;
+            summary: string;
+          };
+        };
+      };
+    };
+    try {
+      parsed = JSON.parse(result.stdout) as typeof parsed;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid JSON output. Parse failed: ${msg}\n\nstdout:\n${result.stdout}`);
+    }
+
+    expect(parsed.ok).toBe(true);
+    expect(parsed.delta.payload.status).toBe("blocked");
+    expect(parsed.delta.payload.last_run.timed_out).toBe(true);
+    expect(parsed.delta.payload.last_run.summary).toContain("timed out");
+    expect(parsed.delta.payload.last_run.summary).toContain("60s");
+  });
+
+  it("fails with clear error when result file is missing required fields", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-missing-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const resultFile = join(cwd, "result.json");
+
+    // Missing result_id and test_id
+    const mockResult = {
+      schema_version: "experiment_result_v0.1",
+      thread_id: "RS-TEST",
+      exit_code: 0,
+      timed_out: false,
+    };
+    writeFileSync(resultFile, JSON.stringify(mockResult, null, 2), "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("missing required field");
+  });
+
+  it("fails with clear error when result file does not exist", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-nofile-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", "nonexistent.json", "--project-key", cwd],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Cannot read result file");
+  });
+
+  it("outputs markdown by default (non-json mode)", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-md-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const resultId = randomUUID();
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T1";
+    const resultFile = join(cwd, "result.json");
+
+    const mockResult = {
+      schema_version: "experiment_result_v0.1",
+      result_id: resultId,
+      capture_mode: "run",
+      thread_id: threadId,
+      test_id: testId,
+      created_at: "2025-12-31T04:00:00.000Z",
+      started_at: "2025-12-31T04:00:00.000Z",
+      finished_at: "2025-12-31T04:00:05.000Z",
+      duration_ms: 5000,
+      exit_code: 0,
+      timed_out: false,
+      stdout: "pass",
+      stderr: "",
+      cwd,
+      argv: ["test"],
+      timeout_seconds: 60,
+    };
+    writeFileSync(resultFile, JSON.stringify(mockResult, null, 2), "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toContain("## Deltas");
+    expect(result.stdout).toContain("```delta");
+    expect(result.stdout).toContain('"operation": "EDIT"');
+    expect(result.stdout).toContain('"section": "discriminative_tests"');
+  });
+
+  it("writes output to file when --out-file is specified", async () => {
+    const cwd = join(tmpdir(), `brenner-test-encode-outfile-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const resultId = randomUUID();
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T1";
+    const resultFile = join(cwd, "result.json");
+    const outFile = join(cwd, "delta.md");
+
+    const mockResult = {
+      schema_version: "experiment_result_v0.1",
+      result_id: resultId,
+      capture_mode: "run",
+      thread_id: threadId,
+      test_id: testId,
+      created_at: "2025-12-31T04:00:00.000Z",
+      started_at: "2025-12-31T04:00:00.000Z",
+      finished_at: "2025-12-31T04:00:05.000Z",
+      duration_ms: 5000,
+      exit_code: 0,
+      timed_out: false,
+      stdout: "pass",
+      stderr: "",
+      cwd,
+      argv: ["test"],
+      timeout_seconds: 60,
+    };
+    writeFileSync(resultFile, JSON.stringify(mockResult, null, 2), "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--out-file", outFile],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout.trim()).toBe(outFile);
+
+    const written = readFileSync(outFile, "utf8");
+    expect(written).toContain("## Deltas");
+    expect(written).toContain("```delta");
+  });
 });
 
 // ============================================================================
