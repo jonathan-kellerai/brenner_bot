@@ -811,6 +811,7 @@ export function SearchTrigger({ className }: { className?: string }) {
   return (
     <button
       onClick={open}
+      aria-label="Open search"
       className={cn(
         "flex items-center gap-2 px-3 py-1.5 rounded-lg",
         "border border-border bg-muted/50 hover:bg-muted transition-all",
