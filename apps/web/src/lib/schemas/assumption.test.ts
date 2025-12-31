@@ -72,6 +72,10 @@ describe("AssumptionSchema", () => {
       "A-CELL-FATE-001-001",
       "A-test-session-999",
       "A-ABC123-001",
+      // Simple format for backwards compatibility
+      "A1",
+      "A42",
+      "A999",
     ];
     for (const id of variations) {
       const data = { ...validAssumption, id };
@@ -188,6 +192,16 @@ describe("AssumptionLoadSchema", () => {
       affectedHypotheses: [],
       affectedTests: [],
       description: "No dependencies yet.",
+    };
+    const result = AssumptionLoadSchema.safeParse(load);
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts simple format test IDs for backwards compatibility", () => {
+    const load = {
+      affectedHypotheses: ["H-RS20251230-001"],
+      affectedTests: ["T1", "T42", "T999"],
+      description: "Using simple test ID format.",
     };
     const result = AssumptionLoadSchema.safeParse(load);
     expect(result.success).toBe(true);
@@ -472,11 +486,18 @@ describe("isValidAssumptionId", () => {
     expect(isValidAssumptionId("A-ABC-123-456")).toBe(true);
   });
 
+  it("validates simple format IDs for backwards compatibility", () => {
+    expect(isValidAssumptionId("A1")).toBe(true);
+    expect(isValidAssumptionId("A42")).toBe(true);
+    expect(isValidAssumptionId("A999")).toBe(true);
+  });
+
   it("rejects invalid IDs", () => {
     expect(isValidAssumptionId("invalid")).toBe(false);
     expect(isValidAssumptionId("A-test")).toBe(false);
     expect(isValidAssumptionId("A-test-1")).toBe(false);
     expect(isValidAssumptionId("H-test-001")).toBe(false);
+    expect(isValidAssumptionId("A")).toBe(false); // Just A without number
   });
 });
 
