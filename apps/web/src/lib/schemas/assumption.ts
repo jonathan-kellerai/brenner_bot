@@ -280,17 +280,7 @@ export const AssumptionSchema = z
      * Free-form notes.
      */
     notes: z.string().max(2000, "Notes too long").optional(),
-  })
-  .refine(
-    (data) => {
-      // scale_physics assumptions SHOULD have a calculation
-      // This is a warning, not an error - enforced via separate validation
-      return true;
-    },
-    {
-      message: "scale_physics assumptions should include a calculation",
-    }
-  );
+  });
 
 export type Assumption = z.infer<typeof AssumptionSchema>;
 

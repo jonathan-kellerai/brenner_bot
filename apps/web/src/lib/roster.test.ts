@@ -57,14 +57,14 @@ describe("validateRoster", () => {
     expect(result.valid).toBe(true);
   });
 
-  it("rejects invalid roles", () => {
-    const roster: Roster = {
-      entries: [
-        { agentName: "BlueLake", role: "researcher" as any },
-      ],
-    };
-    const result = validateRoster(roster);
-    expect(result.valid).toBe(false);
+	  it("rejects invalid roles", () => {
+	    const roster: Roster = {
+	      entries: [
+	        { agentName: "BlueLake", role: "researcher" as unknown as RosterEntry["role"] },
+	      ],
+	    };
+	    const result = validateRoster(roster);
+	    expect(result.valid).toBe(false);
     expect(result.errors).toContain("Invalid role for BlueLake: researcher");
   });
 
