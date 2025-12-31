@@ -2212,13 +2212,14 @@ ${JSON.stringify(delta, null, 2)}
     const evidenceMdPath = join(evidenceDir, "evidence.md");
 
     // Helper: read existing evidence pack or return null
+    // Throws if file exists but is malformed JSON (to prevent accidental data loss)
     function readEvidencePack(): EvidencePack | null {
       if (!existsSync(evidenceJsonPath)) return null;
+      const content = readTextFile(evidenceJsonPath);
       try {
-        const content = readTextFile(evidenceJsonPath);
         return JSON.parse(content) as EvidencePack;
-      } catch {
-        return null;
+      } catch (e) {
+        throw new Error(`Malformed JSON in ${evidenceJsonPath}: ${e instanceof Error ? e.message : String(e)}`);
       }
     }
 
@@ -2243,9 +2244,9 @@ ${JSON.stringify(delta, null, 2)}
       return "manual";
     }
 
-    // Helper: escape pipe characters for markdown tables
+    // Helper: escape pipe and newline characters for markdown tables
     function escapeTableValue(s: string): string {
-      return s.replace(/\|/g, "\\|");
+      return s.replace(/\|/g, "\\|").replace(/\n/g, " ");
     }
 
     // Helper: render evidence pack to markdown
