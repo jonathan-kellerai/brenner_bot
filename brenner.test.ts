@@ -10,7 +10,7 @@
 import { describe, expect, it } from "bun:test";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -930,6 +930,350 @@ describe("experiment post validation", () => {
     );
     expect(result.exitCode).toBe(1);
     expect(result.stderr).toContain("timed_out");
+  });
+});
+
+// ============================================================================
+// Tests: Experiment E2E Pipeline
+// ============================================================================
+
+describe("experiment E2E pipeline", () => {
+  it("run → encode pipeline produces valid DELTA blocks", async () => {
+    const cwd = join(tmpdir(), `brenner-e2e-run-encode-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-E2E-${randomUUID()}`;
+    const testId = "T1";
+
+    // Step 1: Run an experiment
+    const runResult = await runCli(
+      [
+        "experiment",
+        "run",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--timeout",
+        "10",
+        "--",
+        process.execPath,
+        "-e",
+        "console.log('E2E test output'); process.exit(0);",
+      ],
+      { cwd, timeout: 15000 }
+    );
+
+    expect(runResult.exitCode).toBe(0);
+    const resultFilePath = runResult.stdout.trim();
+    expect(existsSync(resultFilePath)).toBe(true);
+
+    // Step 2: Encode the result
+    const encodeResult = await runCli(
+      [
+        "experiment",
+        "encode",
+        "--result-file",
+        resultFilePath,
+        "--project-key",
+        cwd,
+        "--json",
+      ],
+      { cwd }
+    );
+
+    expect(encodeResult.exitCode).toBe(0);
+
+    let encodeOutput: {
+      ok: boolean;
+      delta: {
+        operation: string;
+        section: string;
+        target_id: string;
+        payload: {
+          test_id: string;
+          status: string;
+          last_run: {
+            result_id: string;
+            exit_code: number;
+            timed_out: boolean;
+            summary: string;
+          };
+        };
+        rationale: string;
+      };
+      markdown: string;
+    };
+    try {
+      encodeOutput = JSON.parse(encodeResult.stdout) as typeof encodeOutput;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid JSON from encode. Parse failed: ${msg}\n\nstdout:\n${encodeResult.stdout}`);
+    }
+
+    // Verify the delta structure
+    expect(encodeOutput.ok).toBe(true);
+    expect(encodeOutput.delta.operation).toBe("EDIT");
+    expect(encodeOutput.delta.section).toBe("discriminative_tests");
+    expect(encodeOutput.delta.target_id).toBe(testId);
+    expect(encodeOutput.delta.payload.status).toBe("passed");
+    expect(encodeOutput.delta.payload.last_run.exit_code).toBe(0);
+    expect(encodeOutput.delta.payload.last_run.timed_out).toBe(false);
+
+    // Step 3: Verify markdown contains parseable delta block
+    const deltaBlockMatch = encodeOutput.markdown.match(/```delta\s*\n([\s\S]*?)```/);
+    expect(deltaBlockMatch).not.toBeNull();
+
+    if (deltaBlockMatch) {
+      const deltaJson = deltaBlockMatch[1].trim();
+      let parsedDelta: unknown;
+      try {
+        parsedDelta = JSON.parse(deltaJson);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        throw new Error(`Delta block JSON is invalid: ${msg}\n\nBlock:\n${deltaJson}`);
+      }
+      expect(parsedDelta).toEqual(encodeOutput.delta);
+    }
+  });
+
+  it("run → encode pipeline handles failing commands correctly", async () => {
+    const cwd = join(tmpdir(), `brenner-e2e-run-fail-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-E2E-${randomUUID()}`;
+    const testId = "T-fail";
+
+    // Run an experiment that fails
+    const runResult = await runCli(
+      [
+        "experiment",
+        "run",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--timeout",
+        "10",
+        "--",
+        process.execPath,
+        "-e",
+        "console.error('Test failure'); process.exit(1);",
+      ],
+      { cwd, timeout: 15000 }
+    );
+
+    expect(runResult.exitCode).toBe(0);
+    const resultFilePath = runResult.stdout.trim();
+
+    // Encode the result
+    const encodeResult = await runCli(
+      [
+        "experiment",
+        "encode",
+        "--result-file",
+        resultFilePath,
+        "--project-key",
+        cwd,
+        "--json",
+      ],
+      { cwd }
+    );
+
+    expect(encodeResult.exitCode).toBe(0);
+
+    const encodeOutput = JSON.parse(encodeResult.stdout) as {
+      ok: boolean;
+      delta: {
+        payload: {
+          status: string;
+          last_run: {
+            exit_code: number;
+            summary: string;
+          };
+        };
+      };
+    };
+
+    expect(encodeOutput.ok).toBe(true);
+    expect(encodeOutput.delta.payload.status).toBe("failed");
+    expect(encodeOutput.delta.payload.last_run.exit_code).toBe(1);
+  });
+
+  it("run → encode pipeline handles timeouts correctly", async () => {
+    const cwd = join(tmpdir(), `brenner-e2e-run-timeout-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-E2E-${randomUUID()}`;
+    const testId = "T-timeout";
+
+    // Run an experiment that times out
+    const runResult = await runCli(
+      [
+        "experiment",
+        "run",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--timeout",
+        "1",
+        "--",
+        process.execPath,
+        "-e",
+        "setTimeout(() => {}, 10000);", // Sleep 10s, times out at 1s
+      ],
+      { cwd, timeout: 15000 }
+    );
+
+    expect(runResult.exitCode).toBe(0);
+    const resultFilePath = runResult.stdout.trim().split("\n")[0];
+
+    // Encode the result
+    const encodeResult = await runCli(
+      [
+        "experiment",
+        "encode",
+        "--result-file",
+        resultFilePath,
+        "--project-key",
+        cwd,
+        "--json",
+      ],
+      { cwd }
+    );
+
+    expect(encodeResult.exitCode).toBe(0);
+
+    const encodeOutput = JSON.parse(encodeResult.stdout) as {
+      ok: boolean;
+      delta: {
+        payload: {
+          status: string;
+          last_run: {
+            timed_out: boolean;
+            summary: string;
+          };
+        };
+      };
+    };
+
+    expect(encodeOutput.ok).toBe(true);
+    expect(encodeOutput.delta.payload.status).toBe("blocked");
+    expect(encodeOutput.delta.payload.last_run.timed_out).toBe(true);
+    expect(encodeOutput.delta.payload.last_run.summary).toContain("timed out");
+  });
+
+  it("full pipeline: run captures output, encode generates valid delta for artifact merge", async () => {
+    const cwd = join(tmpdir(), `brenner-e2e-full-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-E2E-${randomUUID()}`;
+    const testId = "T-full-e2e";
+
+    // Step 1: Run with specific output
+    const expectedOutput = "E2E integration test passed successfully";
+    const runResult = await runCli(
+      [
+        "experiment",
+        "run",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--timeout",
+        "10",
+        "--json",
+        "--",
+        process.execPath,
+        "-e",
+        `console.log('${expectedOutput}'); process.exit(0);`,
+      ],
+      { cwd, timeout: 15000 }
+    );
+
+    expect(runResult.exitCode).toBe(0);
+
+    const runOutput = JSON.parse(runResult.stdout) as {
+      ok: boolean;
+      out_file: string;
+      result: {
+        result_id: string;
+        test_id: string;
+        thread_id: string;
+        exit_code: number;
+        timed_out: boolean;
+        stdout: string;
+        started_at: string;
+        finished_at: string;
+        duration_ms: number;
+        cwd: string;
+      };
+    };
+
+    expect(runOutput.ok).toBe(true);
+    expect(runOutput.result.test_id).toBe(testId);
+    expect(runOutput.result.thread_id).toBe(threadId);
+    expect(runOutput.result.exit_code).toBe(0);
+    expect(runOutput.result.timed_out).toBe(false);
+    expect(runOutput.result.stdout).toContain(expectedOutput);
+    expect(runOutput.result.duration_ms).toBeGreaterThan(0);
+
+    // Step 2: Encode
+    const encodeResult = await runCli(
+      [
+        "experiment",
+        "encode",
+        "--result-file",
+        runOutput.out_file,
+        "--project-key",
+        cwd,
+        "--json",
+      ],
+      { cwd }
+    );
+
+    expect(encodeResult.exitCode).toBe(0);
+
+    const encodeOutput = JSON.parse(encodeResult.stdout) as {
+      ok: boolean;
+      delta: {
+        operation: string;
+        section: string;
+        target_id: string;
+        payload: {
+          test_id: string;
+          status: string;
+          last_run: {
+            result_id: string;
+            result_path: string;
+            run_at: string;
+            exit_code: number;
+            timed_out: boolean;
+            duration_ms: number;
+            summary: string;
+          };
+        };
+        rationale: string;
+      };
+      markdown: string;
+    };
+
+    // Verify complete data preservation
+    expect(encodeOutput.delta.payload.test_id).toBe(testId);
+    expect(encodeOutput.delta.payload.last_run.result_id).toBe(runOutput.result.result_id);
+    expect(encodeOutput.delta.payload.last_run.exit_code).toBe(0);
+    expect(encodeOutput.delta.payload.last_run.timed_out).toBe(false);
+    expect(encodeOutput.delta.payload.last_run.duration_ms).toBe(runOutput.result.duration_ms);
+    expect(encodeOutput.delta.payload.last_run.run_at).toBe(runOutput.result.started_at);
+    expect(encodeOutput.delta.payload.status).toBe("passed");
+
+    // Verify result_path points to the artifact file
+    expect(encodeOutput.delta.payload.last_run.result_path).toContain("artifacts");
+    expect(encodeOutput.delta.payload.last_run.result_path).toContain(testId);
+
+    // Verify rationale includes result_id prefix
+    expect(encodeOutput.delta.rationale).toContain(runOutput.result.result_id.slice(0, 8));
   });
 });
 
