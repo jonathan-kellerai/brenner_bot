@@ -281,7 +281,7 @@ export class TestStorage {
             discriminates: test.discriminates,
             addressesPredictions: test.addressesPredictions ?? [],
             isExecuted: !!test.execution,
-            hasPotencyCheck: !!test.potencyCheck?.positiveControl,
+            hasPotencyCheck: (test.potencyCheck?.positiveControl ?? "").trim().length >= 10,
             evidencePerWeekTotal: total,
             designedBy: test.designedBy,
             priority: test.priority,
@@ -476,7 +476,7 @@ export class TestStorage {
       const tests = await this.loadSessionTests(sessionId);
       results.push(
         ...tests.filter(
-          (t) => !t.potencyCheck?.positiveControl || t.potencyCheck.positiveControl.length < 10
+          (t) => (t.potencyCheck?.positiveControl ?? "").trim().length < 10
         )
       );
     }

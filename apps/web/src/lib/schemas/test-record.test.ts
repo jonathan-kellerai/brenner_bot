@@ -77,11 +77,8 @@ describe("Test Record Schema", () => {
       expect(() => PotencyCheckSchema.parse(check)).not.toThrow();
     });
 
-    it("rejects too-short positive control", () => {
-      const check = {
-        positiveControl: "Control",
-      };
-      expect(() => PotencyCheckSchema.parse(check)).toThrow();
+    it("rejects missing positive control", () => {
+      expect(() => PotencyCheckSchema.parse({})).toThrow();
     });
   });
 

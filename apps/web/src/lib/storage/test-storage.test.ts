@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -10,7 +11,7 @@ import { createTestRecord, type TestRecord } from "../schemas/test-record";
 // ============================================================================
 
 async function createTempDir(): Promise<string> {
-  const dir = join(tmpdir(), `test-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = join(tmpdir(), `test-storage-test-${randomUUID()}`);
   await fs.mkdir(dir, { recursive: true });
   return dir;
 }
@@ -359,45 +360,31 @@ describe("TestStorage", () => {
   // ============================================================================
 
   describe("getTestsMissingPotencyCheck", () => {
-    it("finds tests with weak potency checks in index", async () => {
-      // Note: The schema enforces positiveControl >= 10 chars at parse time.
-      // To test getTestsMissingPotencyCheck, we verify the index correctly
-      // tracks hasPotencyCheck=false for tests written directly to storage.
-
+    it("finds tests with weak potency checks", async () => {
       const withPotency = createTestTestRecord("RS20251230", 1);
-      await storage.saveTest(withPotency);
-
-      // Write a test with empty potencyCheck directly to storage
-      // This bypasses schema validation but allows testing the query
-      const testsDir = join(tempDir, ".research", "tests");
-      const filePath = join(testsDir, "RS20251230-tests.json");
-      const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionTestFile;
-
-      // Add a test with no/weak potency check directly
-      const weakPotencyTest = {
-        ...data.tests[0],
+      const weakPotency = createTestRecord({
         id: "T-RS20251230-002",
         name: "Test with weak potency check",
+        procedure: "This procedure is valid, but the potency check is too short to be useful.",
+        discriminates: ["H-RS20251230-001", "H-RS20251230-002"],
+        expectedOutcomes: [
+          { hypothesisId: "H-RS20251230-001", outcome: "Outcome A" },
+          { hypothesisId: "H-RS20251230-002", outcome: "Outcome B" },
+        ],
         potencyCheck: {
-          positiveControl: "", // Empty - will be caught by hasPotencyCheck check
+          positiveControl: "Control",
         },
-      };
-      data.tests.push(weakPotencyTest);
-      await fs.writeFile(filePath, JSON.stringify(data, null, 2));
+        evidencePerWeekScore: { likelihoodRatio: 2, cost: 2, speed: 2, ambiguity: 2 },
+        feasibility: { requirements: "Lab equipment", difficulty: "moderate" },
+        designedInSession: "RS20251230",
+      });
 
-      // Rebuild index to pick up the directly-written test
-      const index = await storage.rebuildIndex();
+      await storage.saveTest(withPotency);
+      await storage.saveTest(weakPotency);
 
-      // Verify index correctly identifies the weak potency test
-      const weakEntry = index.entries.find((e) => e.id === "T-RS20251230-002");
-      expect(weakEntry?.hasPotencyCheck).toBe(false);
-
-      // The getTestsMissingPotencyCheck filters at query time too,
-      // but since schema validation in loadSessionTests may filter,
-      // we just verify the index tracking works correctly
-      const strongEntry = index.entries.find((e) => e.id === "T-RS20251230-001");
-      expect(strongEntry?.hasPotencyCheck).toBe(true);
+      const missing = await storage.getTestsMissingPotencyCheck();
+      expect(missing).toHaveLength(1);
+      expect(missing[0].id).toBe(weakPotency.id);
     });
   });
 

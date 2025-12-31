@@ -45,7 +45,7 @@ export const PotencyCheckSchema = z.object({
    * "What would I see if this were working?"
    * @example "Include wells with known activator as positive control"
    */
-  positiveControl: z.string().min(10, "Positive control must be specific"),
+  positiveControl: z.string().max(2000),
 
   /**
    * How do we verify detection threshold is adequate?
@@ -77,17 +77,17 @@ export function calculatePotencyScore(check: PotencyCheck): number {
   let score = 0;
 
   // Positive control is required (1 point if present)
-  if (check.positiveControl && check.positiveControl.length >= 10) {
+  if (check.positiveControl.trim().length >= 10) {
     score += 1;
   }
 
   // Sensitivity verification (1 point)
-  if (check.sensitivityVerification && check.sensitivityVerification.length >= 10) {
+  if ((check.sensitivityVerification ?? "").trim().length >= 10) {
     score += 1;
   }
 
   // Timing validation (1 point)
-  if (check.timingValidation && check.timingValidation.length >= 10) {
+  if ((check.timingValidation ?? "").trim().length >= 10) {
     score += 1;
   }
 
@@ -572,7 +572,7 @@ export function validatePotencyCheck(test: TestRecord): {
   // Note: potencyCheck is required by TestRecordSchema, so it's always present.
   // This validation focuses on quality, not existence.
 
-  if (!check.positiveControl || check.positiveControl.length < 10) {
+  if (check.positiveControl.trim().length < 10) {
     issues.push("Potency check must have a specific positive control");
     return { valid: false, score: 0, issues, suggestions };
   }
@@ -581,10 +581,10 @@ export function validatePotencyCheck(test: TestRecord): {
 
   // Add suggestions for improving potency score (these are NOT errors)
   if (score < 3) {
-    if (!check.sensitivityVerification) {
+    if (!check.sensitivityVerification?.trim() || check.sensitivityVerification.trim().length < 10) {
       suggestions.push("Consider adding sensitivity verification for a more complete potency check");
     }
-    if (!check.timingValidation) {
+    if (!check.timingValidation?.trim() || check.timingValidation.trim().length < 10) {
       suggestions.push("Consider adding timing validation for a more complete potency check");
     }
   }
