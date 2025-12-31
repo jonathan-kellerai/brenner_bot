@@ -66,6 +66,15 @@ Artifacts must clearly separate:
 - All transcript grounding uses **`§n` anchors** that refer to `complete_brenner_transcript.md`.
 - Prefer anchoring *the exact* supporting section(s), not a vague "somewhere earlier".
 
+### Evidence Pack Anchors (Topic Evidence)
+
+When grounding claims in **external topic evidence** (papers/datasets/experiment results), cite evidence pack records with stable IDs:
+
+- Evidence record: `EV-001`
+- Evidence excerpt anchor: `EV-001#E1`
+
+**Rule**: If you cite `EV-...`, the corresponding evidence record (and excerpt, if applicable) must exist in the session’s evidence pack with provenance (URL/path/DOI + accessed date). If it doesn’t, treat the statement as `[inference]`.
+
 ### How To Mark Provenance
 
 **Direct quote (verbatim)**:
@@ -82,13 +91,15 @@ Artifacts must clearly separate:
 ### Anchors Field Contract
 
 Anywhere the schema includes an `**Anchors**:` line:
-- Use a comma-separated list of `§n` anchors and/or simple ranges (e.g. `§127-§129`).
+- Use a comma-separated list of transcript anchors (`§n`, with optional ranges like `§127-§129`) and/or evidence refs (`EV-001`, `EV-001#E1`).
 - If the item is an inference grounded in transcript evidence, append `[inference]` after the anchors.
 - If no transcript grounding exists, use the literal `inference`.
 
 **Examples**:
 - `**Anchors**: §58, §127`
 - `**Anchors**: §161-§162 [inference]`
+- `**Anchors**: §58, EV-001#E1 [inference]`
+- `**Anchors**: EV-003`
 - `**Anchors**: inference`
 
 ## Section Specifications
@@ -549,7 +560,7 @@ A conforming artifact must pass these checks:
 ### Info (nice to have)
 - [ ] Contributors listed in metadata
 - [ ] Session ID follows thread naming convention
-- [ ] All citations use §n anchor format
+- [ ] All citations use valid anchor formats (`§n` and/or `EV-001` / `EV-001#E1`)
 
 ---
 
