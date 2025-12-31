@@ -755,6 +755,169 @@ describe("experiment capture", () => {
 });
 
 // ============================================================================
+// Tests: Experiment Encode with Golden Fixtures + Delta Parser Validation
+// ============================================================================
+
+/**
+ * These tests use golden fixture files and validate that:
+ * 1. The encoder produces valid output
+ * 2. The output parses correctly via delta-parser
+ * 3. The parsed delta matches expected structure
+ */
+describe("experiment encode golden fixtures", () => {
+  const fixturesDir = join(import.meta.dir, "fixtures", "experiment-results");
+
+  it("encodes passed fixture and validates via delta-parser", async () => {
+    const cwd = join(tmpdir(), `brenner-test-fixture-passed-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    // Copy fixture to temp dir
+    const fixtureContent = readFileSync(join(fixturesDir, "passed.json"), "utf8");
+    const resultFile = join(cwd, "passed.json");
+    writeFileSync(resultFile, fixtureContent, "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as { ok: boolean; delta: object; markdown: string };
+    expect(parsed.ok).toBe(true);
+
+    // Import delta-parser dynamically and validate
+    const { parseDeltaMessage } = await import("./apps/web/src/lib/delta-parser.ts");
+    const parseResult = parseDeltaMessage(parsed.markdown);
+
+    expect(parseResult.totalBlocks).toBe(1);
+    expect(parseResult.validCount).toBe(1);
+    expect(parseResult.invalidCount).toBe(0);
+
+    const delta = parseResult.deltas[0];
+    expect(delta?.valid).toBe(true);
+    if (delta?.valid) {
+      expect(delta.operation).toBe("EDIT");
+      expect(delta.section).toBe("discriminative_tests");
+      expect(delta.target_id).toBe("T1");
+    }
+  });
+
+  it("encodes failed fixture and validates via delta-parser", async () => {
+    const cwd = join(tmpdir(), `brenner-test-fixture-failed-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const fixtureContent = readFileSync(join(fixturesDir, "failed.json"), "utf8");
+    const resultFile = join(cwd, "failed.json");
+    writeFileSync(resultFile, fixtureContent, "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as { ok: boolean; delta: { payload: { status: string } }; markdown: string };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.delta.payload.status).toBe("failed");
+
+    const { parseDeltaMessage } = await import("./apps/web/src/lib/delta-parser.ts");
+    const parseResult = parseDeltaMessage(parsed.markdown);
+
+    expect(parseResult.totalBlocks).toBe(1);
+    expect(parseResult.validCount).toBe(1);
+    expect(parseResult.invalidCount).toBe(0);
+
+    const delta = parseResult.deltas[0];
+    expect(delta?.valid).toBe(true);
+    if (delta?.valid) {
+      expect(delta.operation).toBe("EDIT");
+      expect(delta.section).toBe("discriminative_tests");
+      expect(delta.target_id).toBe("T2");
+    }
+  });
+
+  it("encodes blocked-timeout fixture and validates via delta-parser", async () => {
+    const cwd = join(tmpdir(), `brenner-test-fixture-timeout-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const fixtureContent = readFileSync(join(fixturesDir, "blocked-timeout.json"), "utf8");
+    const resultFile = join(cwd, "blocked-timeout.json");
+    writeFileSync(resultFile, fixtureContent, "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as { ok: boolean; delta: { payload: { status: string } }; markdown: string };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.delta.payload.status).toBe("blocked");
+
+    const { parseDeltaMessage } = await import("./apps/web/src/lib/delta-parser.ts");
+    const parseResult = parseDeltaMessage(parsed.markdown);
+
+    expect(parseResult.totalBlocks).toBe(1);
+    expect(parseResult.validCount).toBe(1);
+    expect(parseResult.invalidCount).toBe(0);
+
+    const delta = parseResult.deltas[0];
+    expect(delta?.valid).toBe(true);
+    if (delta?.valid) {
+      expect(delta.operation).toBe("EDIT");
+      expect(delta.section).toBe("discriminative_tests");
+      expect(delta.target_id).toBe("T3");
+    }
+  });
+
+  it("encodes record-manual fixture and validates via delta-parser", async () => {
+    const cwd = join(tmpdir(), `brenner-test-fixture-manual-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const fixtureContent = readFileSync(join(fixturesDir, "record-manual.json"), "utf8");
+    const resultFile = join(cwd, "record-manual.json");
+    writeFileSync(resultFile, fixtureContent, "utf8");
+
+    const result = await runCli(
+      ["experiment", "encode", "--result-file", resultFile, "--project-key", cwd, "--json"],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as { ok: boolean; delta: { payload: { status: string } }; markdown: string };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.delta.payload.status).toBe("passed");
+
+    const { parseDeltaMessage } = await import("./apps/web/src/lib/delta-parser.ts");
+    const parseResult = parseDeltaMessage(parsed.markdown);
+
+    expect(parseResult.totalBlocks).toBe(1);
+    expect(parseResult.validCount).toBe(1);
+    expect(parseResult.invalidCount).toBe(0);
+
+    const delta = parseResult.deltas[0];
+    expect(delta?.valid).toBe(true);
+    if (delta?.valid) {
+      expect(delta.operation).toBe("EDIT");
+      expect(delta.section).toBe("discriminative_tests");
+      expect(delta.target_id).toBe("T4");
+    }
+  });
+
+  it("validates all fixtures are present", async () => {
+    const expectedFixtures = ["passed.json", "failed.json", "blocked-timeout.json", "record-manual.json"];
+    for (const fixture of expectedFixtures) {
+      const fixturePath = join(fixturesDir, fixture);
+      expect(() => readFileSync(fixturePath, "utf8")).not.toThrow();
+    }
+  });
+});
+
+// ============================================================================
 // Tests: Experiment Post Validation
 // ============================================================================
 
