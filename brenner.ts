@@ -69,6 +69,19 @@ import {
   type ScaleCalculation,
 } from "./apps/web/src/lib/schemas/assumption";
 import { challengeAssumption, verifyAssumption, falsifyAssumption } from "./apps/web/src/lib/schemas/assumption-lifecycle";
+import { CritiqueStorage } from "./apps/web/src/lib/storage/critique-storage";
+import {
+  acceptCritique,
+  addressCritique,
+  createCritique,
+  dismissCritique,
+  generateCritiqueId,
+  type Critique,
+  type CritiqueAction,
+  type CritiqueSeverity,
+  type CritiqueStatus,
+  type CritiqueTargetType,
+} from "./apps/web/src/lib/schemas/critique";
 
 function isRecord(value: Json): value is { [key: string]: Json } {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -1195,6 +1208,18 @@ Commands:
   anomaly reactivate <id> [--project-key <abs-path>] [--json]
   anomaly spawn-hypothesis <id> [--project-key <abs-path>] [--json]
   anomaly stats [--project-key <abs-path>] [--json]
+
+  critique list [--session-id <id>] [--status <active|addressed|dismissed|accepted>] [--severity <minor|moderate|serious|critical>]
+              [--target <H-...|T-...|A-...|framing|methodology>] [--project-key <abs-path>] [--json]
+  critique show <id> [--project-key <abs-path>] [--json]
+  critique create --target <H-...|T-...|A-...|framing|methodology> --attack <s> --evidence-to-confirm <s>
+                [--severity <minor|moderate|serious|critical>] [--session-id <id>] [--by <s>] [--anchors <A,B>]
+                [--tags <A,B>] [--notes <s>] [--project-key <abs-path>] [--json]
+  critique respond <id> --response <s> [--action <none|modified|killed|new_test>] [--new-test-id <T-...>] [--by <s>]
+                 [--project-key <abs-path>] [--json]
+  critique dismiss <id> --reason <s> [--by <s>] [--project-key <abs-path>] [--json]
+  critique accept <id> --action <none|modified|killed|new_test> --response <s> [--new-test-id <T-...>] [--by <s>]
+                [--project-key <abs-path>] [--json]
 
   assumption list [--session-id <id>] [--status <unchecked|challenged|verified|falsified>]
                 [--type <background|methodological|boundary|scale_physics>] [--project-key <abs-path>] [--json]
@@ -2830,6 +2855,320 @@ ${JSON.stringify(delta, null, 2)}
     }
 
     throw new Error(`Unknown anomaly subcommand: ${sub ?? "(missing)"}`);
+  }
+
+  // ============================================================================
+  // Critique Command
+  // ============================================================================
+  if (top === "critique") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+    const storage = new CritiqueStorage({ baseDir: projectKey });
+
+    const VALID_TARGET_TYPES: CritiqueTargetType[] = ["hypothesis", "test", "assumption", "framing", "methodology"];
+    const VALID_STATUSES: CritiqueStatus[] = ["active", "addressed", "dismissed", "accepted"];
+    const VALID_SEVERITIES: CritiqueSeverity[] = ["minor", "moderate", "serious", "critical"];
+    const VALID_ACTIONS: CritiqueAction[] = ["none", "modified", "killed", "new_test"];
+
+    function parseTargetFilter(targetRaw: string): { targetType: CritiqueTargetType; targetId?: string } {
+      const target = targetRaw.trim();
+      if (!target) {
+        throw new Error("Invalid --target (empty).");
+      }
+
+      if (target === "framing" || target === "methodology") {
+        return { targetType: target };
+      }
+
+      if (target.startsWith("H-")) {
+        return { targetType: "hypothesis", targetId: target };
+      }
+
+      if (target.startsWith("T-") || /^T\\d+$/.test(target)) {
+        return { targetType: "test", targetId: target };
+      }
+
+      if (target.startsWith("A-") || /^A\\d+$/.test(target)) {
+        return { targetType: "assumption", targetId: target };
+      }
+
+      throw new Error(
+        `Invalid --target "${targetRaw}" (expected H-..., T-..., A-..., framing, or methodology).`
+      );
+    }
+
+    // Subcommand: list
+    if (sub === "list") {
+      const sessionId = asStringFlag(flags, "session-id");
+      const statusFilterRaw = asStringFlag(flags, "status");
+      const severityFilterRaw = asStringFlag(flags, "severity");
+      const targetRaw = asStringFlag(flags, "target");
+
+      const statusFilter = statusFilterRaw as CritiqueStatus | undefined;
+      const severityFilter = severityFilterRaw as CritiqueSeverity | undefined;
+      const targetFilter = targetRaw ? parseTargetFilter(targetRaw) : undefined;
+
+      if (statusFilter && !VALID_STATUSES.includes(statusFilter)) {
+        throw new Error(`Invalid --status "${statusFilter}" (expected one of: ${VALID_STATUSES.join(", ")})`);
+      }
+      if (severityFilter && !VALID_SEVERITIES.includes(severityFilter)) {
+        throw new Error(`Invalid --severity "${severityFilter}" (expected one of: ${VALID_SEVERITIES.join(", ")})`);
+      }
+      if (targetFilter && !VALID_TARGET_TYPES.includes(targetFilter.targetType)) {
+        throw new Error(
+          `Invalid --target "${targetRaw}" (expected one of: ${VALID_TARGET_TYPES.join(", ")}, H-..., T-..., A-...).`
+        );
+      }
+
+      let critiques: Critique[];
+      if (sessionId) {
+        critiques = await storage.loadSessionCritiques(sessionId);
+      } else if (statusFilter && !severityFilter && !targetFilter) {
+        critiques = await storage.getCritiquesByStatus(statusFilter);
+      } else if (severityFilter && !statusFilter && !targetFilter) {
+        critiques = await storage.getCritiquesBySeverity(severityFilter);
+      } else if (targetFilter && !statusFilter && !severityFilter) {
+        critiques = await storage.getCritiquesForTarget(targetFilter.targetType, targetFilter.targetId);
+      } else {
+        critiques = await storage.getAllCritiques();
+      }
+
+      if (statusFilter) critiques = critiques.filter((c) => c.status === statusFilter);
+      if (severityFilter) critiques = critiques.filter((c) => c.severity === severityFilter);
+      if (targetFilter) {
+        critiques = critiques.filter(
+          (c) => c.targetType === targetFilter.targetType && (targetFilter.targetId === undefined || c.targetId === targetFilter.targetId)
+        );
+      }
+
+      critiques.sort((a, b) => a.id.localeCompare(b.id));
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: critiques.length, critiques }, null, 2));
+      } else {
+        if (critiques.length === 0) {
+          stdoutLine("No critiques found.");
+        } else {
+          for (const c of critiques) {
+            const target = c.targetId ? `${c.targetType}:${c.targetId}` : c.targetType;
+            const status = c.status.padEnd(9);
+            const sev = c.severity.padEnd(8);
+            const attackPreview = c.attack.length > 60 ? `${c.attack.slice(0, 60)}...` : c.attack;
+            stdoutLine(`[${status} ${sev}] ${c.id} → ${target} :: ${attackPreview}`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: show
+    if (sub === "show") {
+      const critiqueId = action;
+      if (!critiqueId) throw new Error("Missing critique ID. Usage: critique show <id>");
+
+      const critique = await storage.getCritiqueById(critiqueId);
+      if (!critique) throw new Error(`Critique not found: ${critiqueId}`);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, critique }, null, 2));
+      } else {
+        stdoutLine(`ID:         ${critique.id}`);
+        stdoutLine(`Session:    ${critique.sessionId}`);
+        stdoutLine(`Status:     ${critique.status}`);
+        stdoutLine(`Severity:   ${critique.severity}`);
+        stdoutLine(`Target:     ${critique.targetType}${critique.targetId ? ` (${critique.targetId})` : ""}`);
+        if (critique.raisedBy) stdoutLine(`Raised by:  ${critique.raisedBy}`);
+        if (critique.anchors?.length) stdoutLine(`Anchors:    ${critique.anchors.join(", ")}`);
+        stdoutLine(`Attack:     ${critique.attack}`);
+        stdoutLine(`Evidence:   ${critique.evidenceToConfirm}`);
+        if (critique.proposedAlternative) {
+          stdoutLine(`Alternative:`);
+          stdoutLine(`  ${critique.proposedAlternative.description}`);
+          if (critique.proposedAlternative.mechanism) {
+            stdoutLine(`  Mechanism: ${critique.proposedAlternative.mechanism}`);
+          }
+          stdoutLine(`  Testable:  ${String(critique.proposedAlternative.testable)}`);
+          if (critique.proposedAlternative.predictions?.length) {
+            stdoutLine(`  Predictions: ${critique.proposedAlternative.predictions.join("; ")}`);
+          }
+        }
+        if (critique.dismissalReason) stdoutLine(`Dismissal:  ${critique.dismissalReason}`);
+        if (critique.response) {
+          stdoutLine(`Response:`);
+          stdoutLine(`  ${critique.response.text}`);
+          if (critique.response.respondedBy) stdoutLine(`  By: ${critique.response.respondedBy}`);
+          stdoutLine(`  At: ${critique.response.respondedAt}`);
+          if (critique.response.actionTaken) stdoutLine(`  Action: ${critique.response.actionTaken}`);
+          if (critique.response.newTestId) stdoutLine(`  New test: ${critique.response.newTestId}`);
+        }
+        if (critique.tags?.length) stdoutLine(`Tags:       ${critique.tags.join(", ")}`);
+        if (critique.notes) stdoutLine(`Notes:      ${critique.notes}`);
+        stdoutLine(`Created:    ${critique.createdAt}`);
+        stdoutLine(`Updated:    ${critique.updatedAt}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: create
+    if (sub === "create") {
+      const targetRaw = asStringFlag(flags, "target");
+      const attack = asStringFlag(flags, "attack");
+      const evidenceToConfirm = asStringFlag(flags, "evidence-to-confirm");
+      const severityRaw = asStringFlag(flags, "severity") ?? "moderate";
+      const sessionId = asStringFlag(flags, "session-id") ?? `RS${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+      const raisedBy = asStringFlag(flags, "by");
+      const anchorsRaw = asStringFlag(flags, "anchors");
+      const tagsRaw = asStringFlag(flags, "tags");
+      const notes = asStringFlag(flags, "notes");
+
+      if (!targetRaw) throw new Error("Missing --target.");
+      if (!attack) throw new Error("Missing --attack.");
+      if (!evidenceToConfirm) throw new Error("Missing --evidence-to-confirm.");
+
+      const severity = severityRaw as CritiqueSeverity;
+      if (!VALID_SEVERITIES.includes(severity)) {
+        throw new Error(`Invalid --severity "${severityRaw}" (expected one of: ${VALID_SEVERITIES.join(", ")})`);
+      }
+
+      const target = parseTargetFilter(targetRaw);
+
+      const existing = await storage.loadSessionCritiques(sessionId);
+      const newId = generateCritiqueId(sessionId, existing.map((c) => c.id));
+
+      const critique = createCritique({
+        id: newId,
+        targetType: target.targetType,
+        targetId: target.targetId,
+        attack,
+        evidenceToConfirm,
+        severity,
+        sessionId,
+        raisedBy: raisedBy || undefined,
+        anchors: anchorsRaw ? splitCsv(anchorsRaw) : undefined,
+        tags: tagsRaw ? splitCsv(tagsRaw) : undefined,
+        notes: notes || undefined,
+      });
+
+      await storage.saveCritique(critique);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, critique }, null, 2));
+      } else {
+        stdoutLine(`Created critique: ${critique.id}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: respond
+    if (sub === "respond") {
+      const critiqueId = action;
+      const response = asStringFlag(flags, "response");
+      const respondedBy = asStringFlag(flags, "by");
+      const actionRaw = asStringFlag(flags, "action") ?? "none";
+      const newTestId = asStringFlag(flags, "new-test-id");
+
+      if (!critiqueId) throw new Error("Missing critique ID. Usage: critique respond <id> --response <s>");
+      if (!response) throw new Error("Missing --response.");
+
+      const actionTaken = actionRaw as CritiqueAction;
+      if (!VALID_ACTIONS.includes(actionTaken)) {
+        throw new Error(`Invalid --action "${actionRaw}" (expected one of: ${VALID_ACTIONS.join(", ")})`);
+      }
+      if (actionTaken === "new_test" && !newTestId) {
+        throw new Error('Missing --new-test-id (required when --action is "new_test").');
+      }
+      if (actionTaken !== "new_test" && newTestId) {
+        throw new Error('Do not pass --new-test-id unless --action is "new_test".');
+      }
+
+      const critique = await storage.getCritiqueById(critiqueId);
+      if (!critique) throw new Error(`Critique not found: ${critiqueId}`);
+
+      const addressed = addressCritique(critique, {
+        text: response,
+        respondedBy: respondedBy || undefined,
+        actionTaken,
+        newTestId: actionTaken === "new_test" ? newTestId : undefined,
+      });
+
+      await storage.saveCritique(addressed);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, critique: addressed }, null, 2));
+      } else {
+        stdoutLine(`Responded to ${critiqueId} (status: ${addressed.status})`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: dismiss
+    if (sub === "dismiss") {
+      const critiqueId = action;
+      const reason = asStringFlag(flags, "reason");
+      const respondedBy = asStringFlag(flags, "by");
+
+      if (!critiqueId) throw new Error("Missing critique ID. Usage: critique dismiss <id> --reason <s>");
+      if (!reason) throw new Error("Missing --reason.");
+
+      const critique = await storage.getCritiqueById(critiqueId);
+      if (!critique) throw new Error(`Critique not found: ${critiqueId}`);
+
+      const dismissed = dismissCritique(critique, reason, respondedBy || undefined);
+      await storage.saveCritique(dismissed);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, critique: dismissed }, null, 2));
+      } else {
+        stdoutLine(`Dismissed ${critiqueId}: ${reason}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: accept
+    if (sub === "accept") {
+      const critiqueId = action;
+      const response = asStringFlag(flags, "response");
+      const respondedBy = asStringFlag(flags, "by");
+      const actionRaw = asStringFlag(flags, "action");
+      const newTestId = asStringFlag(flags, "new-test-id");
+
+      if (!critiqueId) throw new Error("Missing critique ID. Usage: critique accept <id> --action <...> --response <s>");
+      if (!actionRaw) throw new Error("Missing --action.");
+      if (!response) throw new Error("Missing --response.");
+
+      const actionTaken = actionRaw as CritiqueAction;
+      if (!VALID_ACTIONS.includes(actionTaken)) {
+        throw new Error(`Invalid --action "${actionRaw}" (expected one of: ${VALID_ACTIONS.join(", ")})`);
+      }
+      if (actionTaken === "new_test" && !newTestId) {
+        throw new Error('Missing --new-test-id (required when --action is "new_test").');
+      }
+      if (actionTaken !== "new_test" && newTestId) {
+        throw new Error('Do not pass --new-test-id unless --action is "new_test".');
+      }
+
+      const critique = await storage.getCritiqueById(critiqueId);
+      if (!critique) throw new Error(`Critique not found: ${critiqueId}`);
+
+      const accepted = acceptCritique(
+        critique,
+        actionTaken,
+        response,
+        respondedBy || undefined,
+        actionTaken === "new_test" ? newTestId : undefined
+      );
+
+      await storage.saveCritique(accepted);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, critique: accepted }, null, 2));
+      } else {
+        stdoutLine(`Accepted ${critiqueId} (action: ${actionTaken})`);
+      }
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown critique subcommand: ${sub ?? "(missing)"}`);
   }
 
   // ============================================================================

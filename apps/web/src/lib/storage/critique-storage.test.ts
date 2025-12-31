@@ -5,7 +5,6 @@ import { tmpdir } from "os";
 import {
   CritiqueStorage,
   type SessionCritiqueFile,
-  type CritiqueIndex,
 } from "./critique-storage";
 import {
   createCritique,
