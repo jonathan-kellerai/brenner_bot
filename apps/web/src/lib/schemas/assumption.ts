@@ -108,14 +108,14 @@ export type AssumptionStatus = z.infer<typeof AssumptionStatusSchema>;
  */
 export const AssumptionLoadSchema = z.object({
   /**
-   * Hypothesis IDs that depend on this assumption (H-xxx format).
+   * Hypothesis IDs that depend on this assumption (H-{session}-{seq} format).
    */
   affectedHypotheses: z.array(
     z.string().regex(hypothesisIdPattern, "Invalid hypothesis ID format")
   ),
 
   /**
-   * Test IDs that require this assumption (T-xxx format).
+   * Test IDs that require this assumption (T-{session}-{seq} or T{n} format).
    */
   affectedTests: z.array(
     z.string().regex(testIdPattern, "Invalid test ID format")
@@ -197,7 +197,7 @@ export const AssumptionSchema = z
      */
     id: z
       .string()
-      .regex(assumptionIdPattern, "Invalid assumption ID format (expected A-{session}-{seq})"),
+      .regex(assumptionIdPattern, "Invalid assumption ID format (expected A-{session}-{seq} or A{n})"),
 
     /**
      * What are we assuming is true?
