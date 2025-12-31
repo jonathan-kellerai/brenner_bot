@@ -20,13 +20,14 @@ import { z } from "zod";
 // ============================================================================
 
 /**
- * Assumption ID format: A-{session_id}-{sequence}
- * Examples: A-RS20251230-001, A-CELL-FATE-001-002
+ * Assumption ID format: A-{session_id}-{sequence} or simple A{n}
+ * Examples: A-RS20251230-001, A-CELL-FATE-001-002, A1, A42
  *
  * The session_id portion allows alphanumeric with dashes.
  * The sequence is a 3-digit zero-padded number.
+ * Simple A{n} format supported for backwards compatibility.
  */
-const assumptionIdPattern = /^A-[A-Za-z0-9][\w-]*-\d{3}$/;
+const assumptionIdPattern = /^A-[A-Za-z0-9][\w-]*-\d{3}$|^A\d+$/;
 
 /**
  * Hypothesis ID format for links: H-{session_id}-{sequence}
@@ -34,9 +35,10 @@ const assumptionIdPattern = /^A-[A-Za-z0-9][\w-]*-\d{3}$/;
 const hypothesisIdPattern = /^H-[A-Za-z0-9][\w-]*-\d{3}$/;
 
 /**
- * Test ID format for links: T-{session_id}-{sequence}
+ * Test ID format for links: T-{session_id}-{sequence} or simple T{n}
+ * Simple T{n} format supported for backwards compatibility.
  */
-const testIdPattern = /^T-[A-Za-z0-9][\w-]*-\d{3}$/;
+const testIdPattern = /^T-[A-Za-z0-9][\w-]*-\d{3}$|^T\d+$/;
 
 /**
  * Transcript anchor format: §n or §n-m for ranges
