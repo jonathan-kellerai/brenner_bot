@@ -563,8 +563,10 @@ export function validatePotencyCheck(test: TestRecord): {
   valid: boolean;
   score: number;
   issues: string[];
+  suggestions: string[];
 } {
   const issues: string[] = [];
+  const suggestions: string[] = [];
   const check = test.potencyCheck;
 
   // Note: potencyCheck is required by TestRecordSchema, so it's always present.
@@ -572,18 +574,18 @@ export function validatePotencyCheck(test: TestRecord): {
 
   if (!check.positiveControl || check.positiveControl.length < 10) {
     issues.push("Potency check must have a specific positive control");
-    return { valid: false, score: 0, issues };
+    return { valid: false, score: 0, issues, suggestions };
   }
 
   const score = calculatePotencyScore(check);
 
-  // Add suggestions for improving potency score
+  // Add suggestions for improving potency score (these are NOT errors)
   if (score < 3) {
     if (!check.sensitivityVerification) {
-      issues.push("Consider adding sensitivity verification for a more complete potency check");
+      suggestions.push("Consider adding sensitivity verification for a more complete potency check");
     }
     if (!check.timingValidation) {
-      issues.push("Consider adding timing validation for a more complete potency check");
+      suggestions.push("Consider adding timing validation for a more complete potency check");
     }
   }
 
@@ -591,6 +593,7 @@ export function validatePotencyCheck(test: TestRecord): {
     valid: true,
     score,
     issues,
+    suggestions,
   };
 }
 
@@ -616,6 +619,7 @@ export function validateTest(test: TestRecord): {
   // Validate potency check (CRITICAL)
   const potencyResult = validatePotencyCheck(test);
   issues.push(...potencyResult.issues);
+  warnings.push(...potencyResult.suggestions);
 
   // Check for inflated scores
   const inflated = detectInflatedScores(test.evidencePerWeekScore);

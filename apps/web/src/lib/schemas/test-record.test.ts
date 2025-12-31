@@ -553,6 +553,24 @@ describe("Test Record Schema", () => {
       const result = validateTest(test);
       expect(result.scoreInflated).toBe(true);
     });
+
+    it("is valid with incomplete but acceptable potency check", () => {
+      // This test verifies the bug fix: tests with valid but incomplete
+      // potency checks (score 1 or 2) should still be marked as valid.
+      // The "Consider adding..." suggestions should be warnings, not errors.
+      const test = {
+        ...validTest,
+        potencyCheck: {
+          positiveControl: "Include known positive samples", // score 1, no sensitivity or timing
+        },
+      };
+      const result = validateTest(test);
+      expect(result.valid).toBe(true); // Should be valid despite incomplete potency check
+      expect(result.potencyScore).toBe(1);
+      expect(result.issues).toHaveLength(0); // No errors
+      expect(result.warnings.some((w) => w.includes("sensitivity verification"))).toBe(true);
+      expect(result.warnings.some((w) => w.includes("timing validation"))).toBe(true);
+    });
   });
 
   // ============================================================================
