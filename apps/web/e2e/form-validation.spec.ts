@@ -17,6 +17,7 @@ import {
   takeScreenshot,
   assertUrl,
   waitForNetworkIdle,
+  createE2ELogger,
 } from "./utils";
 
 // ============================================================================
@@ -41,9 +42,14 @@ function getCookieDomain(): string {
 // Session Form Validation Tests
 // ============================================================================
 
+// Type aliases for cleaner function signatures
+type Page = import("@playwright/test").Page;
+type BrowserContext = import("@playwright/test").BrowserContext;
+type Logger = ReturnType<typeof createE2ELogger>;
+
 test.describe("Session Form Validation", () => {
   // Helper to authenticate and navigate to session form
-  async function setupAuthenticatedSession(page: Parameters<typeof test>[0]["page"], context: Parameters<typeof test>[0]["context"], logger: Parameters<typeof test>[0]["logger"]) {
+  async function setupAuthenticatedSession(page: Page, context: BrowserContext, logger: Logger) {
     const labSecret = process.env.BRENNER_LAB_SECRET || "test-secret-for-e2e";
     await context.addCookies([
       {
