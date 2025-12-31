@@ -141,6 +141,7 @@ export interface CritiqueItem extends BaseItem {
   evidence: string;
   current_status: string;
   real_third_alternative?: boolean;
+  proposed_alternative?: string;
 }
 
 /** Union of all item types */
