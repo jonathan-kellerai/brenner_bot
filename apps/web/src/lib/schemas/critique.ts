@@ -753,10 +753,12 @@ export function reopenCritique(critique: Critique, reason?: string): Critique {
   }
 
   const now = new Date().toISOString();
-  return {
+  const updated = {
     ...critique,
     status: "active",
     notes: reason ? `${critique.notes || ""}\n\nReopened: ${reason}`.trim() : critique.notes,
     updatedAt: now,
   };
+
+  return CritiqueSchema.parse(updated);
 }
