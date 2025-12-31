@@ -2633,6 +2633,10 @@ ${JSON.stringify(delta, null, 2)}
       let anomalies: Anomaly[];
       if (sessionId) {
         anomalies = await storage.loadSessionAnomalies(sessionId);
+        // Apply status filter if both filters provided
+        if (statusFilter) {
+          anomalies = anomalies.filter((a) => a.quarantineStatus === statusFilter);
+        }
       } else if (statusFilter) {
         anomalies = await storage.getAnomaliesByStatus(statusFilter);
       } else {
