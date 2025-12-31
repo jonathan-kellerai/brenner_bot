@@ -4,9 +4,13 @@
  * Captures page screenshots and compares against baselines to catch unintended
  * visual changes. Uses Playwright's built-in visual comparison.
  *
+ * IMPORTANT: These tests only run on desktop-chrome to maintain consistent baselines.
+ * Running on multiple browsers would require separate baselines per browser since
+ * rendering differs between browser engines.
+ *
  * Baseline Generation:
  * - First run creates baseline snapshots in e2e/visual-regression.spec.ts-snapshots/
- * - Update baselines with: bun playwright test visual-regression --update-snapshots
+ * - Update baselines with: bun playwright test visual-regression --update-snapshots --project=desktop-chrome
  *
  * Policy:
  * - Fail CI on visual differences exceeding threshold
@@ -16,6 +20,9 @@
 
 import { test, expect, waitForNetworkIdle } from "./utils";
 import { withStep } from "./utils/e2e-logging";
+
+// Only run visual regression tests on desktop-chrome for consistent baselines
+test.skip(({ browserName }) => browserName !== "chromium", "Visual regression tests only run on Chromium");
 
 // Viewport configurations for responsive testing
 const VIEWPORTS = [
