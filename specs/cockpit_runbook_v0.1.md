@@ -87,6 +87,39 @@ Conventions live in: `thread_subject_conventions_v0.1.md`
 
 ## 2) Start the cockpit (`ntm`)
 
+### 2.1 One-command start (recommended)
+
+This wraps the happy-path steps:
+1) spawn an `ntm` session (optional)
+2) send role-separated kickoff messages via Agent Mail (explicit roster mapping)
+3) broadcast “check mail” into all panes (optional)
+
+```bash
+export THREAD_ID="RS-20251230-cell-fate"
+
+./brenner.ts cockpit start \
+  --project-key "$PWD" \
+  --thread-id "$THREAD_ID" \
+  --sender FuchsiaDog \
+  --to BlueLake,PurpleMountain,RedForest \
+  --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,RedForest=adversarial_critic" \
+  --excerpt-file excerpt.md \
+  --question "How do cells choose between lineage and gradient-based fate determination?"
+```
+
+Useful flags:
+- `--dry-run`: print the plan without spawning `ntm` or sending messages.
+- `--skip-ntm`: don’t run `ntm spawn` (use if the session already exists).
+- `--ntm-args "<args>"`: override `ntm spawn` flags (default: `--cc=1 --cod=1 --gmi=1`).
+- `--skip-broadcast`: don’t `ntm send --all ...`.
+- `--broadcast-message "<text>"`: customize the broadcast message.
+
+Notes:
+- `cockpit start` **requires** `--role-map` (no recipient-name heuristics).
+- `thread_id` is also used as the `ntm` session name.
+
+### 2.2 Manual `ntm` commands (fallback)
+
 Spawn a tmux session with agent panes using the thread id as the session name:
 ```bash
 export THREAD_ID="RS-20251230-cell-fate"
@@ -411,12 +444,12 @@ Use `experiment run` to execute the test command and capture output:
 
 **Where results are written**:
 ```
-artifacts/{thread_id}/results/{test_id}_{timestamp}_{uuid}.json
+artifacts/{thread_id}/experiments/{test_id}/{timestamp}_{uuid}.json
 ```
 
 Example output:
 ```
-artifacts/RS-20251230-cell-fate/results/T1_20251230_183045_a1b2c3d4.json
+artifacts/RS-20251230-cell-fate/experiments/T1/20251230T183045Z_a1b2c3d4.json
 ```
 
 ### 4.4 Inspect the result file
@@ -424,7 +457,7 @@ artifacts/RS-20251230-cell-fate/results/T1_20251230_183045_a1b2c3d4.json
 The result file is a structured JSON document (schema: `experiment_result_v0.1`):
 
 ```bash
-cat artifacts/$THREAD_ID/results/T1_*.json | jq '.'
+cat artifacts/$THREAD_ID/experiments/T1/*.json | jq '.'
 ```
 
 Key fields:
@@ -441,7 +474,7 @@ Generate a non-interpretive DELTA that attaches run metadata to the test:
 
 ```bash
 ./brenner.ts experiment encode \
-  --result-file artifacts/$THREAD_ID/results/T1_*.json \
+  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
   --project-key "$PROJECT_KEY" \
   > delta.md
 ```
@@ -449,7 +482,7 @@ Generate a non-interpretive DELTA that attaches run metadata to the test:
 With `--json`:
 ```bash
 ./brenner.ts experiment encode \
-  --result-file artifacts/$THREAD_ID/results/T1_*.json \
+  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
   --project-key "$PROJECT_KEY" \
   --json
 ```
@@ -467,7 +500,7 @@ The `experiment post` command combines encode + send:
 
 ```bash
 ./brenner.ts experiment post \
-  --result-file artifacts/$THREAD_ID/results/T1_*.json \
+  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
   --project-key "$PROJECT_KEY" \
   --sender Operator \
   --to BlueLake,PurpleMountain,RedForest
@@ -482,7 +515,7 @@ This:
 
 ```bash
 ./brenner.ts experiment encode \
-  --result-file artifacts/$THREAD_ID/results/T1_*.json \
+  --result-file artifacts/$THREAD_ID/experiments/T1/*.json \
   --project-key "$PROJECT_KEY" \
   > delta.md
 
@@ -528,7 +561,7 @@ export THREAD_ID="RS-20251230-cell-fate"
   -- python test_rrp.py --variant knockout
 
 # 2) Find the result file
-RESULT_FILE=$(ls -t artifacts/$THREAD_ID/results/T1_*.json | head -1)
+RESULT_FILE=$(ls -t artifacts/$THREAD_ID/experiments/T1/*.json | head -1)
 echo "Result: $RESULT_FILE"
 
 # 3) Post to thread (encode + send)
