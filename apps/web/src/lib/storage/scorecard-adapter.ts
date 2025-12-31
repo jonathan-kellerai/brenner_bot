@@ -151,6 +151,9 @@ export function testToArtifactItem(t: TestRecord): TestItem {
     }
   };
 
+  // Map status, checking the mapped value (not input) to avoid including undefined
+  const mappedStatus = mapStatus(t.status);
+
   return {
     id: t.id,
     name: t.name,
@@ -158,7 +161,7 @@ export function testToArtifactItem(t: TestRecord): TestItem {
     discriminates: t.discriminates?.join(" vs ") ?? "",
     expected_outcomes: expectedOutcomesRecord,
     potency_check: t.potencyCheck?.positiveControl ?? "",
-    ...(t.status && { status: mapStatus(t.status) }),
+    ...(mappedStatus && { status: mappedStatus }),
     ...(t.feasibility && { feasibility: t.feasibility.requirements }),
   };
 }

@@ -142,7 +142,7 @@ describe("DashboardAggregator", () => {
 
     const a1 = AssumptionSchema.parse({
       ...createAssumption({
-        id: "A-RS20251230-001",
+        id: "A-RS-20251230-001",
         statement: "Background assumption that is falsified.",
         type: "background",
         sessionId: session1,
@@ -162,6 +162,8 @@ describe("DashboardAggregator", () => {
 
     await anomalyStorage.saveSessionAnomalies(session1, []);
     await anomalyStorage.saveSessionAnomalies(session2, []);
+
+    await critiqueStorage.saveSessionCritiques(session1, []);
 
     const c1 = createCritique({
       id: "C-RS-20251231-001",
