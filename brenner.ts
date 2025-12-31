@@ -117,8 +117,6 @@ import {
   deferHypothesis,
   reactivateHypothesis,
   isTerminalState,
-  TransitionHistoryStore,
-  type TransitionTrigger,
   type StateTransition,
 } from "./apps/web/src/lib/schemas/hypothesis-lifecycle";
 import { TestStorage } from "./apps/web/src/lib/storage/test-storage";
@@ -339,6 +337,26 @@ function stderrLine(message: string): void {
   process.stderr.write(ensureTrailingNewline(message));
 }
 
+async function confirmDestructiveAction(message: string, assumeYes: boolean): Promise<void> {
+  if (assumeYes) return;
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new Error(`${message} Pass --yes to confirm in non-interactive mode.`);
+  }
+
+  const promptOut = process.stderr;
+  const rl = createInterface({ input: process.stdin, output: promptOut });
+  const ask = (q: string) => new Promise<string>((resolve) => rl.question(q, resolve));
+
+  try {
+    const answer = (await ask(`${message} Type "yes" to confirm: `)).trim().toLowerCase();
+    if (answer !== "yes" && answer !== "y") {
+      throw new Error("Aborted.");
+    }
+  } finally {
+    rl.close();
+  }
+}
+
 const sanitizeThreadIdForArtifactFilename = (threadId: string): string => {
   const trimmed = threadId.trim();
   const withoutSeparators = trimmed.replace(/[\\/]+/g, "-");
@@ -347,6 +365,92 @@ const sanitizeThreadIdForArtifactFilename = (threadId: string): string => {
   const strippedEdges = collapsedDashes.replace(/^[-.]+|[-.]+$/g, "");
   return strippedEdges || "thread";
 };
+
+type HypothesisTransitionLog = {
+  sessionId: string;
+  createdAt: string;
+  updatedAt: string;
+  transitions: StateTransition[];
+};
+
+function extractSessionIdFromHypothesisId(hypothesisId: string): string | null {
+  const match = hypothesisId.match(/^H-(.+)-\d{3}$/);
+  if (!match) return null;
+  return match[1] ?? null;
+}
+
+function ensureHypothesisTransitionDir(baseDir: string): string {
+  const dir = join(baseDir, ".research", "transitions");
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true });
+  }
+  return dir;
+}
+
+function transitionLogPath(baseDir: string, sessionId: string): string {
+  const safeSession = sanitizeThreadIdForArtifactFilename(sessionId);
+  const dir = ensureHypothesisTransitionDir(baseDir);
+  return join(dir, `${safeSession}-transitions.json`);
+}
+
+function loadHypothesisTransitionLog(baseDir: string, sessionId: string): HypothesisTransitionLog {
+  const path = transitionLogPath(baseDir, sessionId);
+  const now = new Date().toISOString();
+
+  if (!existsSync(path)) {
+    return { sessionId, createdAt: now, updatedAt: now, transitions: [] };
+  }
+
+  let parsed: HypothesisTransitionLog;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as HypothesisTransitionLog;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to parse hypothesis transition log at ${path}: ${message}`);
+  }
+
+  if (!parsed || !Array.isArray(parsed.transitions)) {
+    throw new Error(`Invalid hypothesis transition log at ${path}`);
+  }
+
+  return {
+    sessionId: parsed.sessionId ?? sessionId,
+    createdAt: parsed.createdAt ?? now,
+    updatedAt: parsed.updatedAt ?? now,
+    transitions: parsed.transitions ?? [],
+  };
+}
+
+function saveHypothesisTransitionLog(baseDir: string, log: HypothesisTransitionLog): void {
+  const path = transitionLogPath(baseDir, log.sessionId);
+  writeFileSync(path, JSON.stringify(log, null, 2));
+}
+
+function appendHypothesisTransition(baseDir: string, transition: StateTransition): void {
+  const sessionId = transition.sessionId ?? extractSessionIdFromHypothesisId(transition.hypothesisId);
+  if (!sessionId) return;
+
+  const log = loadHypothesisTransitionLog(baseDir, sessionId);
+  const already = log.transitions.some((entry) => entry.id === transition.id);
+  if (!already) {
+    log.transitions.push({
+      ...transition,
+      sessionId,
+    });
+  }
+  log.updatedAt = transition.timestamp ?? new Date().toISOString();
+  saveHypothesisTransitionLog(baseDir, log);
+}
+
+function loadHypothesisTransitionHistory(baseDir: string, hypothesisId: string): StateTransition[] {
+  const sessionId = extractSessionIdFromHypothesisId(hypothesisId);
+  if (!sessionId) return [];
+
+  const log = loadHypothesisTransitionLog(baseDir, sessionId);
+  return log.transitions
+    .filter((entry) => entry.hypothesisId === hypothesisId)
+    .sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+}
 
 function formatUtcTimestampForFilename(date: Date): string {
   // YYYYMMDDTHHMMSSZ (UTC)
@@ -1309,15 +1413,15 @@ Commands:
                    [--session-id <id>] [--mechanism <s>] [--origin <proposed|third_alternative|refinement|anomaly_spawned>]
                    [--confidence <high|medium|low|speculative>] [--parent <H-...>] [--by <s>]
                    [--anchors <A,B>] [--tags <A,B>] [--notes <s>] [--project-key <abs-path>] [--json]
+  hypothesis activate <id> [--project-key <abs-path>] [--json]
+  hypothesis kill <id> --test <T-...> [--reason <s>] [--yes] [--project-key <abs-path>] [--json]
+  hypothesis refine <id> --child <H-...> [--project-key <abs-path>] [--json]
+  hypothesis validate <id> --test <T-...> [--project-key <abs-path>] [--json]
+  hypothesis park <id> [--reason <s>] [--project-key <abs-path>] [--json]
+  hypothesis reactivate <id> [--project-key <abs-path>] [--json]
   hypothesis search <query> [--project-key <abs-path>] [--json]
   hypothesis link <child-id> <parent-id> [--project-key <abs-path>] [--json]
   hypothesis stats [--project-key <abs-path>] [--json]
-  hypothesis activate <id> [--project-key <abs-path>] [--json]
-  hypothesis kill <id> --test=<test-id> [--reason <s>] [--project-key <abs-path>] [--json]
-  hypothesis refine <id> --child=<new-id> [--project-key <abs-path>] [--json]
-  hypothesis validate <id> --test=<test-id> [--project-key <abs-path>] [--json]
-  hypothesis park <id> [--reason <s>] [--project-key <abs-path>] [--json]
-  hypothesis reactivate <id> [--project-key <abs-path>] [--json]
   hypothesis history <id> [--project-key <abs-path>] [--json]
 
   test list [--session-id <id>] [--status <designed|ready|in_progress|completed|blocked|abandoned>] [--project-key <abs-path>] [--json]
@@ -4185,7 +4289,7 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Hypothesis not found: ${hypothesisId}`);
       }
 
-      const result = activateHypothesis(hypothesis);
+      const result = activateHypothesis(hypothesis, { sessionId: hypothesis.sessionId });
       if (!result.success) {
         if (jsonMode) {
           stdoutLine(JSON.stringify({ ok: false, error: result.error }, null, 2));
@@ -4198,8 +4302,7 @@ ${JSON.stringify(delta, null, 2)}
       await storage.saveHypothesis(result.hypothesis!);
 
       // Log transition history
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      await historyStore.logTransition(result.transition!);
+      appendHypothesisTransition(projectKey, result.transition!);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
@@ -4217,9 +4320,10 @@ ${JSON.stringify(delta, null, 2)}
 
       const testId = asStringFlag(flags, "test");
       const reason = asStringFlag(flags, "reason");
+      const assumeYes = asBoolFlag(flags, "yes");
 
-      if (!testId && !reason) {
-        throw new Error(`--test=<test-id> or --reason="..." is required.\nHypotheses should be killed by specific test results, not arbitrary decisions.`);
+      if (!testId) {
+        throw new Error(`--test=<test-id> is required.\nHypotheses should be killed by specific test results, not arbitrary decisions.`);
       }
 
       const hypothesis = await storage.getHypothesisById(hypothesisId);
@@ -4227,9 +4331,11 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Hypothesis not found: ${hypothesisId}`);
       }
 
-      const result = refuteHypothesis(hypothesis, {
-        testResultId: testId,
+      await confirmDestructiveAction(`Confirm kill of hypothesis ${hypothesisId}.`, assumeYes);
+
+      const result = refuteHypothesis(hypothesis, testId, {
         reason,
+        sessionId: hypothesis.sessionId,
       });
 
       if (!result.success) {
@@ -4243,8 +4349,7 @@ ${JSON.stringify(delta, null, 2)}
 
       await storage.saveHypothesis(result.hypothesis!);
 
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      await historyStore.logTransition(result.transition!);
+      appendHypothesisTransition(projectKey, result.transition!);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
@@ -4277,7 +4382,7 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Child hypothesis not found: ${childId}`);
       }
 
-      const result = supersedeHypothesis(hypothesis, { childHypothesisId: childId });
+      const result = supersedeHypothesis(hypothesis, childId, { sessionId: hypothesis.sessionId });
 
       if (!result.success) {
         if (jsonMode) {
@@ -4290,8 +4395,7 @@ ${JSON.stringify(delta, null, 2)}
 
       await storage.saveHypothesis(result.hypothesis!);
 
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      await historyStore.logTransition(result.transition!);
+      appendHypothesisTransition(projectKey, result.transition!);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
@@ -4318,7 +4422,7 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Hypothesis not found: ${hypothesisId}`);
       }
 
-      const result = confirmHypothesis(hypothesis, { testResultId: testId });
+      const result = confirmHypothesis(hypothesis, testId, { sessionId: hypothesis.sessionId });
 
       if (!result.success) {
         if (jsonMode) {
@@ -4331,8 +4435,7 @@ ${JSON.stringify(delta, null, 2)}
 
       await storage.saveHypothesis(result.hypothesis!);
 
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      await historyStore.logTransition(result.transition!);
+      appendHypothesisTransition(projectKey, result.transition!);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
@@ -4357,7 +4460,7 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Hypothesis not found: ${hypothesisId}`);
       }
 
-      const result = deferHypothesis(hypothesis, { reason });
+      const result = deferHypothesis(hypothesis, { reason, sessionId: hypothesis.sessionId });
 
       if (!result.success) {
         if (jsonMode) {
@@ -4370,8 +4473,7 @@ ${JSON.stringify(delta, null, 2)}
 
       await storage.saveHypothesis(result.hypothesis!);
 
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      await historyStore.logTransition(result.transition!);
+      appendHypothesisTransition(projectKey, result.transition!);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
@@ -4393,7 +4495,7 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Hypothesis not found: ${hypothesisId}`);
       }
 
-      const result = reactivateHypothesis(hypothesis);
+      const result = reactivateHypothesis(hypothesis, { sessionId: hypothesis.sessionId });
 
       if (!result.success) {
         if (jsonMode) {
@@ -4406,8 +4508,7 @@ ${JSON.stringify(delta, null, 2)}
 
       await storage.saveHypothesis(result.hypothesis!);
 
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      await historyStore.logTransition(result.transition!);
+      appendHypothesisTransition(projectKey, result.transition!);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({ ok: true, hypothesis: result.hypothesis, transition: result.transition }, null, 2));
@@ -4428,8 +4529,7 @@ ${JSON.stringify(delta, null, 2)}
         throw new Error(`Hypothesis not found: ${hypothesisId}`);
       }
 
-      const historyStore = new TransitionHistoryStore({ baseDir: projectKey });
-      const history = await historyStore.getHistory(hypothesisId);
+      const history = loadHypothesisTransitionHistory(projectKey, hypothesisId);
 
       if (jsonMode) {
         stdoutLine(JSON.stringify({
