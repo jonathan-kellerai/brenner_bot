@@ -2232,6 +2232,11 @@ ${JSON.stringify(delta, null, 2)}
       return "manual";
     }
 
+    // Helper: escape pipe characters for markdown tables
+    function escapeTableValue(s: string): string {
+      return s.replace(/\|/g, "\\|");
+    }
+
     // Helper: render evidence pack to markdown
     function renderEvidenceMd(pack: EvidencePack): string {
       const lines: string[] = [];
@@ -2245,18 +2250,18 @@ ${JSON.stringify(delta, null, 2)}
 
       for (const rec of pack.records) {
         lines.push("");
-        lines.push(`## ${rec.id}: ${rec.title}`);
+        lines.push(`## ${rec.id}: ${escapeTableValue(rec.title)}`);
         lines.push("");
         lines.push("| Field | Value |");
         lines.push("|-------|-------|");
         lines.push(`| Type | ${rec.type} |`);
-        if (rec.authors?.length) lines.push(`| Authors | ${rec.authors.join("; ")} |`);
-        if (rec.date) lines.push(`| Date | ${rec.date} |`);
-        lines.push(`| Source | ${rec.source} |`);
-        lines.push(`| Verified | ${rec.verified ? `Yes${rec.verification_notes ? ` (${rec.verification_notes})` : ""}` : "No"} |`);
-        if (rec.supports?.length) lines.push(`| Supports | ${rec.supports.join(", ")} |`);
-        if (rec.refutes?.length) lines.push(`| Refutes | ${rec.refutes.join(", ")} |`);
-        if (rec.informs?.length) lines.push(`| Informs | ${rec.informs.join(", ")} |`);
+        if (rec.authors?.length) lines.push(`| Authors | ${escapeTableValue(rec.authors.join("; "))} |`);
+        if (rec.date) lines.push(`| Date | ${escapeTableValue(rec.date)} |`);
+        lines.push(`| Source | ${escapeTableValue(rec.source)} |`);
+        lines.push(`| Verified | ${rec.verified ? `Yes${rec.verification_notes ? ` (${escapeTableValue(rec.verification_notes)})` : ""}` : "No"} |`);
+        if (rec.supports?.length) lines.push(`| Supports | ${escapeTableValue(rec.supports.join(", "))} |`);
+        if (rec.refutes?.length) lines.push(`| Refutes | ${escapeTableValue(rec.refutes.join(", "))} |`);
+        if (rec.informs?.length) lines.push(`| Informs | ${escapeTableValue(rec.informs.join(", "))} |`);
         lines.push("");
         lines.push(`**Relevance**: ${rec.relevance}`);
         lines.push("");
@@ -2321,7 +2326,7 @@ ${JSON.stringify(delta, null, 2)}
 
     // Subcommand: add
     if (sub === "add") {
-      const evType = asStringFlag(flags, "type") as EvidenceType | undefined;
+      const evTypeRaw = asStringFlag(flags, "type");
       const title = asStringFlag(flags, "title");
       const source = asStringFlag(flags, "source");
       const relevance = asStringFlag(flags, "relevance") ?? "";
@@ -2329,7 +2334,12 @@ ${JSON.stringify(delta, null, 2)}
       const refutes = splitCsv(asStringFlag(flags, "refutes"));
       const informs = splitCsv(asStringFlag(flags, "informs"));
 
-      if (!evType) throw new Error("Missing --type (paper|preprint|dataset|experiment|observation|prior_session|expert_opinion|code_artifact).");
+      const validTypes: EvidenceType[] = ["paper", "preprint", "dataset", "experiment", "observation", "prior_session", "expert_opinion", "code_artifact"];
+      if (!evTypeRaw) throw new Error("Missing --type (paper|preprint|dataset|experiment|observation|prior_session|expert_opinion|code_artifact).");
+      if (!validTypes.includes(evTypeRaw as EvidenceType)) {
+        throw new Error(`Invalid --type "${evTypeRaw}". Valid types: ${validTypes.join(", ")}`);
+      }
+      const evType = evTypeRaw as EvidenceType;
       if (!title) throw new Error("Missing --title.");
       if (!source) throw new Error("Missing --source.");
 
