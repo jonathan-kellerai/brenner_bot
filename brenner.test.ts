@@ -96,6 +96,7 @@ describe("help and usage", () => {
     expect(result.stdout).toContain("memory");
     expect(result.stdout).toContain("mail");
     expect(result.stdout).toContain("prompt");
+    expect(result.stdout).toContain("cockpit");
     expect(result.stdout).toContain("session");
   });
 
@@ -135,6 +136,7 @@ describe("help and usage", () => {
     expect(result.stdout).toContain("lint <artifact.json>");
     expect(result.stdout).toContain("prompt compose");
     expect(result.stdout).toContain("memory context");
+    expect(result.stdout).toContain("cockpit start");
     expect(result.stdout).toContain("session start");
     expect(result.stdout).toContain("session status");
     expect(result.stdout).toContain("session compile");
@@ -157,6 +159,86 @@ describe("help and usage", () => {
     const result = await runCli(["--help"]);
     expect(result.stdout).toContain("Aliases:");
     expect(result.stdout).toContain("orchestrate start");
+  });
+});
+
+// ============================================================================
+// Tests: Cockpit Start
+// ============================================================================
+
+describe("cockpit start", () => {
+  it("fails without --role-map", async () => {
+    const excerptPath = join(tmpdir(), `brenner-test-excerpt-${randomUUID()}.md`);
+    writeFileSync(excerptPath, "§1 — test excerpt", "utf8");
+
+    const result = await runCli([
+      "cockpit",
+      "start",
+      "--thread-id",
+      "RS-20251231-test",
+      "--sender",
+      "TestSender",
+      "--to",
+      "BlueLake,PurpleMountain,RedForest",
+      "--excerpt-file",
+      excerptPath,
+      "--question",
+      "What is the question?",
+      "--dry-run",
+      "--json",
+      "--skip-ntm",
+      "--skip-broadcast",
+    ]);
+
+    expect(result.exitCode).toBe(1);
+    expect(result.stderr).toContain("Missing --role-map");
+  });
+
+  it("prints a dry-run plan with explicit roster", async () => {
+    const excerptPath = join(tmpdir(), `brenner-test-excerpt-${randomUUID()}.md`);
+    writeFileSync(excerptPath, "§1 — test excerpt", "utf8");
+
+    const result = await runCli([
+      "cockpit",
+      "start",
+      "--thread-id",
+      "RS-20251231-test",
+      "--sender",
+      "TestSender",
+      "--to",
+      "BlueLake,PurpleMountain,RedForest",
+      "--role-map",
+      "BlueLake=hypothesis_generator,PurpleMountain=test_designer,RedForest=adversarial_critic",
+      "--excerpt-file",
+      excerptPath,
+      "--question",
+      "What is the question?",
+      "--dry-run",
+      "--json",
+      "--skip-ntm",
+      "--skip-broadcast",
+    ]);
+
+    expect(result.exitCode).toBe(0);
+
+    const parsed = JSON.parse(result.stdout) as {
+      ok: boolean;
+      dryRun: boolean;
+      threadId: string;
+      roster: Record<string, string>;
+      kickoff: Array<{ to: string; role: string; subject: string }>;
+      ntm: { spawn: unknown; broadcast: unknown };
+    };
+
+    expect(parsed.ok).toBe(true);
+    expect(parsed.dryRun).toBe(true);
+    expect(parsed.threadId).toBe("RS-20251231-test");
+    expect(parsed.roster.BlueLake).toBe("hypothesis_generator");
+    expect(parsed.roster.PurpleMountain).toBe("test_designer");
+    expect(parsed.roster.RedForest).toBe("adversarial_critic");
+    expect(parsed.ntm.spawn).toBeNull();
+    expect(parsed.ntm.broadcast).toBeNull();
+    expect(parsed.kickoff.map((k) => k.to)).toEqual(["BlueLake", "PurpleMountain", "RedForest"]);
   });
 });
 

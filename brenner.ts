@@ -1769,7 +1769,7 @@ async function main(): Promise<void> {
       if (result.timed_out) {
         const timeoutSec = result.timeout_seconds ?? "unknown";
         summary = `Test blocked: timed out after ${timeoutSec}s`;
-      } else if (result.duration_ms != null) {
+      } else if (typeof result.duration_ms === "number") {
         const durationSec = (result.duration_ms / 1000).toFixed(1);
         summary = `Test completed: exit ${result.exit_code} in ${durationSec}s`;
       } else {
@@ -1789,7 +1789,7 @@ async function main(): Promise<void> {
             run_at: result.started_at ?? result.created_at,
             exit_code: result.exit_code,
             timed_out: result.timed_out,
-            ...(result.duration_ms != null ? { duration_ms: result.duration_ms } : {}),
+            ...(typeof result.duration_ms === "number" ? { duration_ms: result.duration_ms } : {}),
             summary,
           },
           status,
@@ -1891,7 +1891,7 @@ ${JSON.stringify(delta, null, 2)}
       if (result.timed_out) {
         const timeoutSec = result.timeout_seconds ?? "unknown";
         summary = `Test blocked: timed out after ${timeoutSec}s`;
-      } else if (result.duration_ms != null) {
+      } else if (typeof result.duration_ms === "number") {
         const durationSec = (result.duration_ms / 1000).toFixed(1);
         summary = `Test completed: exit ${result.exit_code} in ${durationSec}s`;
       } else {
@@ -1911,7 +1911,7 @@ ${JSON.stringify(delta, null, 2)}
             run_at: result.started_at ?? result.created_at,
             exit_code: result.exit_code,
             timed_out: result.timed_out,
-            ...(result.duration_ms != null ? { duration_ms: result.duration_ms } : {}),
+            ...(typeof result.duration_ms === "number" ? { duration_ms: result.duration_ms } : {}),
             summary,
           },
           status,
