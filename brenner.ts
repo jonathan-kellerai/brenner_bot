@@ -2811,6 +2811,343 @@ ${JSON.stringify(delta, null, 2)}
     throw new Error(`Unknown anomaly subcommand: ${sub ?? "(missing)"}`);
   }
 
+  // ============================================================================
+  // Assumption Command
+  // ============================================================================
+  if (top === "assumption") {
+    const jsonMode = asBoolFlag(flags, "json");
+    const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
+    const storage = new AssumptionStorage({ baseDir: projectKey });
+
+    const VALID_TYPES: AssumptionType[] = ["background", "methodological", "boundary", "scale_physics"];
+    const VALID_STATUSES: AssumptionStatus[] = ["unchecked", "challenged", "verified", "falsified"];
+
+    // Subcommand: list
+    if (sub === "list") {
+      const sessionId = asStringFlag(flags, "session-id");
+      const statusFilter = asStringFlag(flags, "status") as AssumptionStatus | undefined;
+      const typeFilter = asStringFlag(flags, "type") as AssumptionType | undefined;
+
+      if (statusFilter && !VALID_STATUSES.includes(statusFilter)) {
+        throw new Error(`Invalid --status "${statusFilter}" (expected one of: ${VALID_STATUSES.join(", ")})`);
+      }
+      if (typeFilter && !VALID_TYPES.includes(typeFilter)) {
+        throw new Error(`Invalid --type "${typeFilter}" (expected one of: ${VALID_TYPES.join(", ")})`);
+      }
+
+      let assumptions: Assumption[];
+      if (sessionId) {
+        assumptions = await storage.loadSessionAssumptions(sessionId);
+      } else if (statusFilter && !typeFilter) {
+        assumptions = await storage.getAssumptionsByStatus(statusFilter);
+      } else if (typeFilter && !statusFilter) {
+        assumptions = await storage.getAssumptionsByType(typeFilter);
+      } else {
+        assumptions = await storage.getAllAssumptions();
+      }
+
+      if (statusFilter) assumptions = assumptions.filter((a) => a.status === statusFilter);
+      if (typeFilter) assumptions = assumptions.filter((a) => a.type === typeFilter);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, count: assumptions.length, assumptions }, null, 2));
+      } else {
+        if (assumptions.length === 0) {
+          stdoutLine("No assumptions found.");
+        } else {
+          for (const a of assumptions) {
+            const status = a.status.padEnd(10);
+            const type = a.type.padEnd(14);
+            stdoutLine(`[${status}] [${type}] ${a.id}: ${a.statement.slice(0, 80)}${a.statement.length > 80 ? "…" : ""}`);
+          }
+        }
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: show
+    if (sub === "show") {
+      const assumptionId = action;
+      if (!assumptionId) throw new Error("Missing assumption ID. Usage: assumption show <id>");
+
+      const assumption = await storage.getAssumptionById(assumptionId);
+      if (!assumption) throw new Error(`Assumption not found: ${assumptionId}`);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, assumption }, null, 2));
+      } else {
+        stdoutLine(`ID:        ${assumption.id}`);
+        stdoutLine(`Type:      ${assumption.type}`);
+        stdoutLine(`Status:    ${assumption.status}`);
+        stdoutLine(`Session:   ${assumption.sessionId}`);
+        stdoutLine(`Statement: ${assumption.statement}`);
+        stdoutLine(`Load:`);
+        stdoutLine(`  Hypotheses: ${assumption.load.affectedHypotheses.join(", ") || "(none)"}`);
+        stdoutLine(`  Tests:      ${assumption.load.affectedTests.join(", ") || "(none)"}`);
+        stdoutLine(`  Desc:       ${assumption.load.description}`);
+        if (assumption.testMethod) stdoutLine(`Test method: ${assumption.testMethod}`);
+        if (assumption.calculation) {
+          stdoutLine(`Calculation:`);
+          stdoutLine(`  Quantities:  ${assumption.calculation.quantities}`);
+          stdoutLine(`  Result:      ${assumption.calculation.result}`);
+          stdoutLine(`  Units:       ${assumption.calculation.units}`);
+          stdoutLine(`  Implication: ${assumption.calculation.implication}`);
+          if (assumption.calculation.whatItRulesOut) stdoutLine(`  Rules out:   ${assumption.calculation.whatItRulesOut}`);
+        }
+        if (assumption.anchors?.length) stdoutLine(`Anchors:   ${assumption.anchors.join(", ")}`);
+        if (assumption.recordedBy) stdoutLine(`Recorded:  ${assumption.recordedBy}`);
+        stdoutLine(`Created:   ${assumption.createdAt}`);
+        stdoutLine(`Updated:   ${assumption.updatedAt}`);
+        if (assumption.notes) stdoutLine(`Notes:     ${assumption.notes}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: create
+    if (sub === "create") {
+      const statement = asStringFlag(flags, "statement");
+      const type = asStringFlag(flags, "type") as AssumptionType | undefined;
+      const sessionId = asStringFlag(flags, "session-id") ?? `RS${new Date().toISOString().slice(0, 10).replace(/-/g, "")}`;
+      const loadDescription = asStringFlag(flags, "load-description");
+      const affectedHypotheses = splitCsv(asStringFlag(flags, "affects-hypotheses"));
+      const affectedTests = splitCsv(asStringFlag(flags, "affects-tests"));
+      const testMethod = asStringFlag(flags, "test-method");
+      const anchors = splitCsv(asStringFlag(flags, "anchors"));
+      const recordedBy = asStringFlag(flags, "by");
+      const notes = asStringFlag(flags, "notes");
+      const calculationRaw = asStringFlag(flags, "calculation");
+
+      if (!statement) throw new Error("Missing --statement.");
+      if (!type) throw new Error(`Missing --type (expected one of: ${VALID_TYPES.join(", ")})`);
+      if (!VALID_TYPES.includes(type)) throw new Error(`Invalid --type "${type}" (expected one of: ${VALID_TYPES.join(", ")})`);
+      if (!loadDescription) throw new Error("Missing --load-description.");
+
+      let calculation: ScaleCalculation | undefined;
+      if (calculationRaw) {
+        let parsed: unknown;
+        try {
+          parsed = JSON.parse(calculationRaw) as unknown;
+        } catch {
+          throw new Error("Invalid --calculation: expected JSON (keys: quantities,result,units,implication,whatItRulesOut?)");
+        }
+        const validated = ScaleCalculationSchema.safeParse(parsed);
+        if (!validated.success) {
+          throw new Error(`Invalid --calculation: ${validated.error.issues[0]?.message ?? "validation failed"}`);
+        }
+        calculation = validated.data;
+      }
+
+      if (type === "scale_physics" && !calculation) {
+        throw new Error("Missing --calculation (required when --type=scale_physics).");
+      }
+
+      const existing = await storage.loadSessionAssumptions(sessionId);
+      const newId = generateAssumptionId(sessionId, existing.map((a) => a.id));
+
+      const assumption = createAssumption({
+        id: newId,
+        statement,
+        type,
+        sessionId,
+        load: {
+          affectedHypotheses,
+          affectedTests,
+          description: loadDescription,
+        },
+        testMethod,
+        calculation,
+        anchors: anchors.length > 0 ? anchors : undefined,
+        recordedBy,
+        notes,
+      });
+
+      await storage.saveAssumption(assumption);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, assumption }, null, 2));
+      } else {
+        stdoutLine(`Created assumption: ${assumption.id}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: challenge
+    if (sub === "challenge") {
+      const assumptionId = action;
+      const reason = asStringFlag(flags, "reason");
+      const evidence = asStringFlag(flags, "evidence");
+      const by = asStringFlag(flags, "by");
+
+      if (!assumptionId) throw new Error("Missing assumption ID. Usage: assumption challenge <id> --reason <s>");
+      if (!reason) throw new Error("Missing --reason.");
+
+      const assumption = await storage.getAssumptionById(assumptionId);
+      if (!assumption) throw new Error(`Assumption not found: ${assumptionId}`);
+
+      const result = challengeAssumption(assumption, {
+        triggeredBy: by,
+        evidenceRef: evidence,
+        reason,
+        sessionId: assumption.sessionId,
+      });
+
+      if (!result.success) throw new Error(result.error.message);
+
+      await storage.saveAssumption(result.assumption);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, ...result }, null, 2));
+      } else {
+        stdoutLine(`Challenged ${assumptionId}: ${reason}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: verify
+    if (sub === "verify") {
+      const assumptionId = action;
+      const evidence = asStringFlag(flags, "evidence");
+      const reason = asStringFlag(flags, "reason");
+      const by = asStringFlag(flags, "by");
+
+      if (!assumptionId) throw new Error("Missing assumption ID. Usage: assumption verify <id> --evidence <s>");
+      if (!evidence) throw new Error("Missing --evidence.");
+
+      const assumption = await storage.getAssumptionById(assumptionId);
+      if (!assumption) throw new Error(`Assumption not found: ${assumptionId}`);
+
+      const result = verifyAssumption(assumption, {
+        triggeredBy: by,
+        evidenceRef: evidence,
+        reason,
+        sessionId: assumption.sessionId,
+      });
+
+      if (!result.success) throw new Error(result.error.message);
+
+      await storage.saveAssumption(result.assumption);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, ...result }, null, 2));
+      } else {
+        stdoutLine(`Verified ${assumptionId}: ${evidence}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: falsify
+    if (sub === "falsify") {
+      const assumptionId = action;
+      const evidence = asStringFlag(flags, "evidence");
+      const reason = asStringFlag(flags, "reason");
+      const by = asStringFlag(flags, "by");
+
+      if (!assumptionId) throw new Error("Missing assumption ID. Usage: assumption falsify <id> --evidence <s>");
+      if (!evidence) throw new Error("Missing --evidence.");
+
+      const assumption = await storage.getAssumptionById(assumptionId);
+      if (!assumption) throw new Error(`Assumption not found: ${assumptionId}`);
+
+      const result = falsifyAssumption(assumption, {
+        triggeredBy: by,
+        evidenceRef: evidence,
+        reason,
+        sessionId: assumption.sessionId,
+      });
+
+      if (!result.success) throw new Error(result.error.message);
+
+      await storage.saveAssumption(result.assumption);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, ...result }, null, 2));
+      } else {
+        stdoutLine(`Falsified ${assumptionId}: ${evidence}`);
+        if (result.propagation) stdoutLine(result.propagation.summary);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: link
+    if (sub === "link") {
+      const assumptionId = action;
+      const targetRaw = positional[3];
+      const loadDescription = asStringFlag(flags, "load-description");
+
+      if (!assumptionId || !targetRaw) {
+        throw new Error("Usage: assumption link <assumption-id> <hypothesis-id|test-id> [--load-description <s>]");
+      }
+
+      const assumption = await storage.getAssumptionById(assumptionId);
+      if (!assumption) throw new Error(`Assumption not found: ${assumptionId}`);
+
+      const targets = splitCsv(targetRaw);
+      if (targets.length === 0) throw new Error("Missing target id(s).");
+
+      const nextHypotheses = new Set(assumption.load.affectedHypotheses);
+      const nextTests = new Set(assumption.load.affectedTests);
+
+      for (const id of targets) {
+        if (id.startsWith("H-")) {
+          nextHypotheses.add(id);
+          continue;
+        }
+        if (id.startsWith("T-") || /^T\d+$/.test(id)) {
+          nextTests.add(id);
+          continue;
+        }
+        throw new Error(`Invalid target ID "${id}" (expected hypothesis H-... or test T-... / T{n})`);
+      }
+
+      const updated: Assumption = {
+        ...assumption,
+        load: {
+          ...assumption.load,
+          affectedHypotheses: Array.from(nextHypotheses),
+          affectedTests: Array.from(nextTests),
+          description: loadDescription ?? assumption.load.description,
+        },
+        updatedAt: new Date().toISOString(),
+      };
+
+      await storage.saveAssumption(updated);
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, assumption: updated }, null, 2));
+      } else {
+        stdoutLine(`Linked ${assumptionId} to ${targets.join(", ")}`);
+      }
+      process.exit(0);
+    }
+
+    // Subcommand: stats
+    if (sub === "stats") {
+      const stats = await storage.getStatistics();
+
+      if (jsonMode) {
+        stdoutLine(JSON.stringify({ ok: true, ...stats }, null, 2));
+      } else {
+        stdoutLine("Assumption Statistics:");
+        stdoutLine(`  Total:                 ${stats.total}`);
+        stdoutLine("  By status:");
+        stdoutLine(`    Unchecked:           ${stats.byStatus.unchecked}`);
+        stdoutLine(`    Challenged:          ${stats.byStatus.challenged}`);
+        stdoutLine(`    Verified:            ${stats.byStatus.verified}`);
+        stdoutLine(`    Falsified:           ${stats.byStatus.falsified}`);
+        stdoutLine("  By type:");
+        stdoutLine(`    Background:          ${stats.byType.background}`);
+        stdoutLine(`    Methodological:      ${stats.byType.methodological}`);
+        stdoutLine(`    Boundary:            ${stats.byType.boundary}`);
+        stdoutLine(`    Scale/physics:       ${stats.byType.scale_physics}`);
+        stdoutLine(`  With calculations:     ${stats.withCalculations}`);
+        stdoutLine(`  Sessions with data:    ${stats.sessionsWithAssumptions}`);
+      }
+      process.exit(0);
+    }
+
+    throw new Error(`Unknown assumption subcommand: ${sub ?? "(missing)"}`);
+  }
+
   if (top === "mail") {
     const client = new AgentMailClient(runtimeConfig.agentMail);
     const projectKey = asStringFlag(flags, "project-key") ?? runtimeConfig.defaults.projectKey;
