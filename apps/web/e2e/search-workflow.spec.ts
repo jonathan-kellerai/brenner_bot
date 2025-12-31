@@ -10,7 +10,6 @@ import {
   expect,
   navigateTo,
   waitForNetworkIdle,
-  waitForContent,
   takeScreenshot,
 } from "./utils";
 import { withStep } from "./utils/e2e-logging";
