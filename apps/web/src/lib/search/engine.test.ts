@@ -299,7 +299,6 @@ describe("loadSearchIndex with real index", () => {
   it("loads index successfully when available", async () => {
     // Read the real index file to use in our mock
     // This tests that our code correctly parses the real index format
-    const indexPath = "/search/index.json";
 
     // Mock fetch to return the real index from the file system
     const { readFile } = await import("node:fs/promises");
