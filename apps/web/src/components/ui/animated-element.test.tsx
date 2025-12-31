@@ -247,12 +247,12 @@ describe("AnimatedElement", () => {
   });
 
   describe("intersection options", () => {
-    it("passes threshold to IntersectionObserver", () => {
+    it("renders with threshold prop without error", () => {
       render(
         <AnimatedElement threshold={0.5}>Content</AnimatedElement>
       );
 
-      // Observer was created and element observed
+      // Component renders and observer is created
       expect(observedElements.length).toBe(1);
     });
 
