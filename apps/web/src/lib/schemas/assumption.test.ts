@@ -753,7 +753,9 @@ describe("Anchor format edge cases", () => {
 });
 
 describe("evaluateScaleRigor edge cases", () => {
-  it("returns 1 when only quantities present", () => {
+  it("returns 1 when result is empty (quantities present, other fields ignored)", () => {
+    // Per implementation: if (!hasQuantities || !hasResult) return 1
+    // Even if units/implication are filled, missing result → rigor 1
     const calc: ScaleCalculation = {
       quantities: "D ≈ 10 μm²/s",
       result: "",
@@ -774,6 +776,8 @@ describe("evaluateScaleRigor edge cases", () => {
   });
 
   it("handles whitespace-only fields as empty", () => {
+    // Whitespace-only quantities is treated as empty via .trim()
+    // So hasQuantities = false → returns 1 (regardless of other fields)
     const calc: ScaleCalculation = {
       quantities: "   ",
       result: "τ ≈ 1000s",
