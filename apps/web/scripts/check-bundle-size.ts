@@ -14,7 +14,7 @@
 
 import { readdirSync, readFileSync, statSync, existsSync } from "fs";
 import { gzipSync } from "zlib";
-import { join, basename } from "path";
+import { join } from "path";
 
 // ============================================================================
 // Budget Configuration (in bytes, gzipped)
