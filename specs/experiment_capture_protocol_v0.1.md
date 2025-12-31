@@ -163,3 +163,173 @@ Rules:
 - Prefer running in a clean git worktree; if dirty, keep the diff small and record it.
 - Avoid commands that can delete or rewrite large swaths of data unless you understand them.
 - Keep outputs bounded; if a command can emit gigabytes, redirect to files and use `experiment record`.
+
+## Failure modes and how to handle them
+
+### Command fails / exit non-zero
+The experiment wrapper itself exits `0` as long as it successfully captures the result. The *command's* exit code is recorded in `exit_code`.
+
+**Example**: a test that fails returns `exit_code: 1`
+```json
+{
+  "exit_code": 1,
+  "stdout": "FAILED: test_hypothesis_1\n",
+  "stderr": "AssertionError: expected True\n"
+}
+```
+This is **expected behavior** for discriminative tests - a failing test is valuable data.
+
+### Timeout
+When a command exceeds `--timeout`, the wrapper:
+1. Sends `SIGTERM` to the process
+2. Waits 1 second for graceful shutdown
+3. Sends `SIGKILL` if the process is still alive
+4. Records `timed_out: true` in the result
+
+**Example**:
+```json
+{
+  "timeout_seconds": 60,
+  "timed_out": true,
+  "exit_code": 143,
+  "stdout": "... partial output ...",
+  "stderr": ""
+}
+```
+The CLI also prints a warning to stderr: `Timed out after 60s.`
+
+### Huge stdout/stderr
+v0 does **not** truncate output. If a command produces gigabytes:
+- Memory usage will spike
+- Write time will be slow
+- The JSON file will be huge
+
+**Mitigations**:
+1. Redirect output to files in the command itself, then use `experiment record`
+2. Use head/tail in the command to bound output
+3. Set a short timeout to limit runtime
+
+**Future**: v0.2 may add a `--max-output` flag with explicit truncation.
+
+### Spawn failure
+If the command cannot be spawned (e.g., executable not found), the wrapper exits non-zero and no result file is written. Check stderr for the error message.
+
+### Write failure
+If the result file cannot be written (e.g., disk full, permission denied), the wrapper exits non-zero. Partial results may be lost.
+
+## Inspecting result files
+
+### Finding results
+Result files are written to:
+```
+<project>/artifacts/<thread_id>/experiments/<test_id>/<timestamp>_<result_id>.json
+```
+
+**Example**:
+```bash
+# List all results for a session
+ls artifacts/RS-20251231-example/experiments/
+
+# List results for a specific test
+ls artifacts/RS-20251231-example/experiments/T1/
+
+# View most recent result
+cat "$(ls -t artifacts/RS-20251231-example/experiments/T1/*.json | head -1)"
+```
+
+### Using jq to extract fields
+```bash
+# Check if the experiment passed
+cat result.json | jq '.exit_code'
+
+# Check if it timed out
+cat result.json | jq '.timed_out'
+
+# Get stdout only
+cat result.json | jq -r '.stdout'
+
+# Get duration in seconds
+cat result.json | jq '.duration_ms / 1000'
+
+# Check git provenance
+cat result.json | jq '.git'
+```
+
+### Comparing multiple runs
+```bash
+# Compare exit codes across all T1 runs
+for f in artifacts/*/experiments/T1/*.json; do
+  echo "$(basename $f): $(jq '.exit_code' $f)"
+done
+```
+
+## Relationship to interpretation
+
+**Capture ≠ Interpretation**
+
+This protocol defines **capture**: recording what happened when a command ran.
+
+**Interpretation** (defined separately in `brenner_bot-1es5`) is the subsequent step where:
+1. The result is classified (pass/fail/error/metrics/observation/anomaly)
+2. The result is mapped to artifact DELTAs (updating hypotheses, tests, etc.)
+3. Human or agent judgment is applied
+
+The workflow is:
+```
+1. Design test (artifact has discriminative test T1)
+2. Run experiment: ./brenner.ts experiment run --thread-id ... --test-id T1 -- <cmd>
+3. Result captured: artifacts/<thread>/experiments/T1/<result>.json
+4. Interpret result: (future) ./brenner.ts experiment classify --session ... --experiment ...
+5. Update artifact with DELTAs based on interpretation
+```
+
+This separation ensures:
+- Raw data is preserved without premature judgment
+- The same result can be re-interpreted with different criteria
+- Operators can review results before artifacts are updated
+
+## Quick reference: common workflows
+
+### Run and capture a test
+```bash
+./brenner.ts experiment run \
+  --thread-id RS-20251231-bio-rrp \
+  --test-id T1 \
+  --timeout 300 \
+  -- \
+  python test_rrp.py --variant rrp
+```
+
+### Record results from a previous run
+```bash
+./brenner.ts experiment record \
+  --thread-id RS-20251231-bio-rrp \
+  --test-id T1 \
+  --exit-code 0 \
+  --stdout-file ./logs/T1-stdout.txt \
+  --stderr-file ./logs/T1-stderr.txt
+```
+
+### Inspect results
+```bash
+# Find the result file
+ls artifacts/RS-20251231-bio-rrp/experiments/T1/
+
+# Check outcome
+cat <result>.json | jq '{exit_code, timed_out, duration_ms}'
+
+# Get stdout/stderr
+cat <result>.json | jq -r '.stdout'
+cat <result>.json | jq -r '.stderr'
+```
+
+### Run with JSON output (for scripting)
+```bash
+./brenner.ts experiment run \
+  --thread-id RS-20251231-bio-rrp \
+  --test-id T1 \
+  --timeout 60 \
+  --json \
+  -- \
+  echo "test" | jq '.ok, .out_file'
+```

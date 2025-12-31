@@ -270,6 +270,163 @@ describe("experiment capture", () => {
     expect(parsed.timeout_seconds).toBe(10);
     expect(parsed.timed_out).toBe(false);
   });
+
+  it("times out and records timed_out flag when command exceeds timeout", async () => {
+    const cwd = join(tmpdir(), `brenner-test-experiment-timeout-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T-timeout";
+
+    // Use a sleep command that exceeds the 1s timeout
+    const result = await runCli(
+      [
+        "experiment",
+        "run",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--timeout",
+        "1",
+        "--",
+        process.execPath,
+        "-e",
+        "setTimeout(() => {}, 10000);", // Sleep 10s, should be killed at 1s
+      ],
+      { cwd, timeout: 15000 }
+    );
+
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toContain("Timed out after 1s");
+
+    const outFile = result.stdout.trim().split("\n")[0]; // First line is path
+    const raw = readFileSync(outFile, "utf8");
+    let parsed: {
+      timed_out: boolean;
+      timeout_seconds: number;
+      exit_code: number;
+    };
+    try {
+      parsed = JSON.parse(raw) as typeof parsed;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid ExperimentResult JSON at ${outFile}. Parse failed: ${msg}\n\nContents:\n${raw}`);
+    }
+
+    expect(parsed.timed_out).toBe(true);
+    expect(parsed.timeout_seconds).toBe(1);
+    // Exit code may be 0, SIGTERM, or SIGKILL depending on OS
+    expect(typeof parsed.exit_code).toBe("number");
+  });
+
+  it("captures provenance fields (cwd, timestamps, duration_ms)", async () => {
+    const cwd = join(tmpdir(), `brenner-test-experiment-provenance-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T-provenance";
+
+    const result = await runCli(
+      [
+        "experiment",
+        "run",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--timeout",
+        "5",
+        "--",
+        process.execPath,
+        "-e",
+        "console.log('provenance test');",
+      ],
+      { cwd, timeout: 10000 }
+    );
+
+    expect(result.exitCode).toBe(0);
+    const outFile = result.stdout.trim();
+    const raw = readFileSync(outFile, "utf8");
+    let parsed: {
+      cwd: string;
+      started_at: string;
+      finished_at: string;
+      duration_ms: number;
+      created_at: string;
+      runtime: { platform: string; arch: string; bun_version: string };
+    };
+    try {
+      parsed = JSON.parse(raw) as typeof parsed;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid ExperimentResult JSON at ${outFile}. Parse failed: ${msg}\n\nContents:\n${raw}`);
+    }
+
+    // Verify cwd is recorded
+    expect(parsed.cwd).toBe(cwd);
+
+    // Verify timestamps are valid ISO strings
+    expect(new Date(parsed.created_at).toISOString()).toBe(parsed.created_at);
+    expect(new Date(parsed.started_at).toISOString()).toBe(parsed.started_at);
+    expect(new Date(parsed.finished_at).toISOString()).toBe(parsed.finished_at);
+
+    // Verify duration is reasonable (> 0, < 5000ms for a simple echo)
+    expect(parsed.duration_ms).toBeGreaterThan(0);
+    expect(parsed.duration_ms).toBeLessThan(5000);
+
+    // Verify runtime info is captured
+    expect(parsed.runtime.platform).toBe(process.platform);
+    expect(parsed.runtime.arch).toBe(process.arch);
+    expect(typeof parsed.runtime.bun_version).toBe("string");
+  });
+
+  it("records experiment with non-zero exit code", async () => {
+    const cwd = join(tmpdir(), `brenner-test-experiment-exitcode-${randomUUID()}`);
+    mkdirSync(cwd, { recursive: true });
+
+    const threadId = `RS-TEST-${randomUUID()}`;
+    const testId = "T-exitcode";
+
+    const result = await runCli(
+      [
+        "experiment",
+        "record",
+        "--thread-id",
+        threadId,
+        "--test-id",
+        testId,
+        "--exit-code",
+        "42",
+        "--stdout",
+        "output text",
+        "--stderr",
+        "error text",
+      ],
+      { cwd }
+    );
+
+    expect(result.exitCode).toBe(0);
+    const outFile = result.stdout.trim();
+    const raw = readFileSync(outFile, "utf8");
+    let parsed: {
+      capture_mode: string;
+      exit_code: number;
+      stdout: string;
+      stderr: string;
+    };
+    try {
+      parsed = JSON.parse(raw) as typeof parsed;
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      throw new Error(`Expected valid ExperimentResult JSON at ${outFile}. Parse failed: ${msg}\n\nContents:\n${raw}`);
+    }
+
+    expect(parsed.capture_mode).toBe("record");
+    expect(parsed.exit_code).toBe(42);
+    expect(parsed.stdout).toBe("output text");
+    expect(parsed.stderr).toBe("error text");
+  });
 });
 
 // ============================================================================
