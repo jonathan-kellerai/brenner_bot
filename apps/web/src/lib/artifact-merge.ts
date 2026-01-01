@@ -1767,3 +1767,877 @@ export function formatLintReportJson(report: LintReport, artifactName?: string):
   };
   return JSON.stringify(output, null, 2);
 }
+
+// ============================================================================
+// Artifact Semantic Diff
+// ============================================================================
+
+/** Change entry for an added item */
+export interface AddedChange {
+  id: string;
+  name: string;
+  by_agent?: string;
+}
+
+/** Change entry for a killed item */
+export interface KilledChange {
+  id: string;
+  name: string;
+  rationale: string;
+  by_agent?: string;
+}
+
+/** Change entry for an edited item */
+export interface EditedChange {
+  id: string;
+  field: string;
+  old_value: string;
+  new_value: string;
+}
+
+/** Changes for hypothesis slate section */
+export interface HypothesisChanges {
+  added: AddedChange[];
+  killed: KilledChange[];
+  edited: EditedChange[];
+}
+
+/** Changes for test battery section */
+export interface TestChanges {
+  added: Array<{ id: string; name: string; targets: string[] }>;
+  killed: KilledChange[];
+  edited: EditedChange[];
+}
+
+/** Changes for assumption ledger section */
+export interface AssumptionChanges {
+  added: Array<{ id: string; assumption: string; by_agent?: string }>;
+  killed: KilledChange[];
+  edited: EditedChange[];
+  challenged: Array<{ id: string; challenger: string; challenge: string }>;
+}
+
+/** Changes for anomaly register section */
+export interface AnomalyChanges {
+  added: Array<{ id: string; description: string }>;
+  killed: KilledChange[];
+  promoted: Array<{ id: string; promoted_to: string }>;
+  dismissed: Array<{ id: string; reason: string }>;
+}
+
+/** Changes for adversarial critique section */
+export interface CritiqueChanges {
+  added: Array<{ id: string; target: string; critique: string; by_agent?: string }>;
+  killed: KilledChange[];
+  resolved: Array<{ id: string; resolution: string }>;
+}
+
+/** Changes for predictions table section */
+export interface PredictionChanges {
+  added: Array<{ id: string; condition: string }>;
+  killed: KilledChange[];
+  edited: EditedChange[];
+}
+
+/** All changes between two artifact versions */
+export interface ArtifactChanges {
+  research_thread: {
+    edited: EditedChange[];
+  };
+  hypothesis_slate: HypothesisChanges;
+  predictions_table: PredictionChanges;
+  discriminative_tests: TestChanges;
+  assumption_ledger: AssumptionChanges;
+  anomaly_register: AnomalyChanges;
+  adversarial_critique: CritiqueChanges;
+}
+
+/** Summary statistics for the diff */
+export interface DiffSummary {
+  hypotheses_added: number;
+  hypotheses_killed: number;
+  hypotheses_net: number;
+  tests_added: number;
+  tests_killed: number;
+  assumptions_added: number;
+  assumptions_killed: number;
+  critiques_added: number;
+  critiques_resolved: number;
+  anomalies_added: number;
+  anomalies_resolved: number;
+  total_additions: number;
+  total_removals: number;
+  progress_score: ProgressLevel;
+}
+
+/** Progress heuristic level */
+export type ProgressLevel = "NONE" | "MINIMAL" | "MODERATE" | "GOOD" | "EXCELLENT";
+
+/** Full artifact diff result */
+export interface ArtifactDiff {
+  from_version: number;
+  to_version: number;
+  from_session_id: string;
+  to_session_id: string;
+  changes: ArtifactChanges;
+  summary: DiffSummary;
+}
+
+/**
+ * Extract a displayable name from an item.
+ */
+function getItemName(item: BaseItem): string {
+  if ("name" in item && typeof (item as { name?: string }).name === "string") {
+    return (item as { name: string }).name;
+  }
+  if ("statement" in item && typeof (item as { statement?: string }).statement === "string") {
+    return (item as { statement: string }).statement.substring(0, 50);
+  }
+  if ("condition" in item && typeof (item as { condition?: string }).condition === "string") {
+    return (item as { condition: string }).condition.substring(0, 50);
+  }
+  if ("observation" in item && typeof (item as { observation?: string }).observation === "string") {
+    return (item as { observation: string }).observation.substring(0, 50);
+  }
+  if ("attack" in item && typeof (item as { attack?: string }).attack === "string") {
+    return (item as { attack: string }).attack.substring(0, 50);
+  }
+  return item.id;
+}
+
+/**
+ * Index items by ID for efficient lookup.
+ */
+function indexById<T extends BaseItem>(items: T[]): Map<string, T> {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    map.set(item.id, item);
+  }
+  return map;
+}
+
+/**
+ * Compare scalar fields between two items and return edits.
+ */
+function compareItemFields(
+  id: string,
+  oldItem: BaseItem,
+  newItem: BaseItem,
+  fieldsToCompare: string[],
+): EditedChange[] {
+  const edits: EditedChange[] = [];
+  const oldRecord = oldItem as unknown as Record<string, unknown>;
+  const newRecord = newItem as unknown as Record<string, unknown>;
+
+  for (const field of fieldsToCompare) {
+    const oldVal = oldRecord[field];
+    const newVal = newRecord[field];
+
+    // Skip undefined/null comparisons
+    if (oldVal === undefined && newVal === undefined) continue;
+    if (oldVal === null && newVal === null) continue;
+
+    // Convert to strings for comparison
+    const oldStr = oldVal === undefined || oldVal === null ? "" : String(oldVal);
+    const newStr = newVal === undefined || newVal === null ? "" : String(newVal);
+
+    if (oldStr !== newStr) {
+      edits.push({
+        id,
+        field,
+        old_value: oldStr.substring(0, 100),
+        new_value: newStr.substring(0, 100),
+      });
+    }
+  }
+
+  return edits;
+}
+
+/**
+ * Diff hypothesis slate between two artifacts.
+ */
+function diffHypotheses(
+  v1Items: HypothesisItem[],
+  v2Items: HypothesisItem[],
+): HypothesisChanges {
+  const v1Index = indexById(v1Items);
+  const v2Index = indexById(v2Items);
+
+  const added: AddedChange[] = [];
+  const killed: KilledChange[] = [];
+  const edited: EditedChange[] = [];
+
+  // Find added and edited items
+  for (const item of v2Items) {
+    const oldItem = v1Index.get(item.id);
+    if (!oldItem) {
+      // New item added
+      added.push({
+        id: item.id,
+        name: item.name,
+        by_agent: undefined, // Could extract from contributors if needed
+      });
+    } else if (!isKilled(oldItem) && isKilled(item)) {
+      // Item was killed
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: item.kill_reason ?? "",
+        by_agent: item.killed_by,
+      });
+    } else if (!isKilled(item)) {
+      // Compare fields for edits
+      const edits = compareItemFields(item.id, oldItem, item, [
+        "name",
+        "claim",
+        "mechanism",
+        "third_alternative",
+      ]);
+      edited.push(...edits);
+    }
+  }
+
+  // Find items that existed in v1 but not in v2 (rare, but possible if structure changed)
+  for (const item of v1Items) {
+    if (!v2Index.has(item.id) && !isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: "Removed from artifact",
+        by_agent: undefined,
+      });
+    }
+  }
+
+  return { added, killed, edited };
+}
+
+/**
+ * Diff discriminative tests between two artifacts.
+ */
+function diffTests(
+  v1Items: TestItem[],
+  v2Items: TestItem[],
+): TestChanges {
+  const v1Index = indexById(v1Items);
+  const v2Index = indexById(v2Items);
+
+  const added: Array<{ id: string; name: string; targets: string[] }> = [];
+  const killed: KilledChange[] = [];
+  const edited: EditedChange[] = [];
+
+  for (const item of v2Items) {
+    const oldItem = v1Index.get(item.id);
+    if (!oldItem) {
+      // Parse discriminates to get targets
+      const targets = item.discriminates
+        ? item.discriminates.split(/[,;]/).map((s) => s.trim()).filter(Boolean)
+        : [];
+      added.push({
+        id: item.id,
+        name: item.name,
+        targets,
+      });
+    } else if (!isKilled(oldItem) && isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: item.kill_reason ?? "",
+        by_agent: item.killed_by,
+      });
+    } else if (!isKilled(item)) {
+      const edits = compareItemFields(item.id, oldItem, item, [
+        "name",
+        "procedure",
+        "discriminates",
+        "potency_check",
+        "feasibility",
+        "status",
+      ]);
+      edited.push(...edits);
+    }
+  }
+
+  for (const item of v1Items) {
+    if (!v2Index.has(item.id) && !isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: "Removed from artifact",
+        by_agent: undefined,
+      });
+    }
+  }
+
+  return { added, killed, edited };
+}
+
+/**
+ * Diff assumptions between two artifacts.
+ */
+function diffAssumptions(
+  v1Items: AssumptionItem[],
+  v2Items: AssumptionItem[],
+): AssumptionChanges {
+  const v1Index = indexById(v1Items);
+  const v2Index = indexById(v2Items);
+
+  const added: Array<{ id: string; assumption: string; by_agent?: string }> = [];
+  const killed: KilledChange[] = [];
+  const edited: EditedChange[] = [];
+  const challenged: Array<{ id: string; challenger: string; challenge: string }> = [];
+
+  for (const item of v2Items) {
+    const oldItem = v1Index.get(item.id);
+    if (!oldItem) {
+      added.push({
+        id: item.id,
+        assumption: item.statement,
+        by_agent: undefined,
+      });
+    } else if (!isKilled(oldItem) && isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: item.kill_reason ?? "",
+        by_agent: item.killed_by,
+      });
+    } else if (!isKilled(item)) {
+      // Check for status changes (unchecked -> challenged, verified -> falsified)
+      if (oldItem.status !== item.status) {
+        if (item.status === "falsified") {
+          challenged.push({
+            id: item.id,
+            challenger: "evaluation",
+            challenge: `Status changed from ${oldItem.status ?? "unchecked"} to falsified`,
+          });
+        }
+      }
+      const edits = compareItemFields(item.id, oldItem, item, [
+        "name",
+        "statement",
+        "load",
+        "test",
+        "status",
+      ]);
+      edited.push(...edits);
+    }
+  }
+
+  for (const item of v1Items) {
+    if (!v2Index.has(item.id) && !isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: "Removed from artifact",
+        by_agent: undefined,
+      });
+    }
+  }
+
+  return { added, killed, edited, challenged };
+}
+
+/**
+ * Diff anomalies between two artifacts.
+ */
+function diffAnomalies(
+  v1Items: AnomalyItem[],
+  v2Items: AnomalyItem[],
+): AnomalyChanges {
+  const v1Index = indexById(v1Items);
+  const v2Index = indexById(v2Items);
+
+  const added: Array<{ id: string; description: string }> = [];
+  const killed: KilledChange[] = [];
+  const promoted: Array<{ id: string; promoted_to: string }> = [];
+  const dismissed: Array<{ id: string; reason: string }> = [];
+
+  for (const item of v2Items) {
+    const oldItem = v1Index.get(item.id);
+    if (!oldItem) {
+      added.push({
+        id: item.id,
+        description: item.observation,
+      });
+    } else if (!isKilled(oldItem) && isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: item.kill_reason ?? "",
+        by_agent: item.killed_by,
+      });
+    } else if (!isKilled(item)) {
+      // Check for status changes
+      if (oldItem.status !== item.status) {
+        if (item.status === "resolved" && item.resolution_plan) {
+          // Check if it became a hypothesis
+          if (item.resolution_plan.toLowerCase().includes("promoted") ||
+              item.resolution_plan.match(/H\d+/)) {
+            const match = item.resolution_plan.match(/H\d+/);
+            promoted.push({
+              id: item.id,
+              promoted_to: match ? match[0] : "hypothesis",
+            });
+          } else {
+            dismissed.push({
+              id: item.id,
+              reason: item.resolution_plan,
+            });
+          }
+        } else if (item.status === "deferred") {
+          dismissed.push({
+            id: item.id,
+            reason: "Deferred for later investigation",
+          });
+        }
+      }
+    }
+  }
+
+  for (const item of v1Items) {
+    if (!v2Index.has(item.id) && !isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: "Removed from artifact",
+        by_agent: undefined,
+      });
+    }
+  }
+
+  return { added, killed, promoted, dismissed };
+}
+
+/**
+ * Diff critiques between two artifacts.
+ */
+function diffCritiques(
+  v1Items: CritiqueItem[],
+  v2Items: CritiqueItem[],
+): CritiqueChanges {
+  const v1Index = indexById(v1Items);
+  const v2Index = indexById(v2Items);
+
+  const added: Array<{ id: string; target: string; critique: string; by_agent?: string }> = [];
+  const killed: KilledChange[] = [];
+  const resolved: Array<{ id: string; resolution: string }> = [];
+
+  for (const item of v2Items) {
+    const oldItem = v1Index.get(item.id);
+    if (!oldItem) {
+      added.push({
+        id: item.id,
+        target: item.name,
+        critique: item.attack,
+        by_agent: undefined,
+      });
+    } else if (!isKilled(oldItem) && isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: item.kill_reason ?? "",
+        by_agent: item.killed_by,
+      });
+    } else if (!isKilled(item)) {
+      // Check for status changes
+      if (oldItem.current_status !== item.current_status) {
+        const newStatus = item.current_status.toLowerCase();
+        if (newStatus.includes("resolved") || newStatus.includes("addressed") || newStatus.includes("fixed")) {
+          resolved.push({
+            id: item.id,
+            resolution: item.current_status,
+          });
+        }
+      }
+    }
+  }
+
+  for (const item of v1Items) {
+    if (!v2Index.has(item.id) && !isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: item.name,
+        rationale: "Removed from artifact",
+        by_agent: undefined,
+      });
+    }
+  }
+
+  return { added, killed, resolved };
+}
+
+/**
+ * Diff predictions between two artifacts.
+ */
+function diffPredictions(
+  v1Items: PredictionItem[],
+  v2Items: PredictionItem[],
+): PredictionChanges {
+  const v1Index = indexById(v1Items);
+  const v2Index = indexById(v2Items);
+
+  const added: Array<{ id: string; condition: string }> = [];
+  const killed: KilledChange[] = [];
+  const edited: EditedChange[] = [];
+
+  for (const item of v2Items) {
+    const oldItem = v1Index.get(item.id);
+    if (!oldItem) {
+      added.push({
+        id: item.id,
+        condition: item.condition,
+      });
+    } else if (!isKilled(oldItem) && isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: getItemName(item),
+        rationale: item.kill_reason ?? "",
+        by_agent: item.killed_by,
+      });
+    } else if (!isKilled(item)) {
+      const edits = compareItemFields(item.id, oldItem, item, ["condition"]);
+      edited.push(...edits);
+    }
+  }
+
+  for (const item of v1Items) {
+    if (!v2Index.has(item.id) && !isKilled(item)) {
+      killed.push({
+        id: item.id,
+        name: getItemName(item),
+        rationale: "Removed from artifact",
+        by_agent: undefined,
+      });
+    }
+  }
+
+  return { added, killed, edited };
+}
+
+/**
+ * Diff research thread between two artifacts.
+ */
+function diffResearchThread(
+  v1: ResearchThreadItem | null,
+  v2: ResearchThreadItem | null,
+): { edited: EditedChange[] } {
+  const edited: EditedChange[] = [];
+
+  if (!v1 && v2) {
+    edited.push({
+      id: "RT",
+      field: "statement",
+      old_value: "",
+      new_value: v2.statement.substring(0, 100),
+    });
+  } else if (v1 && v2) {
+    const edits = compareItemFields("RT", v1, v2, [
+      "statement",
+      "context",
+      "why_it_matters",
+    ]);
+    edited.push(...edits);
+  }
+
+  return { edited };
+}
+
+/**
+ * Calculate progress level based on diff summary.
+ */
+function calculateProgressLevel(summary: Omit<DiffSummary, "progress_score">): ProgressLevel {
+  const netHypotheses = summary.hypotheses_net;
+  const testProgress = summary.tests_added;
+  const critiquesResolved = summary.critiques_resolved;
+  const anomaliesResolved = summary.anomalies_resolved;
+
+  // Calculate a simple progress score
+  let score = 0;
+
+  // Hypothesis refinement (killing bad ones is good progress)
+  if (summary.hypotheses_killed > 0 && summary.hypotheses_added > 0) {
+    score += 2; // Active refinement
+  } else if (summary.hypotheses_killed > 0) {
+    score += 1; // Narrowing focus
+  } else if (summary.hypotheses_added > 0) {
+    score += 1; // Expansion
+  }
+
+  // Test progress
+  if (testProgress >= 2) score += 2;
+  else if (testProgress >= 1) score += 1;
+
+  // Critique resolution
+  if (critiquesResolved >= 2) score += 2;
+  else if (critiquesResolved >= 1) score += 1;
+
+  // Anomaly handling
+  if (anomaliesResolved > 0) score += 1;
+
+  // Total activity check
+  const totalChanges = summary.total_additions + summary.total_removals;
+  if (totalChanges === 0) return "NONE";
+
+  // Map score to level
+  if (score >= 6) return "EXCELLENT";
+  if (score >= 4) return "GOOD";
+  if (score >= 2) return "MODERATE";
+  if (score >= 1) return "MINIMAL";
+  return "NONE";
+}
+
+/**
+ * Compute semantic diff between two artifact versions.
+ *
+ * Shows WHAT changed (not just whether valid):
+ * - Added hypotheses, tests, assumptions, critiques, anomalies
+ * - Killed items with rationales
+ * - Edited items with field-level changes
+ * - Summary statistics and progress heuristic
+ *
+ * @param v1 - The older artifact version
+ * @param v2 - The newer artifact version
+ * @returns Semantic diff with changes and summary
+ */
+export function diffArtifacts(v1: Artifact, v2: Artifact): ArtifactDiff {
+  // Diff each section
+  const hypothesisChanges = diffHypotheses(
+    v1.sections.hypothesis_slate,
+    v2.sections.hypothesis_slate,
+  );
+
+  const testChanges = diffTests(
+    v1.sections.discriminative_tests,
+    v2.sections.discriminative_tests,
+  );
+
+  const assumptionChanges = diffAssumptions(
+    v1.sections.assumption_ledger,
+    v2.sections.assumption_ledger,
+  );
+
+  const anomalyChanges = diffAnomalies(
+    v1.sections.anomaly_register,
+    v2.sections.anomaly_register,
+  );
+
+  const critiqueChanges = diffCritiques(
+    v1.sections.adversarial_critique,
+    v2.sections.adversarial_critique,
+  );
+
+  const predictionChanges = diffPredictions(
+    v1.sections.predictions_table,
+    v2.sections.predictions_table,
+  );
+
+  const researchThreadChanges = diffResearchThread(
+    v1.sections.research_thread,
+    v2.sections.research_thread,
+  );
+
+  // Calculate summary
+  const partialSummary = {
+    hypotheses_added: hypothesisChanges.added.length,
+    hypotheses_killed: hypothesisChanges.killed.length,
+    hypotheses_net: hypothesisChanges.added.length - hypothesisChanges.killed.length,
+    tests_added: testChanges.added.length,
+    tests_killed: testChanges.killed.length,
+    assumptions_added: assumptionChanges.added.length,
+    assumptions_killed: assumptionChanges.killed.length,
+    critiques_added: critiqueChanges.added.length,
+    critiques_resolved: critiqueChanges.resolved.length,
+    anomalies_added: anomalyChanges.added.length,
+    anomalies_resolved: anomalyChanges.promoted.length + anomalyChanges.dismissed.length,
+    total_additions:
+      hypothesisChanges.added.length +
+      testChanges.added.length +
+      assumptionChanges.added.length +
+      critiqueChanges.added.length +
+      anomalyChanges.added.length +
+      predictionChanges.added.length,
+    total_removals:
+      hypothesisChanges.killed.length +
+      testChanges.killed.length +
+      assumptionChanges.killed.length +
+      critiqueChanges.killed.length +
+      anomalyChanges.killed.length +
+      predictionChanges.killed.length,
+  };
+
+  const summary: DiffSummary = {
+    ...partialSummary,
+    progress_score: calculateProgressLevel(partialSummary),
+  };
+
+  return {
+    from_version: v1.metadata.version,
+    to_version: v2.metadata.version,
+    from_session_id: v1.metadata.session_id,
+    to_session_id: v2.metadata.session_id,
+    changes: {
+      research_thread: researchThreadChanges,
+      hypothesis_slate: hypothesisChanges,
+      predictions_table: predictionChanges,
+      discriminative_tests: testChanges,
+      assumption_ledger: assumptionChanges,
+      anomaly_register: anomalyChanges,
+      adversarial_critique: critiqueChanges,
+    },
+    summary,
+  };
+}
+
+/**
+ * Format an artifact diff as human-readable text for CLI output.
+ *
+ * Example output:
+ * ```
+ * === Artifact Diff: v1 → v2 ===
+ *
+ * HYPOTHESES
+ *   + [H4] Epigenetic microcode (by: GreenCastle)
+ *   ✗ [H2] Gradient reading - KILLED: "contradicted by T3 results" (by: RedForest)
+ *   ~ [H1] Lineage counting - edited: mechanism field refined
+ *
+ * TESTS
+ *   + [T5] Digital handle task (targets: H1, H4)
+ *
+ * SUMMARY: +1 hypothesis, +1 test, 1 critique resolved | Progress: MODERATE
+ * ```
+ */
+export function formatDiffHuman(diff: ArtifactDiff): string {
+  const lines: string[] = [];
+
+  lines.push(`=== Artifact Diff: v${diff.from_version} → v${diff.to_version} ===`);
+  lines.push("");
+
+  // Research Thread
+  if (diff.changes.research_thread.edited.length > 0) {
+    lines.push("RESEARCH THREAD");
+    for (const edit of diff.changes.research_thread.edited) {
+      lines.push(`  ~ [${edit.id}] ${edit.field} changed`);
+    }
+    lines.push("");
+  }
+
+  // Hypotheses
+  const h = diff.changes.hypothesis_slate;
+  if (h.added.length > 0 || h.killed.length > 0 || h.edited.length > 0) {
+    lines.push("HYPOTHESES");
+    for (const item of h.added) {
+      const byAgent = item.by_agent ? ` (by: ${item.by_agent})` : "";
+      lines.push(`  + [${item.id}] ${item.name}${byAgent}`);
+    }
+    for (const item of h.killed) {
+      const byAgent = item.by_agent ? ` (by: ${item.by_agent})` : "";
+      const rationale = item.rationale ? `: "${item.rationale}"` : "";
+      lines.push(`  ✗ [${item.id}] ${item.name} - KILLED${rationale}${byAgent}`);
+    }
+    for (const edit of h.edited) {
+      lines.push(`  ~ [${edit.id}] edited: ${edit.field} changed`);
+    }
+    lines.push("");
+  }
+
+  // Tests
+  const t = diff.changes.discriminative_tests;
+  if (t.added.length > 0 || t.killed.length > 0 || t.edited.length > 0) {
+    lines.push("TESTS");
+    for (const item of t.added) {
+      const targets = item.targets.length > 0 ? ` (targets: ${item.targets.join(", ")})` : "";
+      lines.push(`  + [${item.id}] ${item.name}${targets}`);
+    }
+    for (const item of t.killed) {
+      const byAgent = item.by_agent ? ` (by: ${item.by_agent})` : "";
+      lines.push(`  ✗ [${item.id}] ${item.name} - KILLED${byAgent}`);
+    }
+    for (const edit of t.edited) {
+      lines.push(`  ~ [${edit.id}] edited: ${edit.field}`);
+    }
+    lines.push("");
+  }
+
+  // Assumptions
+  const a = diff.changes.assumption_ledger;
+  if (a.added.length > 0 || a.killed.length > 0 || a.challenged.length > 0) {
+    lines.push("ASSUMPTIONS");
+    for (const item of a.added) {
+      const byAgent = item.by_agent ? ` (by: ${item.by_agent})` : "";
+      lines.push(`  + [${item.id}] ${item.assumption}${byAgent}`);
+    }
+    for (const item of a.killed) {
+      lines.push(`  ✗ [${item.id}] ${item.name} - KILLED`);
+    }
+    for (const item of a.challenged) {
+      lines.push(`  ⚠ [${item.id}] CHALLENGED: ${item.challenge}`);
+    }
+    lines.push("");
+  }
+
+  // Critiques
+  const c = diff.changes.adversarial_critique;
+  if (c.added.length > 0 || c.resolved.length > 0 || c.killed.length > 0) {
+    lines.push("CRITIQUES");
+    for (const item of c.added) {
+      const byAgent = item.by_agent ? ` (by: ${item.by_agent})` : "";
+      lines.push(`  + [${item.id}] ${item.target}${byAgent}`);
+    }
+    for (const item of c.resolved) {
+      lines.push(`  ✓ [${item.id}] RESOLVED: ${item.resolution}`);
+    }
+    for (const item of c.killed) {
+      lines.push(`  ✗ [${item.id}] ${item.name} - KILLED`);
+    }
+    lines.push("");
+  }
+
+  // Anomalies
+  const x = diff.changes.anomaly_register;
+  if (x.added.length > 0 || x.promoted.length > 0 || x.dismissed.length > 0) {
+    lines.push("ANOMALIES");
+    for (const item of x.added) {
+      lines.push(`  + [${item.id}] ${item.description.substring(0, 60)}`);
+    }
+    for (const item of x.promoted) {
+      lines.push(`  ↑ [${item.id}] PROMOTED to ${item.promoted_to}`);
+    }
+    for (const item of x.dismissed) {
+      lines.push(`  ○ [${item.id}] dismissed: ${item.reason}`);
+    }
+    lines.push("");
+  }
+
+  // Summary
+  const s = diff.summary;
+  const parts: string[] = [];
+  if (s.hypotheses_net !== 0) {
+    parts.push(`${s.hypotheses_net > 0 ? "+" : ""}${s.hypotheses_net} hypothesis${Math.abs(s.hypotheses_net) !== 1 ? "es" : ""}`);
+  }
+  if (s.tests_added > 0) {
+    parts.push(`+${s.tests_added} test${s.tests_added !== 1 ? "s" : ""}`);
+  }
+  if (s.critiques_resolved > 0) {
+    parts.push(`${s.critiques_resolved} critique${s.critiques_resolved !== 1 ? "s" : ""} resolved`);
+  }
+  if (s.anomalies_resolved > 0) {
+    parts.push(`${s.anomalies_resolved} anomal${s.anomalies_resolved !== 1 ? "ies" : "y"} resolved`);
+  }
+
+  if (parts.length > 0) {
+    lines.push(`SUMMARY: ${parts.join(", ")} | Progress: ${s.progress_score}`);
+  } else {
+    lines.push(`SUMMARY: No significant changes | Progress: ${s.progress_score}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Format an artifact diff as JSON.
+ */
+export function formatDiffJson(diff: ArtifactDiff): string {
+  return JSON.stringify(diff, null, 2);
+}

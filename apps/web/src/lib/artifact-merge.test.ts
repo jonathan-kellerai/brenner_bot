@@ -1575,3 +1575,880 @@ describe("artifact-merge additional coverage", () => {
     expect(() => JSON.parse(json)).not.toThrow();
   });
 });
+
+// ============================================================================
+// Tests: Artifact Semantic Diff
+// ============================================================================
+
+import { diffArtifacts, formatDiffHuman, formatDiffJson, type Artifact } from "./artifact-merge";
+
+describe("diffArtifacts", () => {
+  test("detects added hypotheses", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "Hypothesis 1", claim: "Claim 1", mechanism: "Mechanism 1" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "Hypothesis 1", claim: "Claim 1", mechanism: "Mechanism 1" },
+      { id: "H2", name: "Hypothesis 2", claim: "Claim 2", mechanism: "Mechanism 2" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.from_version).toBe(1);
+    expect(diff.to_version).toBe(2);
+    expect(diff.changes.hypothesis_slate.added).toHaveLength(1);
+    expect(diff.changes.hypothesis_slate.added[0].id).toBe("H2");
+    expect(diff.changes.hypothesis_slate.added[0].name).toBe("Hypothesis 2");
+    expect(diff.summary.hypotheses_added).toBe(1);
+    expect(diff.summary.hypotheses_net).toBe(1);
+  });
+
+  test("detects killed hypotheses with rationale", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "Hypothesis 1", claim: "Claim 1", mechanism: "Mechanism 1" },
+      { id: "H2", name: "Hypothesis 2", claim: "Claim 2", mechanism: "Mechanism 2" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "Hypothesis 1", claim: "Claim 1", mechanism: "Mechanism 1" },
+      {
+        id: "H2",
+        name: "Hypothesis 2",
+        claim: "Claim 2",
+        mechanism: "Mechanism 2",
+        killed: true,
+        killed_by: "TestAgent",
+        killed_at: "2025-01-01T00:00:00Z",
+        kill_reason: "Refuted by T1 results",
+      },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.hypothesis_slate.killed).toHaveLength(1);
+    expect(diff.changes.hypothesis_slate.killed[0].id).toBe("H2");
+    expect(diff.changes.hypothesis_slate.killed[0].rationale).toBe("Refuted by T1 results");
+    expect(diff.changes.hypothesis_slate.killed[0].by_agent).toBe("TestAgent");
+    expect(diff.summary.hypotheses_killed).toBe(1);
+  });
+
+  test("detects edited fields", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "Hypothesis 1", claim: "Original claim", mechanism: "Mechanism 1" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "Hypothesis 1", claim: "Updated claim", mechanism: "Mechanism 1" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.hypothesis_slate.edited).toHaveLength(1);
+    expect(diff.changes.hypothesis_slate.edited[0].id).toBe("H1");
+    expect(diff.changes.hypothesis_slate.edited[0].field).toBe("claim");
+    expect(diff.changes.hypothesis_slate.edited[0].old_value).toBe("Original claim");
+    expect(diff.changes.hypothesis_slate.edited[0].new_value).toBe("Updated claim");
+  });
+
+  test("detects added tests with targets", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.discriminative_tests = [];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.discriminative_tests = [
+      {
+        id: "T1",
+        name: "Digital handle task",
+        procedure: "Run test",
+        discriminates: "H1, H2",
+        expected_outcomes: { H1: "pass", H2: "fail" },
+        potency_check: "Control check",
+      },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.discriminative_tests.added).toHaveLength(1);
+    expect(diff.changes.discriminative_tests.added[0].id).toBe("T1");
+    expect(diff.changes.discriminative_tests.added[0].targets).toEqual(["H1", "H2"]);
+    expect(diff.summary.tests_added).toBe(1);
+  });
+
+  test("detects resolved critiques", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Missing potency check", attack: "No control", evidence: "T1 lacks control", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Missing potency check", attack: "No control", evidence: "T1 lacks control", current_status: "resolved - addressed by T1 edit" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.adversarial_critique.resolved).toHaveLength(1);
+    expect(diff.changes.adversarial_critique.resolved[0].id).toBe("C1");
+    expect(diff.summary.critiques_resolved).toBe(1);
+  });
+
+  test("detects assumption status changes (challenged)", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.assumption_ledger = [
+      { id: "A1", name: "Stable chromatin", statement: "Cells have stable chromatin", load: "If false, mechanism breaks", test: "Check inheritance", status: "unchecked" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.assumption_ledger = [
+      { id: "A1", name: "Stable chromatin", statement: "Cells have stable chromatin", load: "If false, mechanism breaks", test: "Check inheritance", status: "falsified" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.assumption_ledger.challenged).toHaveLength(1);
+    expect(diff.changes.assumption_ledger.challenged[0].id).toBe("A1");
+  });
+
+  test("detects research thread edits", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.research_thread = {
+      id: "RT",
+      statement: "Original question",
+      context: "Context",
+      why_it_matters: "Importance",
+    };
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.research_thread = {
+      id: "RT",
+      statement: "Refined question",
+      context: "Context",
+      why_it_matters: "Importance",
+    };
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.research_thread.edited).toHaveLength(1);
+    expect(diff.changes.research_thread.edited[0].field).toBe("statement");
+  });
+
+  test("detects anomaly promotions", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Unexpected pattern", observation: "Cells showed pattern X", conflicts_with: ["H1"], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Unexpected pattern", observation: "Cells showed pattern X", conflicts_with: ["H1"], status: "resolved", resolution_plan: "Promoted to H4" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.anomaly_register.promoted).toHaveLength(1);
+    expect(diff.changes.anomaly_register.promoted[0].id).toBe("X1");
+    expect(diff.changes.anomaly_register.promoted[0].promoted_to).toBe("H4");
+  });
+
+  test("calculates progress score based on changes", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+      { id: "H2", name: "H2", claim: "C2", mechanism: "M2" },
+    ];
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "Attack", evidence: "E", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    // Kill one hypothesis, add a new one (refinement)
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+      { id: "H2", name: "H2", claim: "C2", mechanism: "M2", killed: true, kill_reason: "Refuted" },
+      { id: "H3", name: "H3", claim: "C3", mechanism: "M3" },
+    ];
+    // Add test
+    v2.sections.discriminative_tests = [
+      { id: "T1", name: "Test", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+    ];
+    // Resolve critique
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "Attack", evidence: "E", current_status: "resolved" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    // Should have GOOD or better progress (refinement + test + critique resolved)
+    expect(["GOOD", "EXCELLENT"]).toContain(diff.summary.progress_score);
+  });
+
+  test("returns NONE progress for no changes", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.summary.progress_score).toBe("NONE");
+    expect(diff.summary.total_additions).toBe(0);
+    expect(diff.summary.total_removals).toBe(0);
+  });
+
+  test("handles items removed from artifact (not killed)", () => {
+    const v1 = createEmptyArtifact("TEST-DIFF");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+      { id: "H2", name: "H2", claim: "C2", mechanism: "M2" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-DIFF");
+    v2.metadata.version = 2;
+    // H2 is completely gone (not killed, just removed)
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+
+    expect(diff.changes.hypothesis_slate.killed).toHaveLength(1);
+    expect(diff.changes.hypothesis_slate.killed[0].id).toBe("H2");
+    expect(diff.changes.hypothesis_slate.killed[0].rationale).toBe("Removed from artifact");
+  });
+});
+
+describe("formatDiffHuman", () => {
+  test("formats diff with all change types", () => {
+    const v1 = createEmptyArtifact("TEST-FORMAT");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+      { id: "H2", name: "H2", claim: "C2", mechanism: "M2" },
+    ];
+    v1.sections.discriminative_tests = [];
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique 1", attack: "A", evidence: "E", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-FORMAT");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "Updated claim", mechanism: "M1" },
+      { id: "H2", name: "H2", claim: "C2", mechanism: "M2", killed: true, killed_by: "Agent", kill_reason: "Refuted" },
+      { id: "H3", name: "New Hypothesis", claim: "C3", mechanism: "M3" },
+    ];
+    v2.sections.discriminative_tests = [
+      { id: "T1", name: "New Test", procedure: "P", discriminates: "H1, H3", expected_outcomes: {}, potency_check: "PC" },
+    ];
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Critique 1", attack: "A", evidence: "E", current_status: "resolved" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+
+    expect(output).toContain("=== Artifact Diff: v1 → v2 ===");
+    expect(output).toContain("HYPOTHESES");
+    expect(output).toContain("+ [H3] New Hypothesis");
+    expect(output).toContain("✗ [H2] H2 - KILLED");
+    expect(output).toContain("~ [H1] edited: claim changed");
+    expect(output).toContain("TESTS");
+    expect(output).toContain("+ [T1] New Test");
+    expect(output).toContain("CRITIQUES");
+    expect(output).toContain("✓ [C1] RESOLVED");
+    expect(output).toContain("SUMMARY:");
+    expect(output).toContain("Progress:");
+  });
+
+  test("formats summary with correct pluralization", () => {
+    const v1 = createEmptyArtifact("TEST-PLURAL");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-PLURAL");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C1", mechanism: "M1" },
+    ];
+    v2.sections.discriminative_tests = [
+      { id: "T1", name: "T1", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+      { id: "T2", name: "T2", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+
+    expect(output).toContain("+1 hypothesis");
+    expect(output).toContain("+2 tests");
+  });
+
+  test("shows 'No significant changes' when nothing changed", () => {
+    const v1 = createEmptyArtifact("TEST-EMPTY");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-EMPTY");
+    v2.metadata.version = 2;
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+
+    expect(output).toContain("No significant changes");
+  });
+});
+
+describe("formatDiffJson", () => {
+  test("produces valid JSON output", () => {
+    const v1 = createEmptyArtifact("TEST-JSON");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-JSON");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const json = formatDiffJson(diff);
+
+    expect(() => JSON.parse(json)).not.toThrow();
+
+    const parsed = JSON.parse(json);
+    expect(parsed.from_version).toBe(1);
+    expect(parsed.to_version).toBe(2);
+    expect(parsed.changes.hypothesis_slate.added).toHaveLength(1);
+    expect(parsed.summary.hypotheses_added).toBe(1);
+  });
+});
+
+// Additional coverage for diffArtifacts edge cases
+describe("diffArtifacts edge cases", () => {
+  test("handles research thread creation from null", () => {
+    const v1 = createEmptyArtifact("TEST-RT-NULL");
+    v1.metadata.version = 1;
+    v1.sections.research_thread = null;
+
+    const v2 = createEmptyArtifact("TEST-RT-NULL");
+    v2.metadata.version = 2;
+    v2.sections.research_thread = {
+      id: "RT",
+      statement: "New question",
+      context: "Context",
+      why_it_matters: "Importance",
+    };
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.research_thread.edited).toHaveLength(1);
+    expect(diff.changes.research_thread.edited[0].field).toBe("statement");
+    expect(diff.changes.research_thread.edited[0].old_value).toBe("");
+  });
+
+  test("handles anomaly deferred status", () => {
+    const v1 = createEmptyArtifact("TEST-ANOMALY-DEFERRED");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-ANOMALY-DEFERRED");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "deferred" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.anomaly_register.dismissed).toHaveLength(1);
+    expect(diff.changes.anomaly_register.dismissed[0].reason).toContain("Deferred");
+  });
+
+  test("handles anomaly resolved without promotion", () => {
+    const v1 = createEmptyArtifact("TEST-ANOMALY-RESOLVED");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-ANOMALY-RESOLVED");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "resolved", resolution_plan: "Measurement error - dismissed" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.anomaly_register.dismissed).toHaveLength(1);
+    expect(diff.changes.anomaly_register.dismissed[0].reason).toBe("Measurement error - dismissed");
+  });
+
+  test("handles killed tests", () => {
+    const v1 = createEmptyArtifact("TEST-KILLED-TEST");
+    v1.metadata.version = 1;
+    v1.sections.discriminative_tests = [
+      { id: "T1", name: "Test 1", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-KILLED-TEST");
+    v2.metadata.version = 2;
+    v2.sections.discriminative_tests = [
+      { id: "T1", name: "Test 1", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC", killed: true, kill_reason: "Obsolete" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.discriminative_tests.killed).toHaveLength(1);
+    expect(diff.summary.tests_killed).toBe(1);
+  });
+
+  test("handles killed assumptions", () => {
+    const v1 = createEmptyArtifact("TEST-KILLED-ASSUMPTION");
+    v1.metadata.version = 1;
+    v1.sections.assumption_ledger = [
+      { id: "A1", name: "Assumption", statement: "S", load: "L", test: "T" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-KILLED-ASSUMPTION");
+    v2.metadata.version = 2;
+    v2.sections.assumption_ledger = [
+      { id: "A1", name: "Assumption", statement: "S", load: "L", test: "T", killed: true, kill_reason: "Invalid" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.assumption_ledger.killed).toHaveLength(1);
+    expect(diff.summary.assumptions_killed).toBe(1);
+  });
+
+  test("handles killed critiques", () => {
+    const v1 = createEmptyArtifact("TEST-KILLED-CRITIQUE");
+    v1.metadata.version = 1;
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-KILLED-CRITIQUE");
+    v2.metadata.version = 2;
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "active", killed: true, kill_reason: "Withdrawn" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.adversarial_critique.killed).toHaveLength(1);
+  });
+
+  test("handles killed predictions", () => {
+    const v1 = createEmptyArtifact("TEST-KILLED-PRED");
+    v1.metadata.version = 1;
+    v1.sections.predictions_table = [
+      { id: "P1", condition: "Cond 1", predictions: { H1: "X" } },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-KILLED-PRED");
+    v2.metadata.version = 2;
+    v2.sections.predictions_table = [
+      { id: "P1", condition: "Cond 1", predictions: { H1: "X" }, killed: true, kill_reason: "Replaced" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.predictions_table.killed).toHaveLength(1);
+  });
+
+  test("handles killed anomalies", () => {
+    const v1 = createEmptyArtifact("TEST-KILLED-ANOMALY");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-KILLED-ANOMALY");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active", killed: true, kill_reason: "Artifact" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.anomaly_register.killed).toHaveLength(1);
+  });
+
+  test("handles added predictions", () => {
+    const v1 = createEmptyArtifact("TEST-ADDED-PRED");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-ADDED-PRED");
+    v2.metadata.version = 2;
+    v2.sections.predictions_table = [
+      { id: "P1", condition: "New prediction", predictions: { H1: "X" } },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.predictions_table.added).toHaveLength(1);
+    expect(diff.changes.predictions_table.added[0].condition).toBe("New prediction");
+  });
+
+  test("handles edited predictions", () => {
+    const v1 = createEmptyArtifact("TEST-EDITED-PRED");
+    v1.metadata.version = 1;
+    v1.sections.predictions_table = [
+      { id: "P1", condition: "Original condition", predictions: { H1: "X" } },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-EDITED-PRED");
+    v2.metadata.version = 2;
+    v2.sections.predictions_table = [
+      { id: "P1", condition: "Updated condition", predictions: { H1: "X" } },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.predictions_table.edited).toHaveLength(1);
+    expect(diff.changes.predictions_table.edited[0].field).toBe("condition");
+  });
+
+  test("handles test with empty discriminates", () => {
+    const v1 = createEmptyArtifact("TEST-EMPTY-DISC");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-EMPTY-DISC");
+    v2.metadata.version = 2;
+    v2.sections.discriminative_tests = [
+      { id: "T1", name: "Test", procedure: "P", discriminates: "", expected_outcomes: {}, potency_check: "PC" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.discriminative_tests.added[0].targets).toEqual([]);
+  });
+
+  test("handles test removed from artifact", () => {
+    const v1 = createEmptyArtifact("TEST-REMOVED-TEST");
+    v1.metadata.version = 1;
+    v1.sections.discriminative_tests = [
+      { id: "T1", name: "Test 1", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-REMOVED-TEST");
+    v2.metadata.version = 2;
+    v2.sections.discriminative_tests = [];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.discriminative_tests.killed).toHaveLength(1);
+    expect(diff.changes.discriminative_tests.killed[0].rationale).toBe("Removed from artifact");
+  });
+
+  test("handles assumption removed from artifact", () => {
+    const v1 = createEmptyArtifact("TEST-REMOVED-ASSUMPTION");
+    v1.metadata.version = 1;
+    v1.sections.assumption_ledger = [
+      { id: "A1", name: "Assumption", statement: "S", load: "L", test: "T" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-REMOVED-ASSUMPTION");
+    v2.metadata.version = 2;
+    v2.sections.assumption_ledger = [];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.assumption_ledger.killed).toHaveLength(1);
+  });
+
+  test("handles anomaly removed from artifact", () => {
+    const v1 = createEmptyArtifact("TEST-REMOVED-ANOMALY");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-REMOVED-ANOMALY");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.anomaly_register.killed).toHaveLength(1);
+  });
+
+  test("handles critique removed from artifact", () => {
+    const v1 = createEmptyArtifact("TEST-REMOVED-CRITIQUE");
+    v1.metadata.version = 1;
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-REMOVED-CRITIQUE");
+    v2.metadata.version = 2;
+    v2.sections.adversarial_critique = [];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.adversarial_critique.killed).toHaveLength(1);
+  });
+
+  test("handles prediction removed from artifact", () => {
+    const v1 = createEmptyArtifact("TEST-REMOVED-PRED");
+    v1.metadata.version = 1;
+    v1.sections.predictions_table = [
+      { id: "P1", condition: "Cond", predictions: {} },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-REMOVED-PRED");
+    v2.metadata.version = 2;
+    v2.sections.predictions_table = [];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.predictions_table.killed).toHaveLength(1);
+  });
+
+  test("handles MINIMAL progress level", () => {
+    const v1 = createEmptyArtifact("TEST-MINIMAL");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-MINIMAL");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.summary.progress_score).toBe("MINIMAL");
+  });
+
+  test("formats diff with anomalies section", () => {
+    const v1 = createEmptyArtifact("TEST-FORMAT-ANOMALY");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-FORMAT-ANOMALY");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "New Anomaly", observation: "Very long observation that exceeds sixty characters when displayed in output", conflicts_with: [], status: "active" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+    expect(output).toContain("ANOMALIES");
+    expect(output).toContain("+ [X1]");
+  });
+
+  test("formats diff with assumptions section", () => {
+    const v1 = createEmptyArtifact("TEST-FORMAT-ASSUMPTION");
+    v1.metadata.version = 1;
+
+    const v2 = createEmptyArtifact("TEST-FORMAT-ASSUMPTION");
+    v2.metadata.version = 2;
+    v2.sections.assumption_ledger = [
+      { id: "A1", name: "New Assumption", statement: "Statement", load: "L", test: "T" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+    expect(output).toContain("ASSUMPTIONS");
+    expect(output).toContain("+ [A1]");
+  });
+
+  test("formats negative hypothesis net change", () => {
+    const v1 = createEmptyArtifact("TEST-NEG-NET");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+      { id: "H2", name: "H2", claim: "C", mechanism: "M" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-NEG-NET");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+      { id: "H2", name: "H2", claim: "C", mechanism: "M", killed: true, kill_reason: "Refuted" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+    expect(output).toContain("-1 hypothesis");
+    expect(diff.summary.hypotheses_net).toBe(-1);
+  });
+
+  test("handles critique with addressed status", () => {
+    const v1 = createEmptyArtifact("TEST-ADDRESSED");
+    v1.metadata.version = 1;
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-ADDRESSED");
+    v2.metadata.version = 2;
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "addressed in v2" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.adversarial_critique.resolved).toHaveLength(1);
+  });
+
+  test("handles critique with fixed status", () => {
+    const v1 = createEmptyArtifact("TEST-FIXED");
+    v1.metadata.version = 1;
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-FIXED");
+    v2.metadata.version = 2;
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Critique", attack: "A", evidence: "E", current_status: "fixed" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.adversarial_critique.resolved).toHaveLength(1);
+  });
+
+  test("handles anomaly promoted with explicit H number", () => {
+    const v1 = createEmptyArtifact("TEST-H-MATCH");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-H-MATCH");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "resolved", resolution_plan: "Spawned H5 to explain this" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.anomaly_register.promoted).toHaveLength(1);
+    expect(diff.changes.anomaly_register.promoted[0].promoted_to).toBe("H5");
+  });
+
+  test("handles anomaly promoted with just 'promoted' keyword", () => {
+    const v1 = createEmptyArtifact("TEST-PROMOTED-KW");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-PROMOTED-KW");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "resolved", resolution_plan: "Promoted to new hypothesis" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.anomaly_register.promoted).toHaveLength(1);
+    expect(diff.changes.anomaly_register.promoted[0].promoted_to).toBe("hypothesis");
+  });
+
+  test("handles EXCELLENT progress with all positive indicators", () => {
+    const v1 = createEmptyArtifact("TEST-EXCELLENT");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+      { id: "H2", name: "H2", claim: "C", mechanism: "M" },
+    ];
+    v1.sections.adversarial_critique = [
+      { id: "C1", name: "Critique 1", attack: "A", evidence: "E", current_status: "active" },
+      { id: "C2", name: "Critique 2", attack: "A", evidence: "E", current_status: "active" },
+    ];
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-EXCELLENT");
+    v2.metadata.version = 2;
+    // Kill and add hypotheses (active refinement)
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+      { id: "H2", name: "H2", claim: "C", mechanism: "M", killed: true, kill_reason: "Refuted" },
+      { id: "H3", name: "H3", claim: "C", mechanism: "M" },
+    ];
+    // Add multiple tests
+    v2.sections.discriminative_tests = [
+      { id: "T1", name: "T1", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+      { id: "T2", name: "T2", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+    ];
+    // Resolve multiple critiques
+    v2.sections.adversarial_critique = [
+      { id: "C1", name: "Critique 1", attack: "A", evidence: "E", current_status: "resolved" },
+      { id: "C2", name: "Critique 2", attack: "A", evidence: "E", current_status: "resolved" },
+    ];
+    // Resolve anomaly
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly", observation: "Obs", conflicts_with: [], status: "resolved", resolution_plan: "Explained" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.summary.progress_score).toBe("EXCELLENT");
+  });
+
+  test("handles field comparison with null values", () => {
+    const v1 = createEmptyArtifact("TEST-NULL-FIELD");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M", third_alternative: null } as any,
+    ];
+
+    const v2 = createEmptyArtifact("TEST-NULL-FIELD");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M", third_alternative: null } as any,
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    // No edits expected for null -> null
+    expect(diff.changes.hypothesis_slate.edited.filter(e => e.field === "third_alternative")).toHaveLength(0);
+  });
+
+  test("handles undefined to defined field transition", () => {
+    const v1 = createEmptyArtifact("TEST-UNDEF-FIELD");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-UNDEF-FIELD");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "C", mechanism: "M", third_alternative: true },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.hypothesis_slate.edited.some(e => e.field === "third_alternative")).toBe(true);
+  });
+
+  test("truncates long field values in edit changes", () => {
+    const longValue = "A".repeat(200);
+    const v1 = createEmptyArtifact("TEST-LONG");
+    v1.metadata.version = 1;
+    v1.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: longValue, mechanism: "M" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-LONG");
+    v2.metadata.version = 2;
+    v2.sections.hypothesis_slate = [
+      { id: "H1", name: "H1", claim: "Short", mechanism: "M" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    expect(diff.changes.hypothesis_slate.edited[0].old_value.length).toBeLessThanOrEqual(100);
+  });
+});
