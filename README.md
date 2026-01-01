@@ -374,6 +374,13 @@ Status legend:
 | `mail inbox` / `mail ack` / `mail thread` | Inbox + acknowledgement + thread tooling | ✅ |
 | `session compile` / `session write` / `session publish` | Compile agent deltas into a canonical artifact, optionally write to disk, and publish back to thread | ✅ |
 | `corpus search <query>` | Corpus search (ranked hits + anchors + snippets) | ✅ |
+| `evidence init --thread-id <id>` | Create a new evidence pack for a session | ✅ |
+| `evidence add --thread-id <id> ...` | Add an evidence record (paper, dataset, prior session, etc.) | ✅ |
+| `evidence add-excerpt --thread-id <id> ...` | Add an excerpt to an evidence record | ✅ |
+| `evidence list --thread-id <id>` | List evidence records in a pack | ✅ |
+| `evidence render --thread-id <id>` | Render evidence pack to markdown | ✅ |
+| `evidence post --thread-id <id> ...` | Post evidence summary to Agent Mail thread | ✅ |
+| `evidence verify --thread-id <id> ...` | Mark an evidence record as verified | ✅ |
 
 #### Config precedence (contract)
 
@@ -490,6 +497,110 @@ ntm broadcast $THREAD_ID "Please check your Agent Mail inbox"
 | `adversarial_critic` | Gemini | Attack framing, check scale constraints |
 
 **Key insight**: Agents run in **your terminal** (via ntm), not in the cloud. You manage the sessions, review outputs, and decide when to compile. This is humans-in-the-loop orchestration.
+
+### Create and cite evidence packs
+
+Evidence packs let you import external sources (papers, datasets, prior session results) into a Brenner Loop session with stable IDs that can be cited in artifacts. This enables research on topics beyond just the Brenner transcripts.
+
+**Why evidence packs?**
+- Avoid model-memory hallucination by importing auditable evidence
+- Stable anchors (`EV-001`, `EV-001#E1`) for citation in artifacts
+- Excerpt-first: store only the snippets you actually use
+- Local-first: never ship copyrighted content to production
+
+**Evidence pack workflow:**
+
+```bash
+# 1. Pick a thread ID for your session
+export THREAD_ID="RS-20251231-cell-fate"
+
+# 2. Initialize an evidence pack
+./brenner.ts evidence init --thread-id $THREAD_ID
+
+# 3. Add a paper (auto-assigns EV-001)
+./brenner.ts evidence add \
+  --thread-id $THREAD_ID \
+  --type paper \
+  --title "Synaptic vesicle depletion dynamics" \
+  --source "doi:10.1234/neuro.2024.001" \
+  --relevance "Provides timescale data for H1" \
+  --supports H1
+
+# 4. Add a key excerpt from the paper (auto-assigns EV-001#E1)
+./brenner.ts evidence add-excerpt \
+  --thread-id $THREAD_ID \
+  --evidence-id EV-001 \
+  --text "Recovery time constant was 487 +/- 32 ms" \
+  --verbatim \
+  --location "p. 4, Results"
+
+# 5. Add a dataset
+./brenner.ts evidence add \
+  --thread-id $THREAD_ID \
+  --type dataset \
+  --title "Synthetic repetition benchmark v2" \
+  --source "file://benchmarks/synth_v2.json" \
+  --relevance "Test stimuli for T5 potency check" \
+  --informs T5
+
+# 6. Add prior session results
+./brenner.ts evidence add \
+  --thread-id $THREAD_ID \
+  --type prior_session \
+  --title "Initial hypothesis exploration" \
+  --source "session://RS-20251228-initial" \
+  --relevance "H2 was killed; avoid re-investigating" \
+  --refutes H2
+
+# 7. Mark evidence as verified
+./brenner.ts evidence verify \
+  --thread-id $THREAD_ID \
+  --evidence-id EV-001 \
+  --notes "Peer-reviewed in Nature Neuroscience"
+
+# 8. List and render the pack
+./brenner.ts evidence list --thread-id $THREAD_ID --json
+./brenner.ts evidence render --thread-id $THREAD_ID
+
+# 9. Post evidence summary to the Agent Mail thread
+./brenner.ts evidence post \
+  --thread-id $THREAD_ID \
+  --sender Operator \
+  --to BlueLake,PurpleMountain,GreenValley \
+  --subject "Evidence pack for $THREAD_ID"
+```
+
+**Evidence types:**
+| Type | Use case |
+|------|----------|
+| `paper` | Published research paper |
+| `preprint` | Unpublished manuscript |
+| `dataset` | Benchmark data, corpus, test stimuli |
+| `experiment` | Results from an experiment |
+| `observation` | Empirical observation |
+| `prior_session` | Results from another Brenner Loop session |
+| `expert_opinion` | Human expert statement |
+| `code_artifact` | Existing code as evidence |
+
+**Citing evidence in artifacts:**
+```markdown
+**Anchors**: §58, EV-001#E1 [inference]
+
+**Claim**: RRP depletion follows exponential decay (EV-001#E1, EV-002).
+
+| P1 | RRP decay rate | ~500ms (EV-001#E2) | ~200ms | indeterminate |
+```
+
+**File layout:**
+```
+artifacts/
+└── <thread_id>/
+    ├── artifact.md      # Compiled artifact
+    ├── evidence.json    # Evidence pack (structured)
+    └── evidence.md      # Evidence pack (human-readable)
+```
+
+See: `specs/evidence_pack_v0.1.md` for the full specification.
 
 ### Build a self-contained executable (Bun)
 
