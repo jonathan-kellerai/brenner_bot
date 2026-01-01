@@ -33,6 +33,17 @@ export interface Contributor {
   contributed_at?: string;
 }
 
+/** Research program status */
+export type ResearchProgramStatus = "active" | "completed" | "paused";
+
+/** Research program metadata for multi-session research efforts */
+export interface ResearchProgram {
+  program_id: string;
+  program_name: string;
+  prior_sessions?: string[];
+  program_status?: ResearchProgramStatus;
+}
+
 /** Artifact metadata header */
 export interface ArtifactMetadata {
   session_id: string;
@@ -41,6 +52,7 @@ export interface ArtifactMetadata {
   version: number;
   contributors: Contributor[];
   status: "draft" | "active" | "closed";
+  research_program?: ResearchProgram;
 }
 
 /** Base interface for all artifact items */
@@ -50,6 +62,22 @@ interface BaseItem {
   killed_by?: string;
   killed_at?: string;
   kill_reason?: string;
+}
+
+/** Cross-session reference relation types */
+export type ReferenceRelation =
+  | "extends"
+  | "refines"
+  | "refutes"
+  | "informed_by"
+  | "supersedes"
+  | "replicates";
+
+/** Cross-session reference to items in other sessions */
+export interface Reference {
+  session: string;
+  item: string;
+  relation: ReferenceRelation;
 }
 
 /** Research thread (singleton) */
@@ -67,12 +95,14 @@ export interface HypothesisItem extends BaseItem {
   mechanism: string;
   anchors?: string[];
   third_alternative?: boolean;
+  references?: Reference[];
 }
 
 /** Prediction item */
 export interface PredictionItem extends BaseItem {
   condition: string;
   predictions: Record<string, string>;
+  references?: Reference[];
 }
 
 /** Test score breakdown */
@@ -111,6 +141,7 @@ export interface TestItem extends BaseItem {
   last_run?: TestLastRun;
   status?: TestStatus;
   actual_outcomes?: Record<string, string>;
+  references?: Reference[];
 }
 
 /** Assumption item */
@@ -123,6 +154,7 @@ export interface AssumptionItem extends BaseItem {
   scale_check?: boolean;
   calculation?: string;
   implication?: string;
+  references?: Reference[];
 }
 
 /** Anomaly item */
@@ -132,6 +164,7 @@ export interface AnomalyItem extends BaseItem {
   conflicts_with: string[];
   status?: "active" | "resolved" | "deferred";
   resolution_plan?: string;
+  references?: Reference[];
 }
 
 /** Critique item */
@@ -142,6 +175,7 @@ export interface CritiqueItem extends BaseItem {
   current_status: string;
   real_third_alternative?: boolean;
   proposed_alternative?: string;
+  references?: Reference[];
 }
 
 /** Union of all item types */
@@ -823,8 +857,130 @@ export function mergeArtifactWithTimestamps(
  * @param artifact - The artifact to validate
  * @returns Array of validation warnings (empty if valid)
  */
+/** Valid reference relation types */
+const VALID_REFERENCE_RELATIONS: ReferenceRelation[] = [
+  "extends",
+  "refines",
+  "refutes",
+  "informed_by",
+  "supersedes",
+  "replicates",
+];
+
+/** Validate a single reference object */
+function validateReference(
+  ref: unknown,
+  itemId: string
+): MergeWarning | null {
+  if (!ref || typeof ref !== "object") {
+    return {
+      code: "INVALID_REFERENCE",
+      message: `Invalid reference in ${itemId}: reference must be an object`,
+    };
+  }
+
+  const r = ref as Record<string, unknown>;
+
+  if (typeof r.session !== "string" || r.session.trim() === "") {
+    return {
+      code: "INVALID_REFERENCE",
+      message: `Invalid reference in ${itemId}: missing or empty 'session' field`,
+    };
+  }
+
+  if (typeof r.item !== "string" || r.item.trim() === "") {
+    return {
+      code: "INVALID_REFERENCE",
+      message: `Invalid reference in ${itemId}: missing or empty 'item' field`,
+    };
+  }
+
+  if (
+    typeof r.relation !== "string" ||
+    !VALID_REFERENCE_RELATIONS.includes(r.relation as ReferenceRelation)
+  ) {
+    return {
+      code: "INVALID_REFERENCE",
+      message: `Invalid reference in ${itemId}: 'relation' must be one of: ${VALID_REFERENCE_RELATIONS.join(", ")}`,
+    };
+  }
+
+  return null;
+}
+
+/** Validate references in an item */
+function validateItemReferences(
+  item: { id: string; references?: Reference[] },
+): MergeWarning[] {
+  const warnings: MergeWarning[] = [];
+
+  if (!item.references) return warnings;
+
+  if (!Array.isArray(item.references)) {
+    warnings.push({
+      code: "INVALID_REFERENCE",
+      message: `Invalid references in ${item.id}: 'references' must be an array`,
+    });
+    return warnings;
+  }
+
+  for (const ref of item.references) {
+    const warning = validateReference(ref, item.id);
+    if (warning) {
+      warnings.push(warning);
+    }
+  }
+
+  return warnings;
+}
+
+/**
+ * Extract all references from an artifact for genealogy tracking.
+ * Returns a map of item ID -> references for all items that have references.
+ */
+export function extractReferences(
+  artifact: Artifact
+): Map<string, Reference[]> {
+  const refMap = new Map<string, Reference[]>();
+
+  const sections: Array<{ id: string; references?: Reference[] }[]> = [
+    artifact.sections.hypothesis_slate,
+    artifact.sections.predictions_table,
+    artifact.sections.discriminative_tests,
+    artifact.sections.assumption_ledger,
+    artifact.sections.anomaly_register,
+    artifact.sections.adversarial_critique,
+  ];
+
+  for (const section of sections) {
+    for (const item of section) {
+      if (item.references && item.references.length > 0) {
+        refMap.set(item.id, item.references);
+      }
+    }
+  }
+
+  return refMap;
+}
+
 export function validateArtifact(artifact: Artifact): MergeWarning[] {
   const warnings: MergeWarning[] = [];
+
+  // Validate references in all sections
+  const sectionsWithRefs: Array<{ id: string; references?: Reference[] }[]> = [
+    artifact.sections.hypothesis_slate,
+    artifact.sections.predictions_table,
+    artifact.sections.discriminative_tests,
+    artifact.sections.assumption_ledger,
+    artifact.sections.anomaly_register,
+    artifact.sections.adversarial_critique,
+  ];
+
+  for (const section of sectionsWithRefs) {
+    for (const item of section) {
+      warnings.push(...validateItemReferences(item));
+    }
+  }
 
   // Check minimum counts
   const activeHypotheses = artifact.sections.hypothesis_slate.filter((h) => !isKilled(h));

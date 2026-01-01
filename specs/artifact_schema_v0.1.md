@@ -436,8 +436,33 @@ contributors:
     program: "codex-cli"
     model: "gpt-5.2"
 status: "draft" | "active" | "closed"
+research_program:              # Optional: Links session to a multi-session research program
+  program_id: "RP-CELL-FATE"   # Stable identifier for the research program
+  program_name: "Cell Fate Determination"
+  prior_sessions:              # Ordered list of sessions that inform this one
+    - "RS-20251228-initial"
+    - "RS-20251229-refinement"
+  program_status: "active" | "completed" | "paused"
 ---
 ```
+
+### Research Program Field (Optional)
+
+The `research_program` field enables tracking of multi-session research efforts. When present:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `program_id` | string | Yes | Stable identifier for the program (format: `RP-{name}`) |
+| `program_name` | string | Yes | Human-readable program name |
+| `prior_sessions` | string[] | No | Ordered list of prior session IDs that inform this session |
+| `program_status` | enum | No | Current program status: `active`, `completed`, or `paused` |
+
+**Cross-Session Reference Integration**:
+- Items in this session can reference items from `prior_sessions` using the `references` field
+- Reference format: `{ "session": "RS-20251228-initial", "item": "H2", "relation": "extends" }`
+- Valid relations: `extends`, `refines`, `refutes`, `informed_by`, `supersedes`, `replicates`
+
+See `delta_output_format_v0.1.md` for detailed reference schema and examples.
 
 ---
 

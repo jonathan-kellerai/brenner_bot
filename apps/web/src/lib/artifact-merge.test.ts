@@ -9,6 +9,7 @@
 import { describe, expect, test } from "vitest";
 import {
   createEmptyArtifact,
+  extractReferences,
   formatLintReportHuman,
   formatLintReportJson,
   lintArtifact,
@@ -16,6 +17,7 @@ import {
   mergeArtifactWithTimestamps,
   renderArtifactMarkdown,
   validateArtifact,
+  type Reference,
 } from "./artifact-merge";
 import { type ValidDelta, type DeltaSection } from "./delta-parser";
 
@@ -2450,5 +2452,274 @@ describe("diffArtifacts edge cases", () => {
 
     const diff = diffArtifacts(v1, v2);
     expect(diff.changes.hypothesis_slate.edited[0].old_value.length).toBeLessThanOrEqual(100);
+  });
+});
+
+// ============================================================================
+// Tests: Cross-Session References
+// ============================================================================
+
+describe("Cross-Session References", () => {
+  describe("extractReferences", () => {
+    test("extracts references from hypothesis slate", () => {
+      const artifact = createEmptyArtifact("TEST-REF");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: [
+            { session: "RS-20251230-prior", item: "H2", relation: "extends" },
+          ],
+        },
+      ];
+
+      const refs = extractReferences(artifact);
+      expect(refs.size).toBe(1);
+      expect(refs.get("H1")).toEqual([
+        { session: "RS-20251230-prior", item: "H2", relation: "extends" },
+      ]);
+    });
+
+    test("extracts references from multiple sections", () => {
+      const artifact = createEmptyArtifact("TEST-REF-MULTI");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: [{ session: "PREV", item: "H1", relation: "refines" }],
+        },
+      ];
+      artifact.sections.discriminative_tests = [
+        {
+          id: "T1",
+          name: "T1",
+          procedure: "P",
+          discriminates: "H1",
+          expected_outcomes: {},
+          potency_check: "PC",
+          references: [{ session: "PREV", item: "T2", relation: "replicates" }],
+        },
+      ];
+
+      const refs = extractReferences(artifact);
+      expect(refs.size).toBe(2);
+      expect(refs.has("H1")).toBe(true);
+      expect(refs.has("T1")).toBe(true);
+    });
+
+    test("returns empty map for artifact with no references", () => {
+      const artifact = createEmptyArtifact("TEST-NO-REF");
+      artifact.sections.hypothesis_slate = [
+        { id: "H1", name: "H1", claim: "C", mechanism: "M" },
+      ];
+
+      const refs = extractReferences(artifact);
+      expect(refs.size).toBe(0);
+    });
+
+    test("ignores items with empty references array", () => {
+      const artifact = createEmptyArtifact("TEST-EMPTY-REF");
+      artifact.sections.hypothesis_slate = [
+        { id: "H1", name: "H1", claim: "C", mechanism: "M", references: [] },
+      ];
+
+      const refs = extractReferences(artifact);
+      expect(refs.size).toBe(0);
+    });
+  });
+
+  describe("validateArtifact with references", () => {
+    test("returns no warnings for valid references", () => {
+      const artifact = createEmptyArtifact("TEST-VALID-REF");
+      // Add minimum items to avoid other warnings
+      artifact.sections.hypothesis_slate = [
+        { id: "H1", name: "H1", claim: "C", mechanism: "M", third_alternative: true },
+        { id: "H2", name: "H2", claim: "C", mechanism: "M" },
+        {
+          id: "H3",
+          name: "H3",
+          claim: "C",
+          mechanism: "M",
+          references: [
+            { session: "RS-20251230-prior", item: "H1", relation: "extends" },
+            { session: "RS-20251229-earlier", item: "H2", relation: "refutes" },
+          ],
+        },
+      ];
+      artifact.sections.predictions_table = [
+        { id: "P1", condition: "C", predictions: { H1: "O1" } },
+        { id: "P2", condition: "C", predictions: { H1: "O1" } },
+        { id: "P3", condition: "C", predictions: { H1: "O1" } },
+      ];
+      artifact.sections.discriminative_tests = [
+        { id: "T1", name: "T1", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+        { id: "T2", name: "T2", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC" },
+      ];
+      artifact.sections.assumption_ledger = [
+        { id: "A1", name: "A1", statement: "S", load: "L", test: "T", scale_check: true },
+        { id: "A2", name: "A2", statement: "S", load: "L", test: "T" },
+        { id: "A3", name: "A3", statement: "S", load: "L", test: "T" },
+      ];
+      artifact.sections.adversarial_critique = [
+        { id: "C1", name: "C1", attack: "A", evidence: "E", current_status: "active", real_third_alternative: true },
+        { id: "C2", name: "C2", attack: "A", evidence: "E", current_status: "active" },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings).toHaveLength(0);
+    });
+
+    test("warns on invalid reference relation type", () => {
+      const artifact = createEmptyArtifact("TEST-BAD-REL");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: [
+            { session: "PREV", item: "H1", relation: "invalid_relation" as any },
+          ],
+        },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings.length).toBeGreaterThan(0);
+      expect(refWarnings[0].message).toContain("relation");
+    });
+
+    test("warns on missing session field", () => {
+      const artifact = createEmptyArtifact("TEST-NO-SESSION");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: [{ item: "H1", relation: "extends" } as any],
+        },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings.length).toBeGreaterThan(0);
+      expect(refWarnings[0].message).toContain("session");
+    });
+
+    test("warns on missing item field", () => {
+      const artifact = createEmptyArtifact("TEST-NO-ITEM");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: [{ session: "PREV", relation: "extends" } as any],
+        },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings.length).toBeGreaterThan(0);
+      expect(refWarnings[0].message).toContain("item");
+    });
+
+    test("warns on non-array references field", () => {
+      const artifact = createEmptyArtifact("TEST-REF-OBJ");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: { session: "PREV", item: "H1", relation: "extends" } as any,
+        },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings.length).toBeGreaterThan(0);
+      expect(refWarnings[0].message).toContain("array");
+    });
+
+    test("warns on non-object reference in array", () => {
+      const artifact = createEmptyArtifact("TEST-REF-STR");
+      artifact.sections.hypothesis_slate = [
+        {
+          id: "H1",
+          name: "H1",
+          claim: "C",
+          mechanism: "M",
+          references: ["RS-20251230:H1:extends"] as any,
+        },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings.length).toBeGreaterThan(0);
+      expect(refWarnings[0].message).toContain("object");
+    });
+
+    test("validates all reference relation types", () => {
+      const validRelations: Array<Reference["relation"]> = [
+        "extends",
+        "refines",
+        "refutes",
+        "informed_by",
+        "supersedes",
+        "replicates",
+      ];
+
+      for (const relation of validRelations) {
+        const artifact = createEmptyArtifact(`TEST-REL-${relation}`);
+        artifact.sections.hypothesis_slate = [
+          {
+            id: "H1",
+            name: "H1",
+            claim: "C",
+            mechanism: "M",
+            references: [{ session: "PREV", item: "H1", relation }],
+          },
+        ];
+
+        const warnings = validateArtifact(artifact);
+        const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+        expect(refWarnings).toHaveLength(0);
+      }
+    });
+
+    test("validates references in all section types", () => {
+      const artifact = createEmptyArtifact("TEST-ALL-SECTIONS");
+      const ref: Reference = { session: "PREV", item: "X1", relation: "informed_by" };
+
+      artifact.sections.hypothesis_slate = [
+        { id: "H1", name: "H1", claim: "C", mechanism: "M", references: [ref] },
+      ];
+      artifact.sections.predictions_table = [
+        { id: "P1", condition: "C", predictions: {}, references: [ref] },
+      ];
+      artifact.sections.discriminative_tests = [
+        { id: "T1", name: "T", procedure: "P", discriminates: "H1", expected_outcomes: {}, potency_check: "PC", references: [ref] },
+      ];
+      artifact.sections.assumption_ledger = [
+        { id: "A1", name: "A", statement: "S", load: "L", test: "T", references: [ref] },
+      ];
+      artifact.sections.anomaly_register = [
+        { id: "X1", name: "X", observation: "O", conflicts_with: [], references: [ref] },
+      ];
+      artifact.sections.adversarial_critique = [
+        { id: "C1", name: "C", attack: "A", evidence: "E", current_status: "active", references: [ref] },
+      ];
+
+      const warnings = validateArtifact(artifact);
+      const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
+      expect(refWarnings).toHaveLength(0);
+    });
   });
 });

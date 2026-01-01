@@ -282,6 +282,70 @@ Adding H4 hypothesis and corresponding test T4.
 
 ---
 
+## Cross-Session References
+
+Items can reference items from other sessions to enable research programs that span multiple Brenner Loop sessions. This provides:
+
+1. **Hypothesis Genealogy** - Track how ideas evolve across sessions
+2. **Research Continuity** - Understand "where did we leave off?"
+3. **Credit Attribution** - Track which session/agent first proposed an idea
+4. **Avoiding Duplicate Work** - Prevent re-proposing killed hypotheses
+
+### Reference Format
+
+```json
+{
+  "references": [
+    {
+      "session": "RS-20251230-bio-rrp",
+      "item": "H2",
+      "relation": "refines"
+    }
+  ]
+}
+```
+
+### Reference Relation Types
+
+| Relation | Description | Example Use |
+|----------|-------------|-------------|
+| `extends` | This item builds on the referenced item | H4 extends H2 with additional mechanism |
+| `refines` | This item is a more precise version | H3 refines H1 with specific predictions |
+| `refutes` | This item contradicts the referenced item | H5 refutes H2 based on T3 results |
+| `informed_by` | This item was influenced by (looser coupling) | T4 informed by X2 anomaly from prior session |
+| `supersedes` | This item replaces the referenced item | H6 supersedes H1 entirely |
+| `replicates` | This item re-tests the referenced item | T5 replicates T2 with improved potency check |
+
+### Example: Cross-Session Hypothesis Refinement
+
+```delta
+{
+  "operation": "ADD",
+  "section": "hypothesis_slate",
+  "target_id": null,
+  "payload": {
+    "name": "Refined vesicle hypothesis",
+    "claim": "Vesicle formation requires both pH gradient and coat proteins",
+    "mechanism": "pH change triggers coat protein binding, enabling budding",
+    "anchors": ["§127", "§128"],
+    "references": [
+      { "session": "RS-20251228-initial", "item": "H2", "relation": "refines" },
+      { "session": "RS-20251228-initial", "item": "T3", "relation": "informed_by" }
+    ]
+  },
+  "rationale": "Refining H2 based on T3 results from prior session"
+}
+```
+
+### Reference Validation
+
+The artifact compiler SHOULD:
+1. Log warnings for references to non-existent sessions/items (soft fail)
+2. Track reference chains for hypothesis genealogy visualization
+3. Prevent circular reference chains (A→B→C→A)
+
+---
+
 ## Payload Schemas by Section
 
 ### hypothesis_slate (ADD/EDIT)
@@ -292,7 +356,14 @@ Adding H4 hypothesis and corresponding test T4.
   "claim": "string (one-sentence claim)",
   "mechanism": "string (how it works)",
   "anchors": ["§n", ...] | ["inference"],
-  "third_alternative": true | false  // Only for third alternative hypothesis
+  "third_alternative": true | false,  // Only for third alternative hypothesis
+  "references": [                      // Optional cross-session references
+    {
+      "session": "RS-20251230-example",
+      "item": "H2",
+      "relation": "refines"
+    }
+  ]
 }
 ```
 
@@ -305,7 +376,14 @@ Adding H4 hypothesis and corresponding test T4.
     "H1": "string (outcome)",
     "H2": "string (outcome)",
     ...
-  }
+  },
+  "references": [                // Optional cross-session references
+    {
+      "session": "RS-20251230-example",
+      "item": "P1",
+      "relation": "extends"
+    }
+  ]
 }
 ```
 
@@ -328,7 +406,14 @@ Adding H4 hypothesis and corresponding test T4.
     "cost": 0-3,
     "speed": 0-3,
     "ambiguity": 0-3
-  }
+  },
+  "references": [                      // Optional cross-session references
+    {
+      "session": "RS-20251230-example",
+      "item": "T2",
+      "relation": "replicates"
+    }
+  ]
 }
 ```
 
@@ -341,7 +426,14 @@ Adding H4 hypothesis and corresponding test T4.
   "load": "string (what breaks if wrong)",
   "test": "string (how to check)",
   "status": "unchecked" | "verified" | "falsified",
-  "scale_check": true | false  // Flag for physics/scale checks
+  "scale_check": true | false,  // Flag for physics/scale checks
+  "references": [                // Optional cross-session references
+    {
+      "session": "RS-20251230-example",
+      "item": "A1",
+      "relation": "refines"
+    }
+  ]
 }
 ```
 
@@ -353,7 +445,14 @@ Adding H4 hypothesis and corresponding test T4.
   "observation": "string (what was observed)",
   "conflicts_with": ["H1", "A2", ...],
   "status": "active" | "resolved" | "deferred",
-  "resolution_plan": "string"
+  "resolution_plan": "string",
+  "references": [                // Optional cross-session references
+    {
+      "session": "RS-20251230-example",
+      "item": "X1",
+      "relation": "informed_by"
+    }
+  ]
 }
 ```
 
@@ -365,7 +464,14 @@ Adding H4 hypothesis and corresponding test T4.
   "attack": "string (how framing could be wrong)",
   "evidence": "string (what would confirm this)",
   "current_status": "string (how seriously we take it)",
-  "real_third_alternative": true | false
+  "real_third_alternative": true | false,
+  "references": [                // Optional cross-session references
+    {
+      "session": "RS-20251230-example",
+      "item": "C1",
+      "relation": "extends"
+    }
+  ]
 }
 ```
 
@@ -451,4 +557,5 @@ section: hypothesis_slate
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.1.1 | 2026-01-01 | Added cross-session references support: `references` field in all payload schemas, reference relation types, validation rules |
 | 0.1 | 2025-12-30 | Initial draft |
