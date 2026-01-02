@@ -11,6 +11,7 @@ import {
   withStep,
   clearTestContext,
   attachLogsToTest,
+  setupConsoleLogging,
 } from "./e2e-logging";
 import {
   setupNetworkLogging,
@@ -63,6 +64,10 @@ export const test = base.extend<{
     // Setup network logging for this test
     setupNetworkLogging(page, testInfo.title);
     logger.debug("Network logging enabled");
+
+    // Setup browser console logging for this test
+    setupConsoleLogging(page, testInfo.title);
+    logger.debug("Console logging enabled");
 
     // Use the logger
     await provideLogger(logger);

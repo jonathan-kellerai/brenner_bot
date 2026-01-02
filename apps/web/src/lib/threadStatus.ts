@@ -274,6 +274,7 @@ export function computeThreadStatus(
 
   // Track various message types
   let kickoff: AgentMailMessage | null = null;
+  const kickoffMessages: AgentMailMessage[] = [];
   let latestCompiled: AgentMailMessage | null = null;
   const participants = new Set<string>();
   const compiledMessages: AgentMailMessage[] = [];
@@ -305,6 +306,7 @@ export function computeThreadStatus(
         if (!kickoff) {
           kickoff = msg;
         }
+        kickoffMessages.push(msg);
         break;
 
       case "delta":
@@ -352,25 +354,30 @@ export function computeThreadStatus(
   // NOTE: Agent Mail acknowledgements are not represented as thread messages, so we treat
   // any post-kickoff reply from a recipient as implicit acknowledgement.
   const awaitingFrom: string[] = [];
-  if (kickoff && kickoff.ack_required) {
-    const recipients = new Set([
-      ...(kickoff.to ?? []),
-      ...(kickoff.cc ?? []),
-      ...(kickoff.bcc ?? []),
-    ]);
-    const kickoffTime = new Date(kickoff.created_ts).getTime();
+  const recipientKickoffTimes = new Map<string, number>();
+  for (const kickoffMessage of kickoffMessages) {
+    if (!kickoffMessage.ack_required) continue;
+    const kickoffTime = new Date(kickoffMessage.created_ts).getTime();
+    const recipients = [
+      ...(kickoffMessage.to ?? []),
+      ...(kickoffMessage.cc ?? []),
+      ...(kickoffMessage.bcc ?? []),
+    ];
     for (const recipient of recipients) {
-      const hasAckMessage = sortedMessages.some(
-        (m) => m.from === recipient && parseSubjectType(m.subject).type === "ack"
-      );
-      const hasReplied = sortedMessages.some(
-        (m) =>
-          m.from === recipient &&
-          new Date(m.created_ts).getTime() > kickoffTime
-      );
-      if (!hasAckMessage && !hasReplied) {
-        awaitingFrom.push(recipient);
+      const existing = recipientKickoffTimes.get(recipient);
+      if (existing === undefined || kickoffTime > existing) {
+        recipientKickoffTimes.set(recipient, kickoffTime);
       }
+    }
+  }
+
+  for (const [recipient, kickoffTime] of recipientKickoffTimes.entries()) {
+    const hasReplyAfterKickoff = sortedMessages.some(
+      (m) =>
+        m.from === recipient && new Date(m.created_ts).getTime() > kickoffTime
+    );
+    if (!hasReplyAfterKickoff) {
+      awaitingFrom.push(recipient);
     }
   }
 
@@ -461,7 +468,10 @@ export function computeThreadStatus(
     isComplete,
     roles,
     acks: {
-      pendingAcks: kickoff?.ack_required && awaitingFrom.length > 0 ? [kickoff] : [],
+      pendingAcks:
+        awaitingFrom.length > 0
+          ? kickoffMessages.filter((msg) => msg.ack_required)
+          : [],
       pendingCount: awaitingFrom.length,
       awaitingFrom,
     },

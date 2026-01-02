@@ -5,9 +5,10 @@
  * Philosophy: Make failures easy to diagnose with step-by-step output.
  */
 
-import type { Page, TestInfo } from "@playwright/test";
+import type { Page, TestInfo, ConsoleMessage } from "@playwright/test";
 
 export type E2ELogLevel = "debug" | "info" | "step" | "warn" | "error";
+export type ConsoleLogLevel = "log" | "debug" | "info" | "warning" | "error" | "trace" | "dir" | "dirxml" | "table" | "count" | "countReset" | "timeEnd" | "assert" | "profile" | "profileEnd" | "clear" | "startGroup" | "startGroupCollapsed" | "endGroup";
 
 export interface E2ELogEntry {
   timestamp: string;
@@ -20,11 +21,30 @@ export interface E2ELogEntry {
   data?: unknown;
 }
 
+export interface ConsoleLogEntry {
+  timestamp: string;
+  level: ConsoleLogLevel;
+  text: string;
+  url?: string;
+  lineNumber?: number;
+  columnNumber?: number;
+  args?: string[];
+}
+
+export interface PageErrorEntry {
+  timestamp: string;
+  message: string;
+  stack?: string;
+  url?: string;
+}
+
 export interface E2ETestContext {
   testTitle: string;
   stepCounter: number;
   startTime: number;
   logs: E2ELogEntry[];
+  consoleLogs: ConsoleLogEntry[];
+  pageErrors: PageErrorEntry[];
 }
 
 const testContexts = new Map<string, E2ETestContext>();
@@ -47,6 +67,8 @@ export function createTestContext(testTitle: string): E2ETestContext {
     stepCounter: 0,
     startTime: Date.now(),
     logs: [],
+    consoleLogs: [],
+    pageErrors: [],
   };
   testContexts.set(testTitle, context);
   return context;
@@ -122,6 +144,96 @@ export function log(
   }
 }
 
+// ============================================================================
+// Browser Console Log Capture
+// ============================================================================
+
+/**
+ * Log a browser console message to the test context.
+ */
+export function logConsoleMessage(testTitle: string, message: ConsoleMessage): void {
+  const context = getTestContext(testTitle);
+  const location = message.location();
+
+  const entry: ConsoleLogEntry = {
+    timestamp: getTimestamp(),
+    level: message.type() as ConsoleLogLevel,
+    text: message.text(),
+    url: location.url || undefined,
+    lineNumber: location.lineNumber || undefined,
+    columnNumber: location.columnNumber || undefined,
+  };
+  context.consoleLogs.push(entry);
+
+  // Log errors and warnings prominently
+  const levelColorMap: Record<string, string> = {
+    error: "\x1b[31m",
+    warning: "\x1b[33m",
+    log: "\x1b[90m",
+    info: "\x1b[90m",
+    debug: "\x1b[90m",
+  };
+  const levelColor = levelColorMap[entry.level] || "\x1b[90m";
+
+  const locationStr = entry.url ? ` (${entry.url}:${entry.lineNumber || 0})` : "";
+
+  if (entry.level === "error" || entry.level === "warning") {
+    console.log(`${levelColor}  [Console ${entry.level}] ${entry.text}${locationStr}\x1b[0m`);
+  }
+}
+
+/**
+ * Log a browser page error to the test context.
+ */
+export function logPageError(testTitle: string, error: Error, url?: string): void {
+  const context = getTestContext(testTitle);
+
+  const entry: PageErrorEntry = {
+    timestamp: getTimestamp(),
+    message: error.message,
+    stack: error.stack,
+    url,
+  };
+  context.pageErrors.push(entry);
+
+  // Always log page errors prominently - they indicate serious issues
+  console.error(`\x1b[31m  [Page Error] ${error.message}\x1b[0m`);
+  if (error.stack) {
+    const stackLines = error.stack.split("\n").slice(0, 3).join("\n    ");
+    console.error(`\x1b[31m    ${stackLines}\x1b[0m`);
+  }
+}
+
+/**
+ * Set up browser console and page error logging for a page.
+ */
+export function setupConsoleLogging(page: Page, testTitle: string): void {
+  // Create context if not exists
+  getTestContext(testTitle);
+
+  page.on("console", (message) => {
+    logConsoleMessage(testTitle, message);
+  });
+
+  page.on("pageerror", (error) => {
+    logPageError(testTitle, error, page.url());
+  });
+}
+
+/**
+ * Get console logs for a test.
+ */
+export function getConsoleLogs(testTitle: string): ConsoleLogEntry[] {
+  return getTestContext(testTitle).consoleLogs;
+}
+
+/**
+ * Get page errors for a test.
+ */
+export function getPageErrors(testTitle: string): PageErrorEntry[] {
+  return getTestContext(testTitle).pageErrors;
+}
+
 /**
  * Get all logs for a test.
  */
@@ -140,6 +252,8 @@ export function formatLogsAsJson(testTitle: string): string {
       totalDuration: Date.now() - context.startTime,
       stepCount: context.stepCounter,
       logs: context.logs,
+      consoleLogs: context.consoleLogs,
+      pageErrors: context.pageErrors,
     },
     null,
     2
@@ -162,7 +276,38 @@ export function formatLogsAsText(testTitle: string): string {
     return `${entry.timestamp.slice(11, 23)} ${entry.level.toUpperCase().padEnd(5)} ${stepStr}${entry.message}${urlStr}${durationStr}`;
   });
 
-  return header + logLines.join("\n");
+  const consoleIssues = context.consoleLogs.filter(
+    (l) => l.level === "error" || l.level === "warning"
+  );
+  const pageErrors = context.pageErrors;
+
+  const consoleSection =
+    consoleIssues.length === 0
+      ? ""
+      : `\n\n${"-".repeat(60)}\nConsole (errors/warnings): ${consoleIssues.length}\n${"-".repeat(60)}\n` +
+        consoleIssues
+          .slice(0, 50)
+          .map((l) => {
+            const location = l.url ? ` (${l.url}:${l.lineNumber ?? 0})` : "";
+            return `${l.timestamp.slice(11, 23)} ${l.level.toUpperCase().padEnd(7)} ${l.text}${location}`;
+          })
+          .join("\n") +
+        (consoleIssues.length > 50 ? `\n... (${consoleIssues.length - 50} more)` : "");
+
+  const pageErrorSection =
+    pageErrors.length === 0
+      ? ""
+      : `\n\n${"-".repeat(60)}\nPage errors: ${pageErrors.length}\n${"-".repeat(60)}\n` +
+        pageErrors
+          .slice(0, 20)
+          .map((e) => {
+            const url = e.url ? ` (${e.url})` : "";
+            return `${e.timestamp.slice(11, 23)} ${e.message}${url}`;
+          })
+          .join("\n") +
+        (pageErrors.length > 20 ? `\n... (${pageErrors.length - 20} more)` : "");
+
+  return header + logLines.join("\n") + consoleSection + pageErrorSection;
 }
 
 /**
@@ -212,12 +357,75 @@ export async function withStep<T>(
 }
 
 /**
+ * Format console logs as human-readable text.
+ */
+export function formatConsoleLogsAsText(testTitle: string): string {
+  const context = getTestContext(testTitle);
+  if (context.consoleLogs.length === 0 && context.pageErrors.length === 0) {
+    return "";
+  }
+
+  const lines: string[] = [
+    `\n${"=".repeat(60)}`,
+    `Browser Console Logs: ${testTitle}`,
+    `Console entries: ${context.consoleLogs.length}, Page errors: ${context.pageErrors.length}`,
+    `${"=".repeat(60)}`,
+    "",
+  ];
+
+  // Page errors first (more important)
+  if (context.pageErrors.length > 0) {
+    lines.push("--- Page Errors ---");
+    for (const entry of context.pageErrors) {
+      lines.push(`${entry.timestamp.slice(11, 23)} ERROR ${entry.message}`);
+      if (entry.stack) {
+        lines.push(`  ${entry.stack.split("\n").slice(0, 3).join("\n  ")}`);
+      }
+    }
+    lines.push("");
+  }
+
+  // Console logs grouped by level
+  const errors = context.consoleLogs.filter((l) => l.level === "error");
+  const warnings = context.consoleLogs.filter((l) => l.level === "warning");
+  const others = context.consoleLogs.filter((l) => l.level !== "error" && l.level !== "warning");
+
+  if (errors.length > 0) {
+    lines.push("--- Console Errors ---");
+    for (const entry of errors) {
+      const loc = entry.url ? ` (${entry.url}:${entry.lineNumber || 0})` : "";
+      lines.push(`${entry.timestamp.slice(11, 23)} ${entry.text}${loc}`);
+    }
+    lines.push("");
+  }
+
+  if (warnings.length > 0) {
+    lines.push("--- Console Warnings ---");
+    for (const entry of warnings) {
+      const loc = entry.url ? ` (${entry.url}:${entry.lineNumber || 0})` : "";
+      lines.push(`${entry.timestamp.slice(11, 23)} ${entry.text}${loc}`);
+    }
+    lines.push("");
+  }
+
+  if (others.length > 0) {
+    lines.push("--- Console Messages ---");
+    for (const entry of others) {
+      lines.push(`${entry.timestamp.slice(11, 23)} [${entry.level}] ${entry.text}`);
+    }
+  }
+
+  return lines.join("\n");
+}
+
+/**
  * Attach logs to Playwright test info for reporting.
  */
 export async function attachLogsToTest(
   testInfo: TestInfo,
   testTitle: string
 ): Promise<void> {
+  const context = getTestContext(testTitle);
   const jsonLogs = formatLogsAsJson(testTitle);
   const textLogs = formatLogsAsText(testTitle);
 
@@ -230,4 +438,23 @@ export async function attachLogsToTest(
     body: textLogs,
     contentType: "text/plain",
   });
+
+  // Attach console logs separately if there are any errors or warnings
+  if (context.consoleLogs.length > 0 || context.pageErrors.length > 0) {
+    await testInfo.attach("console-logs.json", {
+      body: JSON.stringify({
+        consoleLogs: context.consoleLogs,
+        pageErrors: context.pageErrors,
+      }, null, 2),
+      contentType: "application/json",
+    });
+
+    const consoleText = formatConsoleLogsAsText(testTitle);
+    if (consoleText) {
+      await testInfo.attach("console-logs.txt", {
+        body: consoleText,
+        contentType: "text/plain",
+      });
+    }
+  }
 }

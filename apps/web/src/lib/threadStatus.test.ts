@@ -371,6 +371,35 @@ describe("computeThreadStatus", () => {
     expect(status.acks.pendingCount).toBe(1);
   });
 
+  it("tracks pending acks across multiple kickoff messages", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({
+        subject: "KICKOFF: Session start",
+        from: "Operator",
+        to: ["AgentA"],
+        ack_required: true,
+        created_ts: "2025-12-30T10:00:00Z",
+      }),
+      createMessage({
+        subject: "KICKOFF: Session start",
+        from: "Operator",
+        to: ["AgentB"],
+        ack_required: true,
+        created_ts: "2025-12-30T10:00:05Z",
+      }),
+      createMessage({
+        subject: "DELTA[gpt]: Hypotheses",
+        from: "AgentA",
+        created_ts: "2025-12-30T10:02:00Z",
+      }),
+    ];
+
+    const status = computeThreadStatus(messages);
+    expect(status.acks.awaitingFrom).not.toContain("AgentA");
+    expect(status.acks.awaitingFrom).toContain("AgentB");
+    expect(status.acks.pendingCount).toBe(1);
+  });
+
   it("tracks multiple contributors per role", () => {
     const messages: AgentMailMessage[] = [
       createMessage({
@@ -617,16 +646,22 @@ describe("isWaitingForRole", () => {
 
 describe("getAgentsWithPendingAcks", () => {
   it("returns agents who have not acknowledged", () => {
+    // Use explicit timestamps to ensure ACK is after KICKOFF
+    const kickoffTime = "2025-01-01T10:00:00.000Z";
+    const ackTime = "2025-01-01T10:05:00.000Z";
+
     const messages: AgentMailMessage[] = [
       createMessage({
         subject: "KICKOFF: Test",
         from: "Operator",
         to: ["AgentA", "AgentB"],
         ack_required: true,
+        created_ts: kickoffTime,
       }),
       createMessage({
         subject: "ACK: Received",
         from: "AgentA",
+        created_ts: ackTime,
       }),
     ];
 

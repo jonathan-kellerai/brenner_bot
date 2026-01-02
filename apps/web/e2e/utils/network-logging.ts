@@ -5,7 +5,9 @@
  * Philosophy: Make network issues easy to diagnose.
  */
 
-import type { Page, Request, Response, TestInfo } from "@playwright/test";
+import type { Page, Request, Response, TestInfo, BrowserContext } from "@playwright/test";
+import * as path from "path";
+import * as fs from "fs";
 
 // ============================================================================
 // Types
@@ -34,6 +36,7 @@ export interface NetworkContext {
   testTitle: string;
   networkLogs: NetworkRequestLog[];
   performanceTiming: PerformanceTimingData;
+  harPath?: string;
 }
 
 // ============================================================================
@@ -42,6 +45,9 @@ export interface NetworkContext {
 
 const networkContexts = new Map<string, NetworkContext>();
 const pendingRequests = new Map<string, { startTime: number; url: string }>();
+
+// HAR file output directory
+const HAR_OUTPUT_DIR = "test-results/har";
 
 function getTimestamp(): string {
   return new Date().toISOString();
@@ -243,6 +249,182 @@ export function formatNetworkLogsAsText(testTitle: string): string {
   return header + logLines.join("\n");
 }
 
+// ============================================================================
+// HAR File Generation
+// ============================================================================
+
+/**
+ * HAR (HTTP Archive) format types.
+ * See: http://www.softwareishard.com/blog/har-12-spec/
+ */
+interface HarEntry {
+  startedDateTime: string;
+  time: number;
+  request: {
+    method: string;
+    url: string;
+    httpVersion: string;
+    cookies: unknown[];
+    headers: unknown[];
+    queryString: unknown[];
+    headersSize: number;
+    bodySize: number;
+  };
+  response: {
+    status: number;
+    statusText: string;
+    httpVersion: string;
+    cookies: unknown[];
+    headers: unknown[];
+    content: {
+      size: number;
+      mimeType: string;
+    };
+    redirectURL: string;
+    headersSize: number;
+    bodySize: number;
+  };
+  cache: Record<string, never>;
+  timings: {
+    send: number;
+    wait: number;
+    receive: number;
+  };
+}
+
+interface Har {
+  log: {
+    version: string;
+    creator: {
+      name: string;
+      version: string;
+    };
+    pages: Array<{
+      startedDateTime: string;
+      id: string;
+      title: string;
+    }>;
+    entries: HarEntry[];
+  };
+}
+
+/**
+ * Generate HAR file content from network logs.
+ * HAR format is widely supported by browser DevTools and network analysis tools.
+ */
+export function generateHar(testTitle: string): Har {
+  const context = getNetworkContext(testTitle);
+  const pageId = `page_${testTitle.replace(/[^a-zA-Z0-9]/g, "_")}`;
+
+  const entries: HarEntry[] = context.networkLogs
+    .filter((log) => log.status !== undefined) // Only completed requests
+    .map((log) => {
+      const duration = log.duration || 0;
+
+      return {
+        startedDateTime: log.timestamp,
+        time: duration,
+        request: {
+          method: log.method,
+          url: log.url,
+          httpVersion: "HTTP/1.1",
+          cookies: [],
+          headers: [],
+          queryString: [],
+          headersSize: -1,
+          bodySize: -1,
+        },
+        response: {
+          status: log.status || 0,
+          statusText: log.statusText || "",
+          httpVersion: "HTTP/1.1",
+          cookies: [],
+          headers: [],
+          content: {
+            size: -1,
+            mimeType: getMimeType(log.resourceType),
+          },
+          redirectURL: "",
+          headersSize: -1,
+          bodySize: -1,
+        },
+        cache: {},
+        timings: {
+          send: 0,
+          wait: duration * 0.8,
+          receive: duration * 0.2,
+        },
+      };
+    });
+
+  const firstEntry = context.networkLogs[0];
+  const startTime = firstEntry?.timestamp || new Date().toISOString();
+
+  return {
+    log: {
+      version: "1.2",
+      creator: {
+        name: "Brenner Bot E2E Tests",
+        version: "1.0",
+      },
+      pages: [
+        {
+          startedDateTime: startTime,
+          id: pageId,
+          title: testTitle,
+        },
+      ],
+      entries,
+    },
+  };
+}
+
+/**
+ * Get MIME type from resource type.
+ */
+function getMimeType(resourceType: string): string {
+  const mimeTypes: Record<string, string> = {
+    document: "text/html",
+    script: "application/javascript",
+    stylesheet: "text/css",
+    image: "image/png",
+    font: "font/woff2",
+    xhr: "application/json",
+    fetch: "application/json",
+    media: "video/mp4",
+    websocket: "application/octet-stream",
+    other: "application/octet-stream",
+  };
+  return mimeTypes[resourceType] || "application/octet-stream";
+}
+
+/**
+ * Save HAR file to disk and store path in context.
+ */
+export function saveHarFile(testTitle: string): string | undefined {
+  const context = getNetworkContext(testTitle);
+
+  if (context.networkLogs.length === 0) {
+    return undefined;
+  }
+
+  // Ensure HAR output directory exists
+  if (!fs.existsSync(HAR_OUTPUT_DIR)) {
+    fs.mkdirSync(HAR_OUTPUT_DIR, { recursive: true });
+  }
+
+  const safeTitle = testTitle.replace(/[^a-zA-Z0-9]/g, "_").slice(0, 100);
+  const harPath = path.join(HAR_OUTPUT_DIR, `${safeTitle}_${Date.now()}.har`);
+
+  const har = generateHar(testTitle);
+  fs.writeFileSync(harPath, JSON.stringify(har, null, 2));
+
+  context.harPath = harPath;
+  console.log(`\x1b[32m  HAR file saved: ${harPath}\x1b[0m`);
+
+  return harPath;
+}
+
 export async function attachNetworkLogsToTest(testInfo: TestInfo, testTitle: string): Promise<void> {
   const context = getNetworkContext(testTitle);
 
@@ -256,6 +438,16 @@ export async function attachNetworkLogsToTest(testInfo: TestInfo, testTitle: str
       body: formatNetworkLogsAsText(testTitle),
       contentType: "text/plain",
     });
+
+    // Generate and attach HAR file
+    const har = generateHar(testTitle);
+    await testInfo.attach("network.har", {
+      body: JSON.stringify(har, null, 2),
+      contentType: "application/json",
+    });
+
+    // Also save to disk for easy access with Chrome DevTools
+    saveHarFile(testTitle);
   }
 
   await testInfo.attach("performance-timing.json", {

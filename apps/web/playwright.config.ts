@@ -8,7 +8,8 @@ import { defineConfig, devices } from "@playwright/test";
  *
  * Environment variables:
  * - BASE_URL: Override the base URL (default: https://brennerbot.org)
- * - RECORD_VIDEO: Set to "on" to record videos of all tests
+ * - RECORD_VIDEO: Set to "on" to record videos of all tests, "off" to disable completely
+ * - NO_VIDEO: Set to "1" to disable video recording (overrides default retry recording)
  * - SLOW_MO: Set to a number (ms) to slow down actions for debugging
  */
 export default defineConfig({
@@ -35,8 +36,14 @@ export default defineConfig({
     trace: "on-first-retry",
     // Screenshots: always capture on failure, optionally on success
     screenshot: "only-on-failure",
-    // Video: off by default, enable with RECORD_VIDEO=on
-    video: process.env.RECORD_VIDEO === "on" ? "on" : "off",
+    // Video: record on first retry by default (captures failures for debugging)
+    // - Set RECORD_VIDEO=on to record all tests
+    // - Set RECORD_VIDEO=off or NO_VIDEO=1 to disable
+    video: process.env.NO_VIDEO === "1" || process.env.RECORD_VIDEO === "off"
+      ? "off"
+      : process.env.RECORD_VIDEO === "on"
+        ? "on"
+        : "on-first-retry",
     // Slow motion for debugging (set SLOW_MO=100 for 100ms delay)
     launchOptions: {
       slowMo: process.env.SLOW_MO ? parseInt(process.env.SLOW_MO, 10) : 0,
