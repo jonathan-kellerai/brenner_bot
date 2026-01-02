@@ -30,8 +30,9 @@ async function getAgentMailSeeder(): Promise<AgentMailSeederModule> {
   return agentMailSeeder;
 }
 
-// Re-export SessionConfig type for consumers
-export type { SessionConfig } from "./agent-mail-seeder";
+// Import and re-export SessionConfig type
+import type { SessionConfig } from "./agent-mail-seeder";
+export type { SessionConfig };
 
 /**
  * Test session fixture for Agent Mail integration.
@@ -89,20 +90,23 @@ export const test = base.extend<{
   },
 
   testSession: async ({}, use) => {
+    // Lazy-load the seeder module to avoid Playwright config-time loading issues
+    const seeder = await getAgentMailSeeder();
+
     // Ensure test server is running
-    await getTestServer();
+    await seeder.getTestServer();
 
     const seededSessions: string[] = [];
 
     const fixture: TestSessionFixture = {
       seed: async (config: SessionConfig) => {
         seededSessions.push(config.threadId);
-        await seedTestSession(config);
+        await seeder.seedTestSession(config);
       },
       cleanup: async (threadId: string) => {
-        await cleanupTestSession(threadId);
+        await seeder.cleanupTestSession(threadId);
       },
-      getServerUrl: () => getTestServerUrl(),
+      getServerUrl: () => seeder.getTestServerUrl(),
       seededSessions,
     };
 
@@ -111,11 +115,11 @@ export const test = base.extend<{
 
     // Cleanup after test
     for (const threadId of seededSessions) {
-      await cleanupTestSession(threadId);
+      await seeder.cleanupTestSession(threadId);
     }
 
     // Reset server state for next test
-    resetTestServer();
+    seeder.resetTestServer();
   },
 });
 

@@ -98,7 +98,8 @@ export function resetTestServer(): void {
  * Seed a test session with messages and agents.
  */
 export async function seedTestSession(config: SessionConfig): Promise<void> {
-  const server = await getTestServer();
+  // Ensure test server is running (we don't need the return value)
+  await getTestServer();
   const projectKey = "/data/projects/brenner_bot";
 
   // Register the orchestrator first
