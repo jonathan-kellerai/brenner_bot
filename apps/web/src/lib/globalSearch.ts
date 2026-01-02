@@ -249,7 +249,7 @@ function parseDocumentSections(content: string, doc: CorpusDoc): IndexedChunk[] 
       contentLower: plainText.slice(0, 5000).toLowerCase(),
       titleLower: doc.title.toLowerCase(),
       url: getDocUrl(doc),
-      wordCount: plainText.split(/\s+/).length,
+      wordCount: plainText.split(/\s+/).filter(Boolean).length,
     });
   } else {
     for (let i = 0; i < matches.length; i++) {
@@ -280,7 +280,7 @@ function parseDocumentSections(content: string, doc: CorpusDoc): IndexedChunk[] 
         titleLower: title.toLowerCase(),
         anchor: slug,
         url: `${getDocUrl(doc)}#${slug}`,
-        wordCount: plainText.split(/\s+/).length,
+        wordCount: plainText.split(/\s+/).filter(Boolean).length,
       });
     }
   }
