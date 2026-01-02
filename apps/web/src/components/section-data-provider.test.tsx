@@ -5,7 +5,7 @@
  */
 
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, waitFor, act } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { SectionDataProvider, useSectionData } from "./section-data-provider";
 
 // Test consumer component
