@@ -208,13 +208,14 @@ All critiques MUST use the delta format:
 \`\`\`delta
 {
   "operation": "ADD",
-  "section": "critiques",
-  "target_id": "hypothesis or test being critiqued",
+  "section": "adversarial_critique",
+  "target_id": null,
   "payload": {
-    "type": "scale_violation | level_confusion | missing_control | framing_attack",
-    "claim": "What's wrong",
+    "name": "Short critique label",
+    "attack": "What's wrong",
     "evidence": "Why it's wrong",
-    "suggested_fix": "How to repair it"
+    "current_status": "active",
+    "real_third_alternative": true
   },
   "rationale": "Why this critique matters"
 }

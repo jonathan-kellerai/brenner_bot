@@ -277,8 +277,8 @@ describe("generatePromptBundle", () => {
       it("includes critique delta format", () => {
         const bundle = generatePromptBundle([theoryKillOperator]);
 
-        expect(bundle.roles.gemini).toContain("critiques");
-        expect(bundle.roles.gemini).toContain("scale_violation");
+        expect(bundle.roles.gemini).toContain("adversarial_critique");
+        expect(bundle.roles.gemini).toContain("attack");
       });
     });
 
