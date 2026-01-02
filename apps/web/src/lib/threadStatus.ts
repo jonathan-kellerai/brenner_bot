@@ -348,16 +348,27 @@ export function computeThreadStatus(
     }
   }
 
-  // Compute pending acks (those who received KICKOFF but haven't sent ACK)
+  // Compute pending acks (those who received KICKOFF but haven't acknowledged or replied).
+  // NOTE: Agent Mail acknowledgements are not represented as thread messages, so we treat
+  // any post-kickoff reply from a recipient as implicit acknowledgement.
   const awaitingFrom: string[] = [];
   if (kickoff && kickoff.ack_required) {
-    const recipients = new Set([...(kickoff.to ?? []), ...(kickoff.cc ?? [])]);
+    const recipients = new Set([
+      ...(kickoff.to ?? []),
+      ...(kickoff.cc ?? []),
+      ...(kickoff.bcc ?? []),
+    ]);
+    const kickoffTime = new Date(kickoff.created_ts).getTime();
     for (const recipient of recipients) {
-      // Check if this recipient has sent any ACK message
-      const hasAcked = sortedMessages.some(
+      const hasAckMessage = sortedMessages.some(
         (m) => m.from === recipient && parseSubjectType(m.subject).type === "ack"
       );
-      if (!hasAcked) {
+      const hasReplied = sortedMessages.some(
+        (m) =>
+          m.from === recipient &&
+          new Date(m.created_ts).getTime() > kickoffTime
+      );
+      if (!hasAckMessage && !hasReplied) {
         awaitingFrom.push(recipient);
       }
     }

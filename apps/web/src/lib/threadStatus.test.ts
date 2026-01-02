@@ -349,6 +349,28 @@ describe("computeThreadStatus", () => {
     expect(status.stats.totalAcks).toBe(1);
   });
 
+  it("treats any post-kickoff reply as implicit acknowledgement", () => {
+    const messages: AgentMailMessage[] = [
+      createMessage({
+        subject: "KICKOFF: Test session",
+        from: "Operator",
+        to: ["AgentA", "AgentB"],
+        ack_required: true,
+        created_ts: "2025-12-30T10:00:00Z",
+      }),
+      createMessage({
+        subject: "DELTA[gpt]: Hypotheses",
+        from: "AgentA",
+        created_ts: "2025-12-30T10:05:00Z",
+      }),
+    ];
+
+    const status = computeThreadStatus(messages);
+    expect(status.acks.awaitingFrom).not.toContain("AgentA");
+    expect(status.acks.awaitingFrom).toContain("AgentB");
+    expect(status.acks.pendingCount).toBe(1);
+  });
+
   it("tracks multiple contributors per role", () => {
     const messages: AgentMailMessage[] = [
       createMessage({
