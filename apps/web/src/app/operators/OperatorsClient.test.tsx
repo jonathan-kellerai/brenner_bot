@@ -13,13 +13,18 @@ import type { BrennerOperatorPaletteEntry } from "@/lib/operators";
 // Mock framer-motion to avoid animation issues
 vi.mock("framer-motion", async () => {
   const React = await import("react");
+  const MockDiv = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    function MockDiv({ children, ...props }, ref) {
+      return React.createElement("div", { ...props, ref }, children);
+    }
+  );
   return {
     motion: {
-      div: React.forwardRef(({ children, ...props }: React.HTMLAttributes<HTMLDivElement>, ref: React.Ref<HTMLDivElement>) =>
-        React.createElement("div", { ...props, ref }, children)
-      ),
+      div: MockDiv,
     },
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+    AnimatePresence: function MockAnimatePresence({ children }: { children: React.ReactNode }) {
+      return React.createElement(React.Fragment, null, children);
+    },
   };
 });
 

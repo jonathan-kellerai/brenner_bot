@@ -36,19 +36,30 @@ const mockMatchMedia = (matches: boolean) => {
 // Mock framer-motion to avoid animation timing issues in tests
 vi.mock("framer-motion", async () => {
   const React = await import("react");
+  const MockDiv = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+    function MockDiv({ children, ...props }, ref) {
+      return React.createElement("div", { ...props, ref }, children);
+    }
+  );
+  const MockSpan = React.forwardRef<HTMLSpanElement, React.HTMLAttributes<HTMLSpanElement>>(
+    function MockSpan({ children, ...props }, ref) {
+      return React.createElement("span", { ...props, ref }, children);
+    }
+  );
+  const MockP = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
+    function MockP({ children, ...props }, ref) {
+      return React.createElement("p", { ...props, ref }, children);
+    }
+  );
   return {
     motion: {
-      div: React.forwardRef(({ children, ...props }: React.HTMLAttributes<HTMLDivElement>, ref: React.Ref<HTMLDivElement>) =>
-        React.createElement("div", { ...props, ref }, children)
-      ),
-      span: React.forwardRef(({ children, ...props }: React.HTMLAttributes<HTMLSpanElement>, ref: React.Ref<HTMLSpanElement>) =>
-        React.createElement("span", { ...props, ref }, children)
-      ),
-      p: React.forwardRef(({ children, ...props }: React.HTMLAttributes<HTMLParagraphElement>, ref: React.Ref<HTMLParagraphElement>) =>
-        React.createElement("p", { ...props, ref }, children)
-      ),
+      div: MockDiv,
+      span: MockSpan,
+      p: MockP,
     },
-    AnimatePresence: ({ children }: { children: React.ReactNode }) => React.createElement(React.Fragment, null, children),
+    AnimatePresence: function MockAnimatePresence({ children }: { children: React.ReactNode }) {
+      return React.createElement(React.Fragment, null, children);
+    },
   };
 });
 
