@@ -392,8 +392,8 @@ function EvidenceRecordCard({ record }: { record: EvidenceRecord }) {
           <div className="space-y-3">
             <h4 className="text-sm font-semibold text-foreground">Excerpts</h4>
             <div className="space-y-3">
-              {record.excerpts.map((excerpt) => (
-                <ExcerptCard key={excerpt.anchor} excerpt={excerpt} recordId={record.id} />
+              {record.excerpts.map((excerpt, idx) => (
+                <ExcerptCard key={`${excerpt.anchor}-${idx}`} excerpt={excerpt} recordId={record.id} />
               ))}
             </div>
           </div>
