@@ -40,6 +40,7 @@ Deployed on Vercel with Cloudflare DNS at **`brennerbot.org`**.
 - [Why this repo is interesting](#why-this-repo-is-interesting)
 - [The Core Insight: Why Brenner?](#the-core-insight-why-brenner)
 - [What's here](#whats-here)
+- [Quick Install](#quick-install)
 - [What this is ultimately for](#what-this-is-ultimately-for)
 - [How the system works](#how-the-system-works)
 - [How to use this repo](#how-to-use-this-repo)
@@ -125,6 +126,40 @@ This repository provides everything needed to run "Brenner-style" research workf
 - **Artifact compiler + linter**: Parse agent responses, merge deterministically, and validate against 50+ Brenner-style rules (third alternative check, potency controls, citation anchors, provenance verification, scale constraints). Human-readable and JSON output formats.
 - **Web app (brennerbot.org)**: Browse the corpus, compose excerpts, start sessions, and review compiled artifacts.
 - **CLI (brenner)**: Terminal-first workflow for power users. Compiles to a single self-contained binary via `bun build --compile`.
+
+---
+
+## Quick Install
+
+### Unix/macOS (curl one-liner)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh | bash
+```
+
+Options:
+- `--easy-mode` — Minimal prompts, sensible defaults
+- `--verify` — Verify checksum after download
+- `--system` — Install to `/usr/local/bin` (requires sudo)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh | bash -s -- --easy-mode --verify
+```
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.ps1 | iex
+```
+
+### From Source
+
+```bash
+git clone https://github.com/Dicklesworthstone/brenner_bot.git
+cd brenner_bot
+bun build --compile ./brenner.ts --outfile brenner
+./brenner --help
+```
 
 ---
 
