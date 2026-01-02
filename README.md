@@ -2228,7 +2228,7 @@ Each session tracks three Brenner roles:
 ```typescript
 import { computeThreadStatus, formatThreadStatusSummary } from "./lib/threadStatus";
 
-const status = computeThreadStatus(messages, { threadId: "RS20251230" });
+const status = computeThreadStatus(messages); // threadId is derived from message.thread_id
 console.log(formatThreadStatusSummary(status));
 // → "Phase: awaiting_compilation | 3/3 roles complete | 0 pending acks"
 ```
