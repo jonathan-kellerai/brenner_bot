@@ -79,6 +79,63 @@ function sanitizeThreadId(threadId: string): string {
   return threadId.replace(/[^a-zA-Z0-9\-_.]/g, "_");
 }
 
+/**
+ * Validates that a parsed JSON object conforms to the EvidencePack structure.
+ * Returns the validated object or throws an error with details.
+ */
+function validateEvidencePack(data: unknown): EvidencePack {
+  if (data === null || typeof data !== "object") {
+    throw new Error("Evidence pack must be an object");
+  }
+
+  const obj = data as Record<string, unknown>;
+
+  // Check required top-level fields
+  if (typeof obj.version !== "string") {
+    throw new Error("Missing or invalid 'version' field");
+  }
+  if (typeof obj.thread_id !== "string") {
+    throw new Error("Missing or invalid 'thread_id' field");
+  }
+  if (typeof obj.created_at !== "string") {
+    throw new Error("Missing or invalid 'created_at' field");
+  }
+  if (typeof obj.updated_at !== "string") {
+    throw new Error("Missing or invalid 'updated_at' field");
+  }
+  if (typeof obj.next_id !== "number") {
+    throw new Error("Missing or invalid 'next_id' field");
+  }
+  if (!Array.isArray(obj.records)) {
+    throw new Error("Missing or invalid 'records' field (expected array)");
+  }
+
+  // Validate each record has minimum required fields
+  for (let i = 0; i < obj.records.length; i++) {
+    const record = obj.records[i] as Record<string, unknown>;
+    if (typeof record !== "object" || record === null) {
+      throw new Error(`Record at index ${i} is not an object`);
+    }
+    if (typeof record.id !== "string") {
+      throw new Error(`Record at index ${i} missing 'id' field`);
+    }
+    if (typeof record.type !== "string") {
+      throw new Error(`Record at index ${i} missing 'type' field`);
+    }
+    if (typeof record.title !== "string") {
+      throw new Error(`Record at index ${i} missing 'title' field`);
+    }
+    if (!Array.isArray(record.excerpts)) {
+      throw new Error(`Record at index ${i} missing 'excerpts' array`);
+    }
+    if (!Array.isArray(record.key_findings)) {
+      throw new Error(`Record at index ${i} missing 'key_findings' array`);
+    }
+  }
+
+  return data as EvidencePack;
+}
+
 const EVIDENCE_TYPE_LABELS: Record<EvidenceType, string> = {
   paper: "Paper",
   preprint: "Preprint",
@@ -328,7 +385,8 @@ export default async function EvidencePackPage({
   try {
     if (existsSync(evidenceJsonPath)) {
       const content = readFileSync(evidenceJsonPath, "utf8");
-      evidencePack = JSON.parse(content) as EvidencePack;
+      const parsed: unknown = JSON.parse(content);
+      evidencePack = validateEvidencePack(parsed);
     }
   } catch (err) {
     loadError = err instanceof Error ? err.message : String(err);
