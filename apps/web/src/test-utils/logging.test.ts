@@ -11,7 +11,7 @@
  * @see brenner_bot-oful (Test Logging: Structured Logging for Unit Tests)
  */
 
-import { describe, expect, it, beforeEach, vi } from "vitest";
+import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import {
   createTestLogger,
   getLogBuffer,
@@ -34,6 +34,10 @@ describe("Test Logging Utilities", () => {
     vi.spyOn(console, "debug").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe("createTestLogger", () => {
@@ -281,6 +285,27 @@ describe("Test Logging Utilities", () => {
       expect(entries[1].level).toBe("error");
       expect(entries[1].message).toContain("Fetch failed");
     });
+
+    it("properly serializes error objects in data", async () => {
+      const log = createTestLogger("fetch-test");
+      const loggingFetch = createLoggingFetch(log);
+
+      const testError = new Error("Serialization test");
+      testError.name = "TestError";
+      vi.spyOn(globalThis, "fetch").mockRejectedValueOnce(testError);
+
+      await expect(loggingFetch("/api/error")).rejects.toThrow("Serialization test");
+
+      const entries = getLogBuffer();
+      const errorEntry = entries.find((e) => e.level === "error");
+      expect(errorEntry).toBeDefined();
+
+      // Error should be properly serialized with name, message, and stack
+      const errorData = errorEntry!.data as { error: { name: string; message: string; stack?: string } };
+      expect(errorData.error.name).toBe("TestError");
+      expect(errorData.error.message).toBe("Serialization test");
+      expect(errorData.error.stack).toBeDefined();
+    });
   });
 
   describe("withStep", () => {
@@ -314,6 +339,29 @@ describe("Test Logging Utilities", () => {
       expect(entries).toHaveLength(2);
       expect(entries[1].level).toBe("error");
       expect(entries[1].message).toContain("Failed: Failing operation");
+    });
+
+    it("properly serializes error in withStep failure data", async () => {
+      const log = createTestLogger("step-test");
+
+      const testError = new Error("Step failure");
+      testError.name = "StepError";
+
+      await expect(
+        withStep(log, "Failing step", async () => {
+          throw testError;
+        })
+      ).rejects.toThrow("Step failure");
+
+      const entries = getLogBuffer();
+      const errorEntry = entries.find((e) => e.level === "error");
+      expect(errorEntry).toBeDefined();
+
+      // Error should be properly serialized
+      const errorData = errorEntry!.data as { error: { name: string; message: string; stack?: string } };
+      expect(errorData.error.name).toBe("StepError");
+      expect(errorData.error.message).toBe("Step failure");
+      expect(errorData.error.stack).toBeDefined();
     });
   });
 

@@ -284,7 +284,11 @@ export function createLoggingFetch(logger: ReturnType<typeof createTestLogger>):
       logger.error(`Fetch failed: ${error instanceof Error ? error.message : String(error)}`, {
         category: LogCategories.NETWORK,
         duration,
-        data: { error },
+        data: {
+          error: error instanceof Error
+            ? { name: error.name, message: error.message, stack: error.stack }
+            : error,
+        },
       });
       throw error;
     }
@@ -319,7 +323,11 @@ export async function withStep<T>(
   } catch (error) {
     logger.error(`Failed: ${description}`, {
       duration: Date.now() - startTime,
-      data: { error: error instanceof Error ? error.message : String(error) },
+      data: {
+        error: error instanceof Error
+          ? { name: error.name, message: error.message, stack: error.stack }
+          : error,
+      },
     });
     throw error;
   }
