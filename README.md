@@ -2192,3 +2192,508 @@ brenner hypothesis list --session RS20251230 --json | jq '.[] | select(.state ==
 ```
 
 The JSON output matches the TypeScript schema types, enabling type-safe integration with other tools.
+
+---
+
+## Thread Status & Phase Detection
+
+The thread status system tracks session lifecycle phases and role contributions in real-time. It's the backbone of session orchestration, enabling the CLI and web app to show progress and determine when compilation is ready.
+
+### Session Phases
+
+Sessions progress through a defined lifecycle:
+
+| Phase | Description |
+|-------|-------------|
+| `not_started` | Thread exists but no kickoff sent |
+| `awaiting_responses` | Kickoff sent, waiting for agent deltas |
+| `partially_complete` | Some roles have contributed, others pending |
+| `awaiting_compilation` | All roles complete, ready for compile |
+| `compiled` | Artifact compiled, no critique yet |
+| `in_critique` | Critique phase active |
+| `closed` | Session complete |
+
+### Role Tracking
+
+Each session tracks three Brenner roles:
+
+| Role | Primary Responsibility | Default Model |
+|------|----------------------|---------------|
+| `hypothesis_generator` | Hunt paradoxes, propose H1-H3 | Codex/GPT |
+| `test_designer` | Design discriminative tests + potency controls | Claude/Opus |
+| `adversarial_critic` | Attack framing, check scale constraints | Gemini |
+
+### Usage
+
+```typescript
+import { computeThreadStatus, formatThreadStatusSummary } from "./lib/threadStatus";
+
+const status = computeThreadStatus(messages, { threadId: "RS20251230" });
+console.log(formatThreadStatusSummary(status));
+// → "Phase: awaiting_compilation | 3/3 roles complete | 0 pending acks"
+```
+
+### CLI Integration
+
+```bash
+# Show session status
+brenner session status --thread-id RS20251230
+
+# Watch for completion
+brenner session status --thread-id RS20251230 --watch --timeout 3600
+```
+
+---
+
+## Delta Parser
+
+The delta parser extracts structured contributions from agent message bodies. Agents produce deltas (not essays) that specify operations on the shared artifact.
+
+### Delta Operations
+
+| Operation | Semantics |
+|-----------|-----------|
+| `ADD` | Append new item (auto-assigns ID like H4, T7) |
+| `EDIT` | Modify existing item by ID |
+| `KILL` | Mark item as killed with reason |
+
+### Sections
+
+Deltas target one of seven artifact sections:
+
+| Section | ID Prefix | Content |
+|---------|-----------|---------|
+| `hypothesis_slate` | H | Candidate explanations |
+| `predictions_table` | P | Per-hypothesis predictions |
+| `discriminative_tests` | T | Tests that separate hypotheses |
+| `assumption_ledger` | A | Load-bearing assumptions |
+| `anomaly_register` | X | Quarantined exceptions |
+| `adversarial_critique` | C | Framing attacks |
+| `research_thread` | RT | Problem statement (singleton) |
+
+### Delta Block Format
+
+Agents embed deltas in fenced code blocks:
+
+```markdown
+:::delta
+{
+  "operation": "ADD",
+  "section": "hypothesis_slate",
+  "target_id": null,
+  "payload": {
+    "name": "Gradient Model",
+    "claim": "Positional information is encoded in morphogen gradients",
+    "mechanism": "Cells read concentration thresholds",
+    "anchors": ["§58", "EV-001"]
+  },
+  "rationale": "Builds on established developmental biology (§58)"
+}
+:::
+```
+
+### Usage
+
+```typescript
+import { parseDeltaMessage, extractValidDeltas } from "./lib/delta-parser";
+
+const result = parseDeltaMessage(messageBody);
+console.log(`Found ${result.validCount} valid deltas, ${result.invalidCount} invalid`);
+
+// Get only valid deltas
+const deltas = extractValidDeltas(messageBody);
+for (const delta of deltas) {
+  console.log(`${delta.operation} on ${delta.section}`);
+}
+```
+
+---
+
+## Session Kickoff System
+
+The session kickoff system composes role-specific prompts for multi-agent sessions. It supports both unified mode (all agents get the same prompt) and roster mode (each agent gets a role-tailored prompt).
+
+### Roster Modes
+
+**Unified mode** (`--unified`): All agents receive identical kickoff messages containing the full research question and excerpt.
+
+**Role-separated mode** (`--role-map`): Each agent receives a role-specific prompt emphasizing their responsibilities:
+
+| Role | Operators | Focus |
+|------|-----------|-------|
+| `hypothesis_generator` | ⊘ Level-Split, ⊕ Cross-Domain, ◊ Paradox-Hunt | Generate 3+ competing hypotheses |
+| `test_designer` | ✂ Exclusion-Test, ⌂ Materialize, ⟂ Object-Transpose, 🎭 Potency-Check | Design discriminative experiments |
+| `adversarial_critic` | ΔE Exception-Quarantine, † Theory-Kill, ⊞ Scale-Check | Attack framings, enforce constraints |
+
+### CLI Usage
+
+```bash
+# Role-separated kickoff (recommended)
+brenner session start \
+  --project-key "$PWD" \
+  --thread-id RS20251230 \
+  --sender Operator \
+  --to BlueLake,PurpleMountain,GreenValley \
+  --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,GreenValley=adversarial_critic" \
+  --excerpt-file excerpt.md
+
+# Unified kickoff
+brenner session start \
+  --project-key "$PWD" \
+  --thread-id RS20251230 \
+  --sender Operator \
+  --to BlueLake,PurpleMountain,GreenValley \
+  --unified \
+  --excerpt-file excerpt.md
+```
+
+### Programmatic Usage
+
+```typescript
+import { composeKickoffMessages, type KickoffConfig } from "./lib/session-kickoff";
+
+const config: KickoffConfig = {
+  threadId: "RS20251230",
+  researchQuestion: "How do cells determine their position?",
+  context: "Investigating positional information encoding",
+  excerpt: excerptMarkdown,
+  recipients: [
+    { name: "BlueLake", role: "hypothesis_generator" },
+    { name: "PurpleMountain", role: "test_designer" },
+    { name: "GreenValley", role: "adversarial_critic" },
+  ],
+};
+
+const messages = composeKickoffMessages(config);
+// → Array of role-specific kickoff messages
+```
+
+---
+
+## Global Search System
+
+The global search system provides full-text search across the entire corpus: transcripts (236 segments), quote bank, distillations, metaprompts, and raw model responses.
+
+### Search Categories
+
+| Category | Content |
+|----------|---------|
+| `transcript` | Complete Brenner transcript (236 segments) |
+| `quote-bank` | Curated primitives tagged by operator |
+| `distillation` | Final synthesis documents (Opus, GPT, Gemini) |
+| `metaprompt` | Prompt templates |
+| `raw-response` | Model response batches |
+| `all` | Search everything (default) |
+
+### Features
+
+- **In-memory caching**: Corpus loaded once, cached for fast queries
+- **Relevance scoring**: BM25-based ranking with title/content weighting
+- **Match highlighting**: Snippets with matched terms emphasized
+- **Model filtering**: Filter raw responses by model (gpt, opus, gemini)
+- **Anchor extraction**: Returns `§n` anchors for citation
+
+### CLI Usage
+
+```bash
+# Basic search
+brenner corpus search "forbidden pattern"
+
+# Filter by category
+brenner corpus search "exclusion" --category transcript
+
+# Filter by model for raw responses
+brenner corpus search "dimensional reduction" --category raw-response --model opus
+
+# JSON output for programmatic use
+brenner corpus search "digital handle" --json --limit 50
+```
+
+### Programmatic Usage
+
+```typescript
+import { globalSearch, type SearchCategory } from "./lib/globalSearch";
+
+const result = await globalSearch("discriminative experiment", {
+  limit: 20,
+  category: "transcript",
+});
+
+console.log(`Found ${result.totalMatches} matches in ${result.searchTimeMs}ms`);
+for (const hit of result.hits) {
+  console.log(`${hit.anchor}: ${hit.title}`);
+  console.log(`  ${hit.snippet}`);
+}
+```
+
+---
+
+## Jargon Dictionary
+
+The jargon dictionary provides a comprehensive glossary of 100+ terms covering Brenner operators, scientific methodology, biology, Bayesian reasoning, and project-specific terminology.
+
+### Categories
+
+| Category | Content |
+|----------|---------|
+| `operators` | Brenner operators (⊘ Level-Split, 𝓛 Recode, ✂ Exclusion-Test, etc.) |
+| `brenner` | Core Brenner concepts (third alternative, forbidden pattern, etc.) |
+| `biology` | Scientific/biology terms (C. elegans, morphogen, etc.) |
+| `bayesian` | Statistical/probabilistic terms (likelihood ratio, prior, etc.) |
+| `method` | Scientific method terms (hypothesis, falsification, etc.) |
+| `project` | BrennerBot-specific terms (delta, artifact, session, etc.) |
+
+### Progressive Disclosure
+
+Each term has multiple levels of explanation:
+
+```typescript
+interface JargonTerm {
+  term: string;      // Display name (e.g., "Level-split")
+  short: string;     // ~100 char tooltip definition
+  long: string;      // 2-4 sentence explanation
+  analogy?: string;  // "Think of it like..." for non-experts
+  why?: string;      // Why this matters in Brenner context
+  related?: string[]; // Related term keys for discovery
+  category: JargonCategory;
+}
+```
+
+### Usage
+
+```typescript
+import { getJargon, jargonDictionary, searchJargon } from "./lib/jargon";
+
+// Get a specific term
+const term = getJargon("level-split");
+if (term) {
+  console.log(term.short);  // For tooltips
+  console.log(term.long);   // For full explanation
+  console.log(term.analogy); // For non-experts
+}
+
+// Search across all terms
+const matches = searchJargon("exclusion");
+// → Returns terms containing "exclusion" in term, short, or long
+```
+
+### Web Component Integration
+
+The web app uses the jargon dictionary for:
+- **Hover tooltips**: Show `short` definition on hover
+- **Glossary page**: Full dictionary with category filtering
+- **Progressive disclosure**: Click for `long` → click again for `analogy` + `why`
+
+---
+
+## Lab Mode Authorization
+
+The lab mode auth system implements defense-in-depth gating for orchestration features. Public deployments cannot trigger Agent Mail operations without explicit enablement.
+
+### Security Layers
+
+1. **Environment gate**: `BRENNER_LAB_MODE=1` must be set (fail-closed)
+2. **Authentication**: Either Cloudflare Access headers OR shared secret
+3. **Timing-safe comparison**: Secrets compared in constant time
+4. **Information hiding**: Failed auth returns 404 (not 401/403)
+
+### Environment Variables
+
+| Variable | Purpose |
+|----------|---------|
+| `BRENNER_LAB_MODE` | Enable lab mode (`1` or `true`) |
+| `BRENNER_LAB_SECRET` | Shared secret for local auth |
+| `BRENNER_TRUST_CF_ACCESS_HEADERS` | Trust Cloudflare Access JWT headers |
+
+### Authentication Methods
+
+**Method 1: Cloudflare Access** (recommended for production)
+- Deploy behind Cloudflare Access
+- Set `BRENNER_TRUST_CF_ACCESS_HEADERS=1`
+- Auth is handled by Cloudflare JWT validation
+
+**Method 2: Shared Secret** (for local development)
+- Set `BRENNER_LAB_SECRET=your-secret-here`
+- Pass secret via header or cookie:
+  - Header: `x-brenner-lab-secret: your-secret-here`
+  - Cookie: `brenner_lab_secret=your-secret-here`
+
+### Usage
+
+```typescript
+import { checkOrchestrationAuth, assertOrchestrationAuth } from "./lib/auth";
+
+// Check auth (returns status object)
+const { authorized, reason } = checkOrchestrationAuth(headers, cookies);
+if (!authorized) {
+  console.log(`Denied: ${reason}`);
+}
+
+// Assert auth (throws on failure)
+assertOrchestrationAuth(headers, cookies);
+// Proceeds if authorized, throws Error if not
+```
+
+---
+
+## Operator Intervention Recording
+
+The operator intervention system tracks human overrides during Brenner Loop sessions. This enables reproducibility, trust verification, and learning from operator decisions.
+
+### Intervention Types
+
+| Type | Description | Typical Severity |
+|------|-------------|-----------------|
+| `artifact_edit` | Direct edit to compiled artifact | moderate |
+| `delta_exclusion` | Excluded a delta from compilation | moderate |
+| `delta_injection` | Added a delta not from an agent | major |
+| `decision_override` | Overrode a protocol decision | major |
+| `session_control` | Terminated, forked, or reset session | critical |
+| `role_reassignment` | Changed agent-role mappings mid-session | major |
+
+### Severity Levels
+
+| Severity | Examples |
+|----------|----------|
+| `minor` | Typo fixes, formatting adjustments |
+| `moderate` | Delta exclusion, small edits |
+| `major` | Killing hypotheses, adding tests, role changes |
+| `critical` | Session termination, protocol bypass |
+
+### Intervention Schema
+
+```typescript
+interface OperatorIntervention {
+  id: string;              // INT-RS20251230-001
+  session_id: string;      // RS20251230
+  timestamp: string;       // ISO 8601
+  operator_id: string;     // "human" or agent name
+  type: InterventionType;
+  severity: InterventionSeverity;
+  target: {
+    message_id?: number;
+    artifact_version?: number;
+    item_id?: string;      // H-RS20251230-001
+    item_type?: string;    // hypothesis, test, etc.
+  };
+  state_change?: {
+    before: string;
+    after: string;
+    before_hash?: string;
+    after_hash?: string;
+  };
+  rationale: string;       // Required, min 10 chars
+  reversible: boolean;
+  reversed_at?: string;
+  reversed_by?: string;
+}
+```
+
+### Intervention Summary
+
+Compiled artifacts include an intervention summary:
+
+```json
+{
+  "total_count": 3,
+  "by_severity": { "minor": 1, "moderate": 2, "major": 0, "critical": 0 },
+  "by_type": { "artifact_edit": 2, "delta_exclusion": 1, ... },
+  "has_major_interventions": false,
+  "operators": ["human"],
+  "first_intervention_at": "2025-12-30T10:00:00Z",
+  "last_intervention_at": "2025-12-30T14:30:00Z"
+}
+```
+
+---
+
+## Session Replay Infrastructure
+
+The session replay system records complete session traces for reproducibility, debugging, and training. It captures inputs, execution traces, and outputs with verification hashes.
+
+### What Gets Recorded
+
+**Inputs** (deterministic):
+- Kickoff configuration (thread_id, question, excerpt, operators)
+- External evidence summaries
+- Agent roster with role assignments
+- Protocol versions
+
+**Trace** (execution):
+- Rounds with message traces
+- Content hashes (SHA256) for verification
+- Operator interventions
+- Timing information
+
+**Outputs**:
+- Final artifact hash
+- Lint results
+- Artifact counts (hypotheses, tests, assumptions, etc.)
+- Scorecard results
+
+### Session Record Schema
+
+```typescript
+interface SessionRecord {
+  id: string;           // REC-RS20251230-1704067200
+  session_id: string;   // RS20251230
+  created_at: string;
+  inputs: SessionInputs;
+  trace: SessionTrace;
+  outputs: SessionOutputs;
+  schema_version: string;
+}
+```
+
+### Replay Modes
+
+| Mode | Purpose |
+|------|---------|
+| `verification` | Re-run with same agents to verify outputs match |
+| `comparison` | Re-run with different agents to compare |
+| `trace` | Step through recorded messages without re-running |
+
+### Divergence Detection
+
+When replaying, the system detects divergences:
+
+| Severity | Meaning |
+|----------|---------|
+| `none` | Identical or semantically equivalent |
+| `minor` | Slight wording differences, same meaning |
+| `moderate` | Different approach, similar conclusions |
+| `major` | Fundamentally different conclusions |
+
+### Usage
+
+```typescript
+import {
+  createEmptySessionRecord,
+  createTraceMessage,
+  validateSessionRecord,
+  isReplayable
+} from "./lib/schemas/session-replay";
+
+// Create a session record
+const record = createEmptySessionRecord("RS20251230");
+
+// Add a trace message
+const message = await createTraceMessage(
+  "BlueLake",
+  "DELTA",
+  deltaContent,
+  { message_id: 42, subject: "H1 proposal" }
+);
+record.trace.rounds[0].messages.push(message);
+
+// Validate the record
+const result = validateSessionRecord(record);
+if (result.valid) {
+  console.log("Record is valid");
+}
+
+// Check if replayable
+if (isReplayable(record)) {
+  console.log("Session can be replayed");
+}
+```
