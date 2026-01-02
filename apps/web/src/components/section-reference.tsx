@@ -271,7 +271,7 @@ export function SectionReference({ sectionNumber, endNumber, title: propsTitle, 
       {/* Desktop Tooltip */}
       {portalContainer && createPortal(
         <AnimatePresence>
-          {isOpen && !isMobile && (
+          {isOpen && !isMobile && Object.keys(tooltipLayout.style).length > 0 && (
             <motion.div
               ref={tooltipRef}
               initial={{ opacity: 0, y: tooltipLayout.position === "top" ? 8 : -8, scale: 0.95 }}
