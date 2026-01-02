@@ -241,6 +241,109 @@ The following workflow successfully runs a complete Brenner Protocol session:
 
 ---
 
+## Viewing Agent Conversations
+
+### Using Agent Mail CLI (brenner.ts)
+
+View thread summary and messages:
+```bash
+# View thread summary with participants and key points
+./brenner.ts mail thread --project-key /data/projects/bio_inspired_nanochat \
+  --thread-id RS-20260102-bio-nanochat-rrp
+
+# Check inbox for a specific agent
+./brenner.ts mail inbox --project-key /data/projects/bio_inspired_nanochat \
+  --agent BlueLake --threads
+```
+
+### Using ntm (Named Tmux Manager)
+
+If agents are running in tmux panes, you can view and interact with them:
+```bash
+# List active sessions
+ntm list
+
+# View pane output for a session
+ntm --robot-tail=RS-20260102-bio-nanochat-rrp --lines=50
+
+# Send a message to all agent panes
+ntm send RS-20260102-bio-nanochat-rrp --all "Please respond to the kickoff message"
+
+# Get session state in JSON format
+ntm --robot-status
+```
+
+### Using Agent Mail MCP Tools Directly
+
+From within Claude Code or another MCP-enabled client:
+```
+# Get thread summary
+mcp__mcp-agent-mail__summarize_thread(project_key, thread_id)
+
+# Fetch inbox for an agent
+mcp__mcp-agent-mail__fetch_inbox(project_key, agent_name)
+
+# Search messages
+mcp__mcp-agent-mail__search_messages(project_key, query)
+```
+
+---
+
+## Sample Kickoff Message Sent
+
+The following kickoff prompt was sent to agents BlueLake and PurpleMountain:
+
+```markdown
+# Kickoff Pack: Bio-Inspired Nanochat (Round 0)
+
+Bead: `brenner_bot-5so.10.2.1`
+Target repo: `/data/projects/bio_inspired_nanochat`
+
+## Research Question (Discriminative)
+
+In Bio-Inspired Nanochat, is **presynaptic vesicle depletion** (RRP clamping)
+functionally distinguishable from an ordinary **frequency penalty / logit bias**?
+If yes, what minimal experiments separate the two?
+
+### Working hypotheses (include third alternative)
+
+- **H1 (Equivalence):** RRP clamping is effectively a tuned frequency penalty;
+  any apparent gains are regularization/cost tradeoffs.
+- **H2 (Mechanistic):** RRP clamping creates *context-/edge-dependent fatigue*
+  that changes attention dynamics in ways a token-count penalty can't reproduce.
+- **H3 (Misspecification):** any "wins" are artifacts (metric confound,
+  sampling/seed effects, compute/capacity mismatch, or evaluation leakage).
+
+## Ranked Discriminative Tests (Cheap → Expensive)
+
+1. **Matched-baseline equivalence test:** Replace RRP clamping with an explicit
+   frequency penalty tuned to match *repetition rate*
+2. **Context-sensitivity test:** Construct prompts with similar token-frequency
+   but different attention structure
+3. **Ablation matrix:** vanilla vs presynaptic-only vs vanilla+freq_penalty
+4. **Mechanistic readout:** Instrument RRP mean/var over time
+5. **Digital handle toy task:** Synthetic prompt requiring controlled repetition
+6. **Failure-mode audit:** Look for over-fatigue pathologies
+
+## Brenner Anchors (Selected)
+
+> **§99**: "Well, I'll do a quickie." — *Pilot experiment to de-risk*
+> **§103**: "You've forgotten there's a third alternative… 'Both could be wrong'"
+> **§106**: "Occam's Broom… the minimum number of facts swept under the carpet"
+```
+
+### Thread Summary
+
+| Field | Value |
+|-------|-------|
+| Thread ID | RS-20260102-bio-nanochat-rrp |
+| Messages Sent | 2 |
+| Participants | IvoryMoose (sender) |
+| Recipients | BlueLake, PurpleMountain |
+| Status | Awaiting responses |
+
+---
+
 ## Conclusion
 
 The BrennerBot system is **fully functional** for running structured research sessions. The core workflow of:
