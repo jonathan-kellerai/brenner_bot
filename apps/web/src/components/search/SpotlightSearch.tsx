@@ -96,7 +96,7 @@ export function SpotlightSearch({ isOpen, onClose }: SpotlightSearchProps) {
 
   // Perform search when debounced query changes
   React.useEffect(() => {
-    if (!debouncedQuery) {
+    if (!debouncedQuery.trim()) {
       setResults(null);
       setSelectedIndex(0);
       setIsSearching(false);

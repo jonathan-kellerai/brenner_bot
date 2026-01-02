@@ -240,6 +240,19 @@ describe("SpotlightSearch", () => {
       });
     });
 
+    it("does not search for whitespace-only queries", async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+
+      render(<SpotlightSearch isOpen={true} onClose={vi.fn()} />);
+
+      const input = screen.getByPlaceholderText(/search transcript/i);
+      await user.type(input, "   ");
+
+      await vi.advanceTimersByTimeAsync(200);
+
+      expect(mockSearchAction).not.toHaveBeenCalled();
+    });
+
     it("cancels pending search when query changes", async () => {
       const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
       mockSearchAction.mockResolvedValue(createSearchResult("brenner", []));
