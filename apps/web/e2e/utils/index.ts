@@ -5,7 +5,7 @@
  */
 
 // Enhanced test fixtures with logging
-export { test, expect } from "./test-fixtures";
+export { test, expect, type TestSessionFixture } from "./test-fixtures";
 
 // Navigation and interaction helpers
 export {
@@ -52,3 +52,19 @@ export {
   filterViolationsByImpact,
   formatViolations,
 } from "./a11y-testing";
+
+// Agent Mail test seeding
+export {
+  getTestServer,
+  getTestServerUrl,
+  stopTestServer,
+  resetTestServer,
+  seedTestSession,
+  cleanupTestSession,
+  createKickoffSession,
+  createSessionWithDeltas,
+  createSessionWithArtifact,
+  type SessionConfig,
+  type SeededMessage,
+  type SeededAgent,
+} from "./agent-mail-seeder";

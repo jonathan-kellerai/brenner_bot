@@ -18,12 +18,41 @@ import {
   attachNetworkLogsToTest,
   clearNetworkContext,
 } from "./network-logging";
+// Lazy import to avoid loading agent-mail-seeder during config phase
+// This prevents Playwright from trying to load test server code during test discovery
+type AgentMailSeederModule = typeof import("./agent-mail-seeder");
+let agentMailSeeder: AgentMailSeederModule | null = null;
+
+async function getAgentMailSeeder(): Promise<AgentMailSeederModule> {
+  if (!agentMailSeeder) {
+    agentMailSeeder = await import("./agent-mail-seeder");
+  }
+  return agentMailSeeder;
+}
+
+// Re-export SessionConfig type for consumers
+export type { SessionConfig } from "./agent-mail-seeder";
 
 /**
- * Extended test fixtures with logging.
+ * Test session fixture for Agent Mail integration.
+ */
+export interface TestSessionFixture {
+  /** Seed a test session with messages */
+  seed: (config: SessionConfig) => Promise<void>;
+  /** Clean up a seeded session */
+  cleanup: (threadId: string) => Promise<void>;
+  /** Get the test server URL */
+  getServerUrl: () => string;
+  /** List of seeded session thread IDs for cleanup */
+  seededSessions: string[];
+}
+
+/**
+ * Extended test fixtures with logging and Agent Mail test session support.
  */
 export const test = base.extend<{
   logger: ReturnType<typeof createE2ELogger>;
+  testSession: TestSessionFixture;
 }>({
   logger: async ({ page }, provideLogger, testInfo) => {
     const logger = createE2ELogger(testInfo.title);
@@ -57,6 +86,36 @@ export const test = base.extend<{
     // Clean up
     clearTestContext(testInfo.title);
     clearNetworkContext(testInfo.title);
+  },
+
+  testSession: async ({}, use) => {
+    // Ensure test server is running
+    await getTestServer();
+
+    const seededSessions: string[] = [];
+
+    const fixture: TestSessionFixture = {
+      seed: async (config: SessionConfig) => {
+        seededSessions.push(config.threadId);
+        await seedTestSession(config);
+      },
+      cleanup: async (threadId: string) => {
+        await cleanupTestSession(threadId);
+      },
+      getServerUrl: () => getTestServerUrl(),
+      seededSessions,
+    };
+
+    // Provide the fixture
+    await use(fixture);
+
+    // Cleanup after test
+    for (const threadId of seededSessions) {
+      await cleanupTestSession(threadId);
+    }
+
+    // Reset server state for next test
+    resetTestServer();
   },
 });
 
