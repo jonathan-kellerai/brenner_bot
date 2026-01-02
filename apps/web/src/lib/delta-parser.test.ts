@@ -75,6 +75,35 @@ Some prose explanation here.
     });
   });
 
+  it("parses :::delta blocks", () => {
+    const body = `
+:::delta
+{
+  "operation": "ADD",
+  "section": "hypothesis_slate",
+  "target_id": null,
+  "payload": {
+    "name": "Alt Fence Hypothesis",
+    "claim": "X causes Y",
+    "mechanism": "Via Z"
+  }
+}
+:::
+`;
+
+    const result = parseDeltaMessage(body);
+
+    expect(result.totalBlocks).toBe(1);
+    expect(result.validCount).toBe(1);
+    expect(result.invalidCount).toBe(0);
+    expect(result.deltas[0]).toMatchObject({
+      valid: true,
+      operation: "ADD",
+      section: "hypothesis_slate",
+      target_id: null,
+    });
+  });
+
   it("parses a valid EDIT delta with target_id", () => {
     const body = `
 \`\`\`delta

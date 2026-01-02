@@ -302,16 +302,22 @@ function validateDelta(raw: unknown, rawJson: string): ParsedDelta {
 // ============================================================================
 
 /**
- * Regular expression to find fenced code blocks with `delta` language tag.
+ * Regular expression to find fenced delta blocks.
  *
- * Matches:
+ * Matches either:
  * ```delta
  * { ... }
  * ```
  *
+ * or
+ *
+ * :::delta
+ * { ... }
+ * :::
+ *
  * Captures the content between the fences.
  */
-const DELTA_BLOCK_REGEX = /```delta\s*\r?\n([\s\S]*?)```/g;
+const DELTA_BLOCK_REGEX = /```delta\s*\r?\n([\s\S]*?)```|:::delta\s*\r?\n([\s\S]*?):::/g;
 
 /**
  * Extract all delta blocks from a markdown message body.
@@ -327,7 +333,7 @@ function extractDeltaBlocks(body: string): string[] {
   DELTA_BLOCK_REGEX.lastIndex = 0;
 
   while ((match = DELTA_BLOCK_REGEX.exec(body)) !== null) {
-    const content = match[1]?.trim();
+    const content = (match[1] ?? match[2])?.trim();
     if (content) {
       blocks.push(content);
     }

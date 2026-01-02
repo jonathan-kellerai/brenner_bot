@@ -489,9 +489,12 @@ export async function POST(
       );
     }
 
-    if (!/```delta\s*\r?\n[\s\S]*?```/m.test(bodyMd)) {
+    const hasDeltaFence =
+      /```delta\s*\r?\n[\s\S]*?```/m.test(bodyMd) ||
+      /:::delta\s*\r?\n[\s\S]*?:::/m.test(bodyMd);
+    if (!hasDeltaFence) {
       return NextResponse.json(
-        { success: false, error: "bodyMd must include at least one ```delta fenced block", code: "VALIDATION_ERROR" },
+        { success: false, error: "bodyMd must include at least one ```delta or :::delta fenced block", code: "VALIDATION_ERROR" },
         { status: 400 }
       );
     }
