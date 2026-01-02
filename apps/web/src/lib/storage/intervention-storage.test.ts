@@ -1,0 +1,426 @@
+/**
+ * Tests for Operator Intervention Storage Layer
+ *
+ * @see intervention-storage.ts
+ * @see brenner_bot-mqg7 (bead)
+ */
+
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { promises as fs } from "fs";
+import { join } from "path";
+import { tmpdir } from "os";
+import { InterventionStorage } from "./intervention-storage";
+import type { OperatorIntervention } from "../schemas/operator-intervention";
+
+// ============================================================================
+// Test Helpers
+// ============================================================================
+
+function makeIntervention(
+  overrides: Partial<OperatorIntervention> = {}
+): OperatorIntervention {
+  return {
+    id: "INT-TEST-001",
+    session_id: "TEST",
+    timestamp: "2025-12-30T10:00:00+00:00",
+    operator_id: "human",
+    type: "artifact_edit",
+    severity: "minor",
+    target: {},
+    rationale: "Test intervention for unit testing",
+    reversible: true,
+    tags: [],
+    ...overrides,
+  };
+}
+
+async function createTempDir(): Promise<string> {
+  const tempDir = join(tmpdir(), `intervention-test-${Date.now()}`);
+  await fs.mkdir(tempDir, { recursive: true });
+  return tempDir;
+}
+
+async function cleanupTempDir(dir: string): Promise<void> {
+  try {
+    await fs.rm(dir, { recursive: true, force: true });
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+// ============================================================================
+// Tests: Basic Operations
+// ============================================================================
+
+describe("InterventionStorage", () => {
+  let tempDir: string;
+  let storage: InterventionStorage;
+
+  beforeEach(async () => {
+    tempDir = await createTempDir();
+    storage = new InterventionStorage({ baseDir: tempDir });
+  });
+
+  afterEach(async () => {
+    await cleanupTempDir(tempDir);
+  });
+
+  describe("Session File Operations", () => {
+    it("returns empty array for non-existent session", async () => {
+      const interventions = await storage.loadSessionInterventions("NONEXISTENT");
+      expect(interventions).toEqual([]);
+    });
+
+    it("saves and loads session interventions", async () => {
+      const intervention = makeIntervention();
+      await storage.saveSessionInterventions("TEST", [intervention]);
+
+      const loaded = await storage.loadSessionInterventions("TEST");
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].id).toBe("INT-TEST-001");
+    });
+
+    it("preserves createdAt on update", async () => {
+      const intervention = makeIntervention();
+      await storage.saveSessionInterventions("TEST", [intervention]);
+
+      // Wait a bit and save again
+      await new Promise((r) => setTimeout(r, 10));
+      const intervention2 = makeIntervention({ id: "INT-TEST-002" });
+      await storage.saveSessionInterventions("TEST", [intervention, intervention2]);
+
+      // Read raw file to check timestamps
+      const filePath = join(tempDir, ".research", "interventions", "TEST-interventions.json");
+      const content = await fs.readFile(filePath, "utf-8");
+      const data = JSON.parse(content);
+
+      expect(data.createdAt).not.toBe(data.updatedAt);
+      expect(new Date(data.updatedAt).getTime()).toBeGreaterThan(
+        new Date(data.createdAt).getTime()
+      );
+    });
+  });
+
+  describe("Individual Operations", () => {
+    it("gets intervention by ID", async () => {
+      const intervention = makeIntervention();
+      await storage.saveIntervention(intervention);
+
+      const found = await storage.getInterventionById("INT-TEST-001");
+      expect(found).not.toBeNull();
+      expect(found?.id).toBe("INT-TEST-001");
+    });
+
+    it("returns null for non-existent ID", async () => {
+      const found = await storage.getInterventionById("INT-FAKE-999");
+      expect(found).toBeNull();
+    });
+
+    it("updates existing intervention", async () => {
+      const intervention = makeIntervention();
+      await storage.saveIntervention(intervention);
+
+      const updated = {
+        ...intervention,
+        rationale: "Updated rationale for testing",
+      };
+      await storage.saveIntervention(updated);
+
+      const loaded = await storage.loadSessionInterventions("TEST");
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].rationale).toBe("Updated rationale for testing");
+    });
+
+    it("deletes intervention by ID", async () => {
+      const intervention = makeIntervention();
+      await storage.saveIntervention(intervention);
+
+      const deleted = await storage.deleteIntervention("INT-TEST-001");
+      expect(deleted).toBe(true);
+
+      const loaded = await storage.loadSessionInterventions("TEST");
+      expect(loaded).toHaveLength(0);
+    });
+
+    it("returns false when deleting non-existent intervention", async () => {
+      const deleted = await storage.deleteIntervention("INT-FAKE-999");
+      expect(deleted).toBe(false);
+    });
+
+    it("gets next sequence number", async () => {
+      const seq1 = await storage.getNextSequence("TEST");
+      expect(seq1).toBe(1);
+
+      await storage.saveIntervention(makeIntervention());
+      const seq2 = await storage.getNextSequence("TEST");
+      expect(seq2).toBe(2);
+    });
+  });
+
+  describe("Index Operations", () => {
+    it("rebuilds index with entries", async () => {
+      await storage.saveIntervention(makeIntervention());
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-002",
+          severity: "major",
+          type: "decision_override",
+        })
+      );
+
+      const index = await storage.loadIndex();
+      expect(index.entries).toHaveLength(2);
+      expect(index.entries.map((e) => e.id)).toContain("INT-TEST-001");
+      expect(index.entries.map((e) => e.id)).toContain("INT-TEST-002");
+    });
+
+    it("index includes correct metadata", async () => {
+      await storage.saveIntervention(
+        makeIntervention({
+          severity: "critical",
+          type: "session_control",
+          operator_id: "admin",
+        })
+      );
+
+      const index = await storage.loadIndex();
+      const entry = index.entries[0];
+
+      expect(entry.severity).toBe("critical");
+      expect(entry.type).toBe("session_control");
+      expect(entry.operatorId).toBe("admin");
+      expect(entry.reversed).toBe(false);
+    });
+
+    it("marks reversed interventions in index", async () => {
+      await storage.saveIntervention(
+        makeIntervention({
+          reversed_at: "2025-12-30T11:00:00+00:00",
+          reversed_by: "admin",
+        })
+      );
+
+      const index = await storage.loadIndex();
+      expect(index.entries[0].reversed).toBe(true);
+    });
+  });
+
+  describe("Query Operations", () => {
+    beforeEach(async () => {
+      // Set up test data
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-001",
+          severity: "minor",
+          type: "artifact_edit",
+          operator_id: "alice",
+        })
+      );
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-002",
+          severity: "major",
+          type: "decision_override",
+          operator_id: "bob",
+        })
+      );
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-003",
+          severity: "critical",
+          type: "session_control",
+          operator_id: "alice",
+        })
+      );
+    });
+
+    it("gets interventions by severity", async () => {
+      const minor = await storage.getInterventionsBySeverity("minor");
+      expect(minor).toHaveLength(1);
+      expect(minor[0].id).toBe("INT-TEST-001");
+
+      const major = await storage.getInterventionsBySeverity("major");
+      expect(major).toHaveLength(1);
+      expect(major[0].id).toBe("INT-TEST-002");
+    });
+
+    it("gets interventions by type", async () => {
+      const edits = await storage.getInterventionsByType("artifact_edit");
+      expect(edits).toHaveLength(1);
+
+      const control = await storage.getInterventionsByType("session_control");
+      expect(control).toHaveLength(1);
+    });
+
+    it("gets interventions by operator", async () => {
+      const alice = await storage.getInterventionsByOperator("alice");
+      expect(alice).toHaveLength(2);
+
+      const bob = await storage.getInterventionsByOperator("bob");
+      expect(bob).toHaveLength(1);
+    });
+
+    it("gets major interventions", async () => {
+      const major = await storage.getMajorInterventions();
+      expect(major).toHaveLength(2); // major + critical
+      expect(major.map((i) => i.severity).sort()).toEqual(["critical", "major"]);
+    });
+  });
+
+  describe("Aggregation Operations", () => {
+    it("returns empty summary for session with no interventions", async () => {
+      const summary = await storage.getSessionSummary("EMPTY");
+      expect(summary.total_count).toBe(0);
+      expect(summary.has_major_interventions).toBe(false);
+    });
+
+    it("returns correct session summary", async () => {
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-TEST-001", severity: "minor" })
+      );
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-TEST-002", severity: "major" })
+      );
+
+      const summary = await storage.getSessionSummary("TEST");
+      expect(summary.total_count).toBe(2);
+      expect(summary.by_severity.minor).toBe(1);
+      expect(summary.by_severity.major).toBe(1);
+      expect(summary.has_major_interventions).toBe(true);
+    });
+
+    it("identifies clean sessions", async () => {
+      await storage.saveIntervention(
+        makeIntervention({ severity: "minor" })
+      );
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-TEST-002", severity: "moderate" })
+      );
+
+      const isClean = await storage.isCleanSession("TEST");
+      expect(isClean).toBe(true);
+    });
+
+    it("identifies non-clean sessions", async () => {
+      await storage.saveIntervention(
+        makeIntervention({ severity: "critical" })
+      );
+
+      const isClean = await storage.isCleanSession("TEST");
+      expect(isClean).toBe(false);
+    });
+  });
+
+  describe("Statistics", () => {
+    it("computes correct statistics", async () => {
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-001",
+          severity: "minor",
+          type: "artifact_edit",
+          operator_id: "alice",
+        })
+      );
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-002",
+          severity: "major",
+          type: "decision_override",
+          operator_id: "bob",
+          reversed_at: "2025-12-30T12:00:00+00:00",
+        })
+      );
+
+      const stats = await storage.getStatistics();
+
+      expect(stats.total).toBe(2);
+      expect(stats.bySeverity.minor).toBe(1);
+      expect(stats.bySeverity.major).toBe(1);
+      expect(stats.byType.artifact_edit).toBe(1);
+      expect(stats.byType.decision_override).toBe(1);
+      expect(stats.reversed).toBe(1);
+      expect(stats.sessionsWithInterventions).toBe(1);
+      expect(stats.operators).toEqual(["alice", "bob"]);
+    });
+  });
+
+  describe("Bulk Operations", () => {
+    it("gets all interventions across sessions", async () => {
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-S1-001", session_id: "S1" })
+      );
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-S2-001", session_id: "S2" })
+      );
+
+      const all = await storage.getAllInterventions();
+      expect(all).toHaveLength(2);
+    });
+
+    it("lists all session IDs with interventions", async () => {
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-S1-001", session_id: "S1" })
+      );
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-S2-001", session_id: "S2" })
+      );
+
+      const sessions = await storage.listSessions();
+      expect(sessions.sort()).toEqual(["S1", "S2"]);
+    });
+
+    it("gets interventions in time range", async () => {
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-001",
+          timestamp: "2025-12-30T08:00:00+00:00",
+        })
+      );
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-002",
+          timestamp: "2025-12-30T10:00:00+00:00",
+        })
+      );
+      await storage.saveIntervention(
+        makeIntervention({
+          id: "INT-TEST-003",
+          timestamp: "2025-12-30T12:00:00+00:00",
+        })
+      );
+
+      const inRange = await storage.getInterventionsInRange(
+        "2025-12-30T09:00:00+00:00",
+        "2025-12-30T11:00:00+00:00"
+      );
+
+      expect(inRange).toHaveLength(1);
+      expect(inRange[0].id).toBe("INT-TEST-002");
+    });
+  });
+
+  describe("Edge Cases", () => {
+    it("handles session IDs with special characters", async () => {
+      const sessionId = "RS-2025/12/30";
+      await storage.saveIntervention(
+        makeIntervention({ id: "INT-RS-2025_12_30-001", session_id: sessionId })
+      );
+
+      const loaded = await storage.loadSessionInterventions(sessionId);
+      expect(loaded).toHaveLength(1);
+    });
+
+    it("validates interventions on load", async () => {
+      const intervention = makeIntervention();
+      await storage.saveIntervention(intervention);
+
+      const loaded = await storage.loadSessionInterventions("TEST");
+      expect(loaded[0]).toMatchObject({
+        id: intervention.id,
+        session_id: intervention.session_id,
+        type: intervention.type,
+        severity: intervention.severity,
+      });
+    });
+  });
+});

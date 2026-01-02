@@ -9,6 +9,7 @@
 import { describe, expect, test } from "vitest";
 import {
   createEmptyArtifact,
+  createInterventionMetadata,
   extractReferences,
   formatLintReportHuman,
   formatLintReportJson,
@@ -19,6 +20,10 @@ import {
   validateArtifact,
   type Reference,
 } from "./artifact-merge";
+import {
+  createEmptyInterventionSummary,
+  type InterventionSummary,
+} from "./schemas/operator-intervention";
 import { type ValidDelta, type DeltaSection } from "./delta-parser";
 
 // ============================================================================
@@ -1928,6 +1933,76 @@ describe("formatDiffHuman", () => {
 
     expect(output).toContain("No significant changes");
   });
+
+  test("formats anomaly promoted and dismissed correctly", () => {
+    const v1 = createEmptyArtifact("TEST-ANOMALY-FORMAT");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly1", observation: "Obs1", conflicts_with: [], status: "active" },
+      { id: "X2", name: "Anomaly2", observation: "Obs2", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-ANOMALY-FORMAT");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      {
+        id: "X1",
+        name: "Anomaly1",
+        observation: "Obs1",
+        conflicts_with: [],
+        status: "resolved",
+        resolution_plan: "Promoted to H5",
+      },
+      { id: "X2", name: "Anomaly2", observation: "Obs2", conflicts_with: [], status: "deferred" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+
+    expect(output).toContain("ANOMALIES");
+    expect(output).toContain("↑ [X1] PROMOTED to");
+    expect(output).toContain("○ [X2] dismissed:");
+  });
+
+  test("formats summary with anomalies_resolved count", () => {
+    const v1 = createEmptyArtifact("TEST-ANOMALY-SUMMARY");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly1", observation: "Obs", conflicts_with: [], status: "active" },
+      { id: "X2", name: "Anomaly2", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-ANOMALY-SUMMARY");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly1", observation: "Obs", conflicts_with: [], status: "resolved", resolution_plan: "Explained by H3" },
+      { id: "X2", name: "Anomaly2", observation: "Obs", conflicts_with: [], status: "deferred" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+
+    expect(output).toContain("2 anomalies resolved");
+  });
+
+  test("formats single anomaly resolved with correct pluralization", () => {
+    const v1 = createEmptyArtifact("TEST-ANOMALY-SINGLE");
+    v1.metadata.version = 1;
+    v1.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly1", observation: "Obs", conflicts_with: [], status: "active" },
+    ];
+
+    const v2 = createEmptyArtifact("TEST-ANOMALY-SINGLE");
+    v2.metadata.version = 2;
+    v2.sections.anomaly_register = [
+      { id: "X1", name: "Anomaly1", observation: "Obs", conflicts_with: [], status: "resolved", resolution_plan: "Explained" },
+    ];
+
+    const diff = diffArtifacts(v1, v2);
+    const output = formatDiffHuman(diff);
+
+    expect(output).toContain("1 anomaly resolved");
+  });
 });
 
 describe("formatDiffJson", () => {
@@ -2721,5 +2796,63 @@ describe("Cross-Session References", () => {
       const refWarnings = warnings.filter((w) => w.code === "INVALID_REFERENCE");
       expect(refWarnings).toHaveLength(0);
     });
+  });
+});
+
+// ============================================================================
+// Intervention Metadata
+// ============================================================================
+
+describe("createInterventionMetadata", () => {
+  test("creates metadata from empty summary", () => {
+    const summary = createEmptyInterventionSummary();
+    const metadata = createInterventionMetadata(summary);
+
+    expect(metadata.count).toBe(0);
+    expect(metadata.has_major).toBe(false);
+    expect(metadata.by_severity).toEqual({
+      minor: 0,
+      moderate: 0,
+      major: 0,
+      critical: 0,
+    });
+    expect(metadata.operators).toBeUndefined();
+  });
+
+  test("creates metadata with intervention counts", () => {
+    const summary: InterventionSummary = {
+      total_count: 5,
+      by_severity: { minor: 2, moderate: 1, major: 1, critical: 1 },
+      by_type: {
+        artifact_edit: 2,
+        delta_exclusion: 1,
+        delta_injection: 1,
+        decision_override: 0,
+        session_control: 1,
+        role_reassignment: 0,
+      },
+      has_major_interventions: true,
+      operators: ["alice", "bob"],
+      first_intervention_at: "2025-12-30T10:00:00+00:00",
+      last_intervention_at: "2025-12-30T14:00:00+00:00",
+    };
+
+    const metadata = createInterventionMetadata(summary);
+
+    expect(metadata.count).toBe(5);
+    expect(metadata.has_major).toBe(true);
+    expect(metadata.by_severity?.minor).toBe(2);
+    expect(metadata.by_severity?.critical).toBe(1);
+    expect(metadata.operators).toEqual(["alice", "bob"]);
+  });
+
+  test("omits operators when empty", () => {
+    const summary = createEmptyInterventionSummary();
+    summary.total_count = 1;
+    summary.by_severity.minor = 1;
+
+    const metadata = createInterventionMetadata(summary);
+
+    expect(metadata.operators).toBeUndefined();
   });
 });

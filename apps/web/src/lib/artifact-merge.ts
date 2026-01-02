@@ -20,6 +20,7 @@
  */
 
 import { type ValidDelta, type DeltaSection, generateNextId } from "./delta-parser";
+import { type InterventionSummary } from "./schemas/operator-intervention";
 
 // ============================================================================
 // Types
@@ -44,6 +45,23 @@ export interface ResearchProgram {
   program_status?: ResearchProgramStatus;
 }
 
+/** Intervention summary for compiled artifacts */
+export interface InterventionMetadata {
+  /** Total number of operator interventions */
+  count: number;
+  /** Whether any major/critical interventions occurred */
+  has_major: boolean;
+  /** Count by severity level */
+  by_severity?: {
+    minor: number;
+    moderate: number;
+    major: number;
+    critical: number;
+  };
+  /** List of operators who intervened */
+  operators?: string[];
+}
+
 /** Artifact metadata header */
 export interface ArtifactMetadata {
   session_id: string;
@@ -53,6 +71,8 @@ export interface ArtifactMetadata {
   contributors: Contributor[];
   status: "draft" | "active" | "closed";
   research_program?: ResearchProgram;
+  /** Operator intervention summary (populated during compile) */
+  interventions?: InterventionMetadata;
 }
 
 /** Base interface for all artifact items */
@@ -1046,6 +1066,26 @@ export function validateArtifact(artifact: Artifact): MergeWarning[] {
   }
 
   return warnings;
+}
+
+/**
+ * Create intervention metadata for artifact from an intervention summary.
+ * Used when compiling artifacts to include intervention audit trail info.
+ */
+export function createInterventionMetadata(
+  summary: InterventionSummary
+): InterventionMetadata {
+  return {
+    count: summary.total_count,
+    has_major: summary.has_major_interventions,
+    by_severity: {
+      minor: summary.by_severity.minor,
+      moderate: summary.by_severity.moderate,
+      major: summary.by_severity.major,
+      critical: summary.by_severity.critical,
+    },
+    operators: summary.operators.length > 0 ? summary.operators : undefined,
+  };
 }
 
 // ============================================================================
