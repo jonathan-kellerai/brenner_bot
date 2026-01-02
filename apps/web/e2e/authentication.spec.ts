@@ -125,8 +125,8 @@ test.describe("Authentication Flows", () => {
 
         logger.info(`${route.name} response status: ${status}`);
 
-        // Public routes should return 200
-        expect(status).toBe(200);
+        // Public routes should return 200 or 304 (Not Modified - cached)
+        expect([200, 304]).toContain(status);
 
         // Should have actual content (not blank)
         await assertPageHasContent(page, logger, 100);

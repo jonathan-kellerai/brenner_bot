@@ -192,6 +192,7 @@ export async function fillInput(
 
 /**
  * Helper: Take a screenshot and log.
+ * Screenshot failures are logged as warnings, not errors - they're diagnostic, not critical.
  */
 export async function takeScreenshot(
   page: Page,
@@ -200,10 +201,30 @@ export async function takeScreenshot(
   options?: { fullPage?: boolean }
 ): Promise<void> {
   await withStep(logger, page, `Screenshot: ${name}`, async () => {
-    await page.screenshot({
-      path: `./screenshots/${name}.png`,
-      fullPage: options?.fullPage ?? true,
-    });
+    const fullPage = options?.fullPage ?? true;
+    try {
+      await page.screenshot({
+        path: `./screenshots/${name}.png`,
+        fullPage,
+      });
+    } catch (err) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      // If fullPage screenshot fails due to size, try viewport only
+      if (fullPage && errMessage.includes("32767")) {
+        logger.warn(`Full page screenshot too large, falling back to viewport`);
+        try {
+          await page.screenshot({
+            path: `./screenshots/${name}.png`,
+            fullPage: false,
+          });
+        } catch {
+          logger.warn(`Screenshot failed (viewport fallback): ${name}`);
+        }
+      } else {
+        // Log other screenshot failures as warnings, don't fail the test
+        logger.warn(`Screenshot failed: ${name} - ${errMessage}`);
+      }
+    }
   });
 }
 
