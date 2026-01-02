@@ -471,7 +471,7 @@ function SearchResultItem({
       onKeyDown={handleKeyDown}
       role="button"
       tabIndex={0}
-      aria-selected={isSelected}
+      aria-current={isSelected ? "true" : undefined}
       className={cn(
         "w-full flex items-start gap-3 px-3 py-2.5 sm:py-3 rounded-xl text-left transition-all",
         isSelected
@@ -532,6 +532,11 @@ function SearchResultItem({
               "transition-all touch-manipulation",
               "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30"
             )}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.stopPropagation();
+              }
+            }}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
