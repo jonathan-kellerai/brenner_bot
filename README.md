@@ -2412,11 +2412,12 @@ const config: KickoffConfig = {
   researchQuestion: "How do cells determine their position?",
   context: "Investigating positional information encoding",
   excerpt: excerptMarkdown,
-  recipients: [
-    { name: "BlueLake", role: "hypothesis_generator" },
-    { name: "PurpleMountain", role: "test_designer" },
-    { name: "GreenValley", role: "adversarial_critic" },
-  ],
+  recipients: ["BlueLake", "PurpleMountain", "GreenValley"],
+  recipientRoles: {
+    BlueLake: "hypothesis_generator",
+    PurpleMountain: "test_designer",
+    GreenValley: "adversarial_critic",
+  },
 };
 
 const messages = composeKickoffMessages(config);
