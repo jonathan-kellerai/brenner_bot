@@ -2116,7 +2116,10 @@ The Next.js web app provides several views for browsing and analyzing research s
 | Route | Description |
 |-------|-------------|
 | `/` | Home page with search |
-| `/docs/[docId]` | Document viewer with anchor navigation |
+| `/corpus` | Corpus document listing |
+| `/corpus/[doc]` | Document viewer with anchor navigation |
+| `/distillations` | Model distillation summaries |
+| `/glossary` | Term definitions and Brenner vocabulary |
 
 ---
 
