@@ -6,16 +6,17 @@
  * Adapted from ACFS wizard step patterns.
  *
  * Provides:
- * - Step header with number, title, and time estimate
+ * - Step header with number, title, and time estimate (with float animation)
  * - Learning objectives and action checklist
  * - Main content area
  * - Collapsible "More details" and "Troubleshooting" sections
- * - Back/Next navigation footer
+ * - Back/Next navigation footer with directional hover animations
+ * - Stagger reveal animations for premium feel
  */
 
 import * as React from "react";
-import { motion } from "framer-motion";
-import { Sparkles, Clock, Check, BookOpen, Wrench, ChevronLeft, ChevronRight } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Sparkles, Clock, Check, BookOpen, Wrench, ChevronLeft, ChevronRight, Target, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialStep as TutorialStepType, TroubleshootingItem } from "@/lib/tutorial-types";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -143,6 +144,31 @@ function TroubleshootingSection({ items }: { items: TroubleshootingItem[] }) {
 }
 
 // ============================================================================
+// Animation Variants
+// ============================================================================
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.1,
+    },
+  },
+  exit: { opacity: 0, y: -20 },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: { type: "spring", stiffness: 300, damping: 25 },
+  },
+};
+
+// ============================================================================
 // Main Component
 // ============================================================================
 
@@ -156,32 +182,41 @@ export function TutorialStep({
   children,
   className,
 }: TutorialStepProps) {
+  const [isHoveringBack, setIsHoveringBack] = React.useState(false);
+  const [isHoveringNext, setIsHoveringNext] = React.useState(false);
+
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      variants={containerVariants}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       className={cn("space-y-6", className)}
     >
-      {/* Header */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="relative flex items-center justify-center size-12 rounded-xl bg-gradient-to-br from-primary/30 to-accent/30 shadow-lg shadow-primary/10">
-            <Sparkles className="size-5 text-primary" />
-          </div>
+      {/* Header with floating icon */}
+      <motion.div variants={itemVariants} className="space-y-2">
+        <div className="flex items-center gap-4">
+          <motion.div
+            className="relative flex items-center justify-center size-14 rounded-2xl bg-gradient-to-br from-primary/30 via-primary/20 to-accent/30 shadow-lg shadow-primary/20"
+            animate={{ y: [0, -4, 0] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          >
+            {/* Glow ring */}
+            <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/20 to-transparent animate-pulse" />
+            <Sparkles className="size-6 text-primary relative z-10" />
+          </motion.div>
           <div className="flex-1 min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground truncate">
               {step.title}
             </h1>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
-                <span className="font-mono text-primary">
+              <span className="flex items-center gap-1.5">
+                <span className="inline-flex items-center justify-center size-5 rounded-full bg-primary/20 text-primary font-mono text-xs font-bold">
                   {step.stepNumber}
                 </span>
                 <span>of {totalSteps}</span>
               </span>
-              <span className="opacity-50">·</span>
+              <span className="size-1 rounded-full bg-muted-foreground/30" />
               <span className="flex items-center gap-1">
                 <Clock className="size-3.5" />
                 {step.estimatedTime}
@@ -189,58 +224,98 @@ export function TutorialStep({
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Learning objectives */}
-      <LearningObjectives items={step.whatYouLearn} />
+      <motion.div variants={itemVariants}>
+        <LearningObjectives items={step.whatYouLearn} />
+      </motion.div>
 
       {/* Action checklist */}
-      <ActionChecklist items={step.whatYouDo} />
+      <motion.div variants={itemVariants}>
+        <ActionChecklist items={step.whatYouDo} />
+      </motion.div>
 
       {/* Main content */}
-      <div className="prose prose-sm dark:prose-invert max-w-none">
+      <motion.div variants={itemVariants} className="prose prose-sm dark:prose-invert max-w-none">
         {children}
-      </div>
+      </motion.div>
 
       {/* More details (if provided) */}
       {step.moreDetails && (
-        <Collapsible className="rounded-xl border border-border bg-muted/30">
-          <CollapsibleTrigger className="w-full px-4 py-3 flex items-center gap-3 text-left">
-            <span className="text-sm font-medium text-muted-foreground">More details</span>
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <div className="px-4 pb-4 text-sm text-muted-foreground">
-              {step.moreDetails}
-            </div>
-          </CollapsibleContent>
-        </Collapsible>
+        <motion.div variants={itemVariants}>
+          <Collapsible className="rounded-xl border border-border bg-muted/30 hover:border-border/80 transition-colors">
+            <CollapsibleTrigger className="w-full px-4 py-3 flex items-center gap-3 text-left group">
+              <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">More details</span>
+              <ChevronRight className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-90" />
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-4 pb-4 text-sm text-muted-foreground">
+                {step.moreDetails}
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
+        </motion.div>
       )}
 
       {/* Troubleshooting */}
       {step.troubleshooting && step.troubleshooting.length > 0 && (
-        <TroubleshootingSection items={step.troubleshooting} />
+        <motion.div variants={itemVariants}>
+          <TroubleshootingSection items={step.troubleshooting} />
+        </motion.div>
       )}
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between pt-6 border-t border-border">
-        <Button
-          variant="ghost"
-          onClick={onBack}
-          disabled={disableBack || !onBack}
-          className="text-muted-foreground hover:text-foreground"
+      {/* Navigation with directional hover animations */}
+      <motion.div
+        variants={itemVariants}
+        className="flex items-center justify-between pt-6 border-t border-border"
+      >
+        <motion.div
+          onHoverStart={() => setIsHoveringBack(true)}
+          onHoverEnd={() => setIsHoveringBack(false)}
         >
-          <ChevronLeft className="size-5 mr-1" />
-          Back
-        </Button>
+          <Button
+            variant="ghost"
+            onClick={onBack}
+            disabled={disableBack || !onBack}
+            className="text-muted-foreground hover:text-foreground group min-w-[100px]"
+          >
+            <motion.div
+              animate={{ x: isHoveringBack ? -4 : 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
+              <ChevronLeft className="size-5 mr-1" />
+            </motion.div>
+            <span>Back</span>
+          </Button>
+        </motion.div>
 
-        <Button
-          onClick={onNext}
-          disabled={disableNext || !onNext}
+        <motion.div
+          onHoverStart={() => setIsHoveringNext(true)}
+          onHoverEnd={() => setIsHoveringNext(false)}
         >
-          {step.stepNumber === totalSteps ? "Complete" : "Next"}
-          <ChevronRight className="size-5 ml-1" />
-        </Button>
-      </div>
+          <Button
+            onClick={onNext}
+            disabled={disableNext || !onNext}
+            className={cn(
+              "min-w-[120px] group",
+              step.stepNumber === totalSteps && "bg-[oklch(0.72_0.19_145)] hover:bg-[oklch(0.65_0.19_145)] text-[oklch(0.15_0.02_145)]"
+            )}
+          >
+            <span>{step.stepNumber === totalSteps ? "Complete" : "Next"}</span>
+            <motion.div
+              animate={{ x: isHoveringNext ? 4 : 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
+              {step.stepNumber === totalSteps ? (
+                <Check className="size-5 ml-1" />
+              ) : (
+                <ChevronRight className="size-5 ml-1" />
+              )}
+            </motion.div>
+          </Button>
+        </motion.div>
+      </motion.div>
     </motion.div>
   );
 }

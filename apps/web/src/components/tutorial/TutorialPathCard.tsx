@@ -9,12 +9,14 @@
  * - Difficulty and time estimates
  * - Hover animations with reduced motion support
  * - Mobile-friendly touch targets (44px minimum)
+ * - Desktop: Gradient border animation, subtle parallax on hover
+ * - Mobile: Strong press feedback with ripple effect
  */
 
 import * as React from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { Check, Lock, Play, Clock, ChevronRight, Rocket, Cpu, Users, Sparkles } from "lucide-react";
+import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { Check, Lock, Play, Clock, ChevronRight, Rocket, Cpu, Users, Sparkles, Zap, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialPath, DifficultyLevel } from "@/lib/tutorial-types";
 
@@ -106,9 +108,43 @@ export function TutorialPathCard({
   const config = statusConfig[status];
   const diffColors = difficultyColors[path.difficulty];
   const icon = pathIcons[path.id] || <Rocket className="size-6" />;
+  const cardRef = React.useRef<HTMLDivElement>(null);
+
+  // Parallax effect for desktop
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [4, -4]), {
+    stiffness: 300,
+    damping: 30,
+  });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-4, 4]), {
+    stiffness: 300,
+    damping: 30,
+  });
+
+  const handleMouseMove = React.useCallback(
+    (e: React.MouseEvent) => {
+      if (!cardRef.current || prefersReducedMotion || !isAccessible) return;
+
+      const rect = cardRef.current.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / rect.width - 0.5;
+      const y = (e.clientY - rect.top) / rect.height - 0.5;
+
+      mouseX.set(x);
+      mouseY.set(y);
+    },
+    [mouseX, mouseY, prefersReducedMotion, isAccessible]
+  );
+
+  const handleMouseLeave = React.useCallback(() => {
+    mouseX.set(0);
+    mouseY.set(0);
+  }, [mouseX, mouseY]);
 
   const cardContent = (
     <motion.div
+      ref={cardRef}
       initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={
@@ -118,64 +154,124 @@ export function TutorialPathCard({
       }
       whileHover={
         isAccessible && !prefersReducedMotion
-          ? { y: -6, scale: 1.02 }
+          ? { y: -8, scale: 1.02 }
           : undefined
       }
       whileTap={
-        isAccessible && !prefersReducedMotion ? { scale: 0.98 } : undefined
+        isAccessible && !prefersReducedMotion ? { scale: 0.97 } : undefined
+      }
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={
+        !prefersReducedMotion && isAccessible
+          ? { rotateX, rotateY, transformPerspective: 1000 }
+          : undefined
       }
       className="h-full"
     >
       <div
         className={cn(
-          "group relative h-full overflow-hidden rounded-2xl border p-5 sm:p-6 transition-all duration-300",
+          "group relative h-full overflow-hidden rounded-2xl border-2 p-5 sm:p-6 transition-all duration-300",
           config.border,
           config.bg,
           isAccessible
-            ? "cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10"
+            ? "cursor-pointer hover:border-primary/60 hover:shadow-xl hover:shadow-primary/15"
             : "cursor-not-allowed opacity-60",
           className
         )}
         style={{ minHeight: 44 }} // Touch target
       >
+        {/* Animated gradient border on hover (desktop) */}
+        {isAccessible && (
+          <div className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-500 group-hover:opacity-100">
+            <div className="absolute inset-[-2px] rounded-2xl bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] animate-[gradient-shift_3s_ease_infinite] -z-10" />
+            <div className="absolute inset-0 rounded-2xl bg-card" />
+          </div>
+        )}
+
         {/* Ambient glow on hover */}
         {isAccessible && (
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/5 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-accent/10 opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+        )}
+
+        {/* Spotlight effect following cursor (desktop only) */}
+        {isAccessible && (
+          <motion.div
+            className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 hidden sm:block"
+            style={{
+              background: `radial-gradient(600px circle at var(--mouse-x, 50%) var(--mouse-y, 50%), oklch(0.58 0.19 195 / 0.15), transparent 40%)`,
+            }}
+          />
         )}
 
         {/* Top gradient line for available/in_progress */}
         {(status === "available" || status === "in_progress") && (
-          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
+          <motion.div
+            className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-transparent via-primary to-transparent"
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ delay: 0.3, duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          />
         )}
 
-        {/* Recommended badge - premium inline style */}
+        {/* Recommended badge - premium inline style with sparkle */}
         {recommended && isAccessible && (
-          <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-semibold text-primary-foreground shadow-md">
-            <Sparkles className="size-3" />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={{ delay: 0.4, type: "spring", stiffness: 400, damping: 20 }}
+            className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] animate-[gradient-shift_3s_ease_infinite] px-3 py-1.5 text-xs font-semibold text-primary-foreground shadow-lg shadow-primary/25"
+          >
+            <motion.div
+              animate={{ rotate: [0, 15, -15, 0] }}
+              transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <Sparkles className="size-3.5" />
+            </motion.div>
             <span>Recommended</span>
-          </div>
+          </motion.div>
         )}
 
-        {/* Status indicator */}
+        {/* Status indicator with enhanced animation */}
         <div className="absolute right-4 top-4">
           <motion.div
+            initial={{ scale: 0, rotate: -180 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 400, damping: 20 }}
             className={cn(
-              "flex items-center justify-center size-8 rounded-full shadow-lg",
+              "relative flex items-center justify-center size-9 rounded-full shadow-lg",
               config.iconBg,
               config.iconText
             )}
-            animate={
-              config.pulse && !prefersReducedMotion
-                ? { scale: [1, 1.1, 1] }
-                : undefined
-            }
-            transition={
-              config.pulse && !prefersReducedMotion
-                ? { duration: 2, repeat: Infinity }
-                : undefined
-            }
           >
-            {config.icon}
+            {/* Glow ring for available status */}
+            {config.pulse && !prefersReducedMotion && (
+              <motion.div
+                className="absolute inset-0 rounded-full"
+                animate={{
+                  boxShadow: [
+                    "0 0 0 0 oklch(0.58 0.19 195 / 0.4)",
+                    "0 0 0 8px oklch(0.58 0.19 195 / 0)",
+                    "0 0 0 0 oklch(0.58 0.19 195 / 0.4)",
+                  ],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+              />
+            )}
+            <motion.div
+              animate={
+                config.pulse && !prefersReducedMotion
+                  ? { scale: [1, 1.15, 1] }
+                  : undefined
+              }
+              transition={
+                config.pulse && !prefersReducedMotion
+                  ? { duration: 2, repeat: Infinity, ease: "easeInOut" }
+                  : undefined
+              }
+            >
+              {config.icon}
+            </motion.div>
           </motion.div>
         </div>
 
@@ -246,9 +342,26 @@ export function TutorialPathCard({
           </div>
         )}
 
-        {/* Hover arrow */}
+        {/* Hover arrow with bounce animation */}
         {isAccessible && (
-          <ChevronRight className="absolute bottom-4 right-4 size-5 text-primary/40 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary group-hover:opacity-100" />
+          <motion.div
+            className="absolute bottom-4 right-4 flex items-center gap-1 text-primary/40 opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            initial={false}
+          >
+            <motion.span
+              className="text-xs font-medium hidden sm:block"
+              initial={{ opacity: 0, x: -10 }}
+              whileHover={{ opacity: 1, x: 0 }}
+            >
+              Start
+            </motion.span>
+            <motion.div
+              animate={{ x: [0, 4, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <ChevronRight className="size-5 text-primary" />
+            </motion.div>
+          </motion.div>
         )}
       </div>
     </motion.div>
@@ -298,6 +411,31 @@ export interface TutorialPathGridProps {
   className?: string;
 }
 
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.12,
+      delayChildren: 0.1,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 30, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: {
+      type: "spring",
+      stiffness: 300,
+      damping: 25,
+    },
+  },
+};
+
 export function TutorialPathGrid({
   paths,
   pathStatus,
@@ -306,7 +444,10 @@ export function TutorialPathGrid({
   className,
 }: TutorialPathGridProps) {
   return (
-    <div
+    <motion.div
+      variants={prefersReducedMotion ? undefined : containerVariants}
+      initial="hidden"
+      animate="visible"
       className={cn(
         "grid gap-4 sm:gap-6",
         paths.length <= 2
@@ -315,16 +456,10 @@ export function TutorialPathGrid({
         className
       )}
     >
-      {paths.map((path, index) => (
+      {paths.map((path) => (
         <motion.div
           key={path.id}
-          initial={prefersReducedMotion ? false : { opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={
-            prefersReducedMotion
-              ? { duration: 0 }
-              : { delay: index * 0.1, type: "spring", stiffness: 300, damping: 25 }
-          }
+          variants={prefersReducedMotion ? undefined : itemVariants}
         >
           <TutorialPathCard
             path={path}
@@ -334,7 +469,7 @@ export function TutorialPathGrid({
           />
         </motion.div>
       ))}
-    </div>
+    </motion.div>
   );
 }
 

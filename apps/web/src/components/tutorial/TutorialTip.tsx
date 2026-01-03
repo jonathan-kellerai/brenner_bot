@@ -91,6 +91,7 @@ export function TutorialTip({
   className,
 }: TutorialTipProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
+  const [isHovered, setIsHovered] = React.useState(false);
   const config = variantConfigs[variant];
 
   const displayTitle = title || config.defaultTitle;
@@ -111,27 +112,36 @@ export function TutorialTip({
     : { className: "flex items-center gap-3" };
 
   return (
-    <div
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
       className={cn(
-        "rounded-xl border p-4 transition-all duration-200",
+        "rounded-xl border p-4 transition-all duration-300",
         config.containerClass,
+        "hover:shadow-md hover:shadow-current/5",
+        isHovered && "translate-y-[-2px]",
         className
       )}
       role={variant === "warning" || variant === "important" ? "alert" : "note"}
     >
       <HeaderWrapper {...headerProps}>
-        {/* Icon */}
-        <div
+        {/* Icon with micro-animation on hover */}
+        <motion.div
           className={cn(
-            "flex items-center justify-center size-8 rounded-lg shrink-0",
+            "flex items-center justify-center size-8 rounded-lg shrink-0 transition-transform",
             config.iconContainerClass
           )}
+          animate={isHovered ? { scale: 1.1, rotate: variant === "pro" ? [0, -10, 10, 0] : 0 } : { scale: 1, rotate: 0 }}
+          transition={{ type: "spring", stiffness: 400, damping: 15 }}
         >
           {config.icon}
-        </div>
+        </motion.div>
 
         {/* Title */}
-        <span className={cn("font-semibold text-sm flex-1", config.titleClass)}>
+        <span className={cn("font-semibold text-sm flex-1 transition-colors", config.titleClass)}>
           {displayTitle}
         </span>
 
@@ -147,7 +157,7 @@ export function TutorialTip({
         )}
       </HeaderWrapper>
 
-      {/* Content */}
+      {/* Content with reveal animation */}
       {collapsible ? (
         <AnimatePresence initial={false}>
           {!isCollapsed && (
@@ -158,9 +168,15 @@ export function TutorialTip({
               transition={{ type: "spring", stiffness: 300, damping: 30 }}
               className="overflow-hidden"
             >
-              <div className="pt-3 pl-11 text-sm text-muted-foreground leading-relaxed">
+              <motion.div
+                initial={{ y: -10, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: -10, opacity: 0 }}
+                transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 25 }}
+                className="pt-3 pl-11 text-sm text-muted-foreground leading-relaxed"
+              >
                 {children}
-              </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
@@ -169,7 +185,7 @@ export function TutorialTip({
           {children}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 

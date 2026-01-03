@@ -105,7 +105,7 @@ describe("TutorialCodeBlock", () => {
     it("renders bash prompt with success color", () => {
       render(<TutorialCodeBlock code="$ npm install" language="bash" />);
       const dollar = screen.getByText("$");
-      expect(dollar).toHaveClass("text-success");
+      expect(dollar).toHaveClass("text-[oklch(0.72_0.19_145)]");
     });
 
     it("renders bash comments with muted color", () => {

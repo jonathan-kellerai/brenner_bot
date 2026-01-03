@@ -5,16 +5,18 @@
  *
  * Features:
  * - Syntax highlighting via highlight.js (through rehype-highlight)
- * - Copy button with success feedback
- * - Optional title bar with filename/description
- * - Optional line numbers
+ * - Copy button with success feedback and keyboard shortcut hint
+ * - Optional title bar with filename/description (traffic light style)
+ * - Optional line numbers with hover highlighting
  * - Collapsible for long code blocks
  * - Diff mode for before/after comparisons
+ * - Scroll indicators for horizontal overflow
+ * - Mobile-optimized with larger touch targets
  */
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Terminal, Code } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import { ChevronDown, Terminal, Code, Command, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/ui/copy-button";
 import type { CodeLanguage, CodeDiff } from "@/lib/tutorial-types";
@@ -80,25 +82,29 @@ function CodeLine({
   showLineNumber,
   diffType,
   language,
+  isHighlighted,
+  onHover,
 }: {
   line: string;
   lineNumber: number;
   showLineNumber: boolean;
   diffType?: "add" | "remove" | "context";
   language?: CodeLanguage;
+  isHighlighted?: boolean;
+  onHover?: (lineNumber: number | null) => void;
 }) {
   // Render bash lines with colored $ prompt and comments
   const renderBashLine = (text: string) => {
     if (text.startsWith("$")) {
       return (
         <>
-          <span className="text-success">$</span>
+          <span className="text-[oklch(0.72_0.19_145)]">$</span>
           <span className="text-foreground">{text.slice(1)}</span>
         </>
       );
     }
     if (text.startsWith("#")) {
-      return <span className="text-muted-foreground">{text}</span>;
+      return <span className="text-muted-foreground italic">{text}</span>;
     }
     return text;
   };
@@ -106,19 +112,27 @@ function CodeLine({
   return (
     <div
       className={cn(
-        "flex",
-        diffType === "add" && "bg-success/10 border-l-2 border-success",
-        diffType === "remove" && "bg-destructive/10 border-l-2 border-destructive line-through opacity-70"
+        "flex group/line transition-colors duration-150",
+        diffType === "add" && "bg-[oklch(0.72_0.19_145/0.1)] border-l-2 border-[oklch(0.72_0.19_145)]",
+        diffType === "remove" && "bg-destructive/10 border-l-2 border-destructive line-through opacity-70",
+        isHighlighted && !diffType && "bg-primary/10"
       )}
+      onMouseEnter={() => onHover?.(lineNumber)}
+      onMouseLeave={() => onHover?.(null)}
     >
       {showLineNumber && (
-        <span className="select-none w-10 pr-3 text-right text-muted-foreground/30 shrink-0">
+        <span
+          className={cn(
+            "select-none w-12 pr-4 text-right shrink-0 transition-colors duration-150 font-mono text-xs",
+            isHighlighted ? "text-primary" : "text-muted-foreground/40 group-hover/line:text-muted-foreground/60"
+          )}
+        >
           {lineNumber}
         </span>
       )}
       <span className="flex-1 pr-4">
-        {diffType === "add" && <span className="text-success mr-1">+</span>}
-        {diffType === "remove" && <span className="text-destructive mr-1">-</span>}
+        {diffType === "add" && <span className="text-[oklch(0.72_0.19_145)] mr-1 font-bold">+</span>}
+        {diffType === "remove" && <span className="text-destructive mr-1 font-bold">-</span>}
         {language === "bash" ? renderBashLine(line) : line || " "}
       </span>
     </div>
@@ -143,6 +157,11 @@ export function TutorialCodeBlock({
 }: TutorialCodeBlockProps) {
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
   const [activeTab, setActiveTab] = React.useState<"before" | "after">("after");
+  const [highlightedLine, setHighlightedLine] = React.useState<number | null>(null);
+  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
+  const [canScrollRight, setCanScrollRight] = React.useState(false);
+  const [isHovered, setIsHovered] = React.useState(false);
+  const scrollContainerRef = React.useRef<HTMLDivElement>(null);
 
   // If diff mode, use diff data
   const displayCode = diff ? (activeTab === "before" ? diff.before : diff.after) : code;
@@ -151,6 +170,33 @@ export function TutorialCodeBlock({
 
   // Calculate if code is "long" (more than 15 lines)
   const isLong = lines.length > 15;
+
+  // Detect horizontal scroll capability
+  const updateScrollIndicators = React.useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const { scrollLeft, scrollWidth, clientWidth } = container;
+    setCanScrollLeft(scrollLeft > 5);
+    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
+  }, []);
+
+  React.useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    updateScrollIndicators();
+    container.addEventListener("scroll", updateScrollIndicators);
+    window.addEventListener("resize", updateScrollIndicators);
+
+    return () => {
+      container.removeEventListener("scroll", updateScrollIndicators);
+      window.removeEventListener("resize", updateScrollIndicators);
+    };
+  }, [updateScrollIndicators, displayCode]);
+
+  // Detect platform for keyboard shortcut display
+  const isMac = typeof navigator !== "undefined" && navigator.platform?.toLowerCase().includes("mac");
 
   // Header content - Terminal style with traffic lights (ACFS pattern)
   const headerContent = (
@@ -205,14 +251,35 @@ export function TutorialCodeBlock({
       </div>
 
       <div className="flex items-center gap-2 shrink-0">
+        {/* Keyboard shortcut hint (desktop only) */}
+        <AnimatePresence>
+          {isHovered && (
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 10 }}
+              className="hidden sm:flex items-center gap-1 text-xs text-muted-foreground/60"
+            >
+              {isMac ? (
+                <Command className="size-3" />
+              ) : (
+                <span className="text-[10px]">Ctrl</span>
+              )}
+              <span>+</span>
+              <span className="text-[10px]">C</span>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Collapse toggle */}
         {collapsible && (
           <button
             type="button"
             onClick={() => setIsCollapsed(!isCollapsed)}
             className={cn(
-              "p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              "p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+              "touch-manipulation active:scale-95"
             )}
             aria-expanded={!isCollapsed}
             aria-label={isCollapsed ? "Expand code" : "Collapse code"}
@@ -226,7 +293,7 @@ export function TutorialCodeBlock({
           </button>
         )}
 
-        {/* Copy button */}
+        {/* Copy button with larger touch target on mobile */}
         <CopyButton
           text={displayCode}
           variant="ghost"
@@ -234,7 +301,7 @@ export function TutorialCodeBlock({
           label="Copy"
           successMessage={`Copied ${lines.length} lines`}
           showPreview={false}
-          className="text-muted-foreground hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] sm:min-w-0 sm:min-h-0"
         />
       </div>
     </div>
@@ -247,12 +314,13 @@ export function TutorialCodeBlock({
     </div>
   );
 
-  // Code content with scroll fade indicators
+  // Code content with enhanced scroll indicators
   const codeContent = (
-    <div className="relative">
+    <div className="relative group/code">
       <div
+        ref={scrollContainerRef}
         className={cn(
-          "overflow-x-auto font-mono text-sm leading-relaxed scrollbar-hide",
+          "overflow-x-auto font-mono text-sm leading-relaxed scrollbar-hide scroll-smooth",
           maxHeight && "overflow-y-auto",
           !collapsible && isLong && !maxHeight && "max-h-[400px] overflow-y-auto"
         )}
@@ -267,22 +335,60 @@ export function TutorialCodeBlock({
                 lineNumber={i + 1}
                 showLineNumber={showLineNumbers}
                 language={displayLanguage}
+                isHighlighted={highlightedLine === i + 1}
+                onHover={setHighlightedLine}
               />
             ))}
           </code>
         </pre>
       </div>
-      {/* Scroll fade indicators (ACFS pattern) */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[oklch(0.12_0.015_260)] to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[oklch(0.12_0.015_260)] to-transparent" />
+
+      {/* Enhanced scroll fade indicators with visibility based on scroll position */}
+      <motion.div
+        className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[oklch(0.12_0.015_260)] via-[oklch(0.12_0.015_260/0.8)] to-transparent"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: canScrollLeft ? 1 : 0.3 }}
+        transition={{ duration: 0.2 }}
+      />
+      <motion.div
+        className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[oklch(0.12_0.015_260)] via-[oklch(0.12_0.015_260/0.8)] to-transparent"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: canScrollRight ? 1 : 0.3 }}
+        transition={{ duration: 0.2 }}
+      />
+
+      {/* Scroll hint for mobile */}
+      <AnimatePresence>
+        {canScrollRight && (
+          <motion.div
+            initial={{ opacity: 0, x: -10 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -10 }}
+            className="absolute bottom-2 right-2 sm:hidden flex items-center gap-1 px-2 py-1 rounded-full bg-primary/20 text-primary text-xs backdrop-blur-sm"
+          >
+            <span>Scroll</span>
+            <motion.span
+              animate={{ x: [0, 4, 0] }}
+              transition={{ duration: 1, repeat: Infinity }}
+            >
+              →
+            </motion.span>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 
   return (
-    <div
+    <motion.div
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ type: "spring", stiffness: 300, damping: 25 }}
       className={cn(
         "rounded-xl border border-border/50 bg-[oklch(0.12_0.015_260)] overflow-hidden",
-        "shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/20",
+        "shadow-md transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 hover:border-primary/30",
         className
       )}
     >
@@ -310,7 +416,7 @@ export function TutorialCodeBlock({
       ) : (
         codeContent
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -334,19 +440,20 @@ export function InlineCode({ children, className, copyable = false }: InlineCode
         "px-1.5 py-0.5 rounded-md",
         "bg-muted font-mono text-sm",
         "border border-border/50",
-        copyable && "group pr-6",
+        "transition-all duration-200 hover:bg-muted/80 hover:border-primary/30",
+        copyable && "group pr-7 cursor-pointer hover:shadow-sm",
         className
       )}
     >
-      <span>{children}</span>
+      <span className="text-primary/90">{children}</span>
       {copyable && text && (
-        <span className="absolute right-0.5 top-1/2 -translate-y-1/2">
+        <span className="absolute right-1 top-1/2 -translate-y-1/2">
           <CopyButton
             text={text}
             variant="ghost"
             size="sm"
             showPreview={false}
-            className="opacity-0 group-hover:opacity-100 p-0.5"
+            className="opacity-0 group-hover:opacity-100 p-0.5 transition-opacity duration-200"
           />
         </span>
       )}
