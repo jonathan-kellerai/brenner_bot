@@ -214,16 +214,18 @@ After installation, here's the minimal workflow to run a Brenner session:
 # Then start a session (all flags are required):
 ./brenner session start \
   --project-key "$PWD" \
-  --sender YourAgentName \
+  --sender GreenCastle \
   --to BlueLake \
   --thread-id RS-$(date +%Y%m%d)-test \
   --excerpt-file excerpt.md \
   --question "How do cells determine their position in a developing embryo?"
 ```
 
+**Note on agent names:** Agent Mail requires adjective+noun combinations (e.g., `GreenCastle`, `BlueLake`, `RedForest`). If you use a different format, the system auto-assigns a random valid name.
+
 **Common issues:**
 - "Missing --question" → The `--question` flag is required for `session start`
-- "Missing --sender" → Add `--sender YourName` or set `AGENT_NAME=YourName`
+- "Missing --sender" → Add `--sender GreenCastle` or set `AGENT_NAME=GreenCastle`
 - "Agent Mail not available" → Ensure Agent Mail server is running on localhost:8765
 
 ---
@@ -568,7 +570,7 @@ ntm new $THREAD_ID --layout=3-agent
 ./brenner.ts session start \
   --project-key "$PWD" \
   --thread-id $THREAD_ID \
-  --sender Operator \
+  --sender GreenCastle \
   --to BlueLake,PurpleMountain,GreenValley \
   --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,GreenValley=adversarial_critic" \
   --excerpt-file excerpt.md \
@@ -578,7 +580,7 @@ ntm new $THREAD_ID --layout=3-agent
 ./brenner.ts session start \
   --project-key "$PWD" \
   --thread-id $THREAD_ID \
-  --sender Operator \
+  --sender GreenCastle \
   --to BlueLake,PurpleMountain,GreenValley \
   --unified \
   --excerpt-file excerpt.md \
@@ -590,7 +592,7 @@ ntm broadcast $THREAD_ID "Please check your Agent Mail inbox"
 # 7. Compile and publish the artifact
 ./brenner.ts session compile --project-key "$PWD" --thread-id $THREAD_ID > artifact.md
 ./brenner.ts session publish --project-key "$PWD" --thread-id $THREAD_ID \
-  --sender Operator --to BlueLake,PurpleMountain,GreenValley
+  --sender GreenCastle --to BlueLake,PurpleMountain,GreenValley
 ```
 
 **Roster roles** (for `--role-map`):
@@ -669,7 +671,7 @@ export THREAD_ID="RS-20251231-cell-fate"
 # 9. Post evidence summary to the Agent Mail thread
 ./brenner.ts evidence post \
   --thread-id $THREAD_ID \
-  --sender Operator \
+  --sender GreenCastle \
   --to BlueLake,PurpleMountain,GreenValley \
   --subject "Evidence pack for $THREAD_ID"
 ```
@@ -2073,7 +2075,7 @@ The cockpit provides an ntm-based multi-agent runtime for running collaborative 
 brenner cockpit start \
   --project-key "$PWD" \
   --thread-id RS-20251230-cell-fate \
-  --sender Operator \
+  --sender GreenCastle \
   --to BlueLake,PurpleMountain,GreenValley \
   --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,GreenValley=adversarial_critic" \
   --excerpt-file excerpt.md \
@@ -2379,7 +2381,7 @@ The session kickoff system composes role-specific prompts for multi-agent sessio
 brenner session start \
   --project-key "$PWD" \
   --thread-id RS20251230 \
-  --sender Operator \
+  --sender GreenCastle \
   --to BlueLake,PurpleMountain,GreenValley \
   --role-map "BlueLake=hypothesis_generator,PurpleMountain=test_designer,GreenValley=adversarial_critic" \
   --excerpt-file excerpt.md \
@@ -2389,7 +2391,7 @@ brenner session start \
 brenner session start \
   --project-key "$PWD" \
   --thread-id RS20251230 \
-  --sender Operator \
+  --sender GreenCastle \
   --to BlueLake,PurpleMountain,GreenValley \
   --unified \
   --excerpt-file excerpt.md \
