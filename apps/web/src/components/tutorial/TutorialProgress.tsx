@@ -140,7 +140,7 @@ function SidebarProgress({
           const isCompleted = completedSet.has(index);
           const isCurrent = index === currentStep;
           const isLast = index === steps.length - 1;
-          const highestCompleted = Math.max(0, ...completedSteps, -1);
+          const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : -1;
           const canClick =
             onStepClick &&
             (isCompleted || isCurrent || index <= highestCompleted + 1 || allowJumpAhead);
@@ -256,7 +256,7 @@ function HeaderProgress({
 }: TutorialProgressProps) {
   const completedSet = new Set(completedSteps);
   const timeRemaining = calculateTimeRemaining(steps, completedSteps);
-  const highestCompleted = Math.max(0, ...completedSteps, -1);
+  const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : -1;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
   // Swipe gesture handler (from ACFS)
