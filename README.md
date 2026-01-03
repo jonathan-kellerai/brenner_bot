@@ -1249,31 +1249,38 @@ Each agent response contains a structured delta block:
 ```markdown
 :::delta
 {
-  "operations": [
-    {
-      "type": "ADD",
-      "section": "hypothesis_slate",
-      "payload": {
-        "statement": "The observed depletion follows exponential decay",
-        "anchors": ["§58", "EV-001#E1"],
-        "predictions": { "T1": "recovery < 600ms", "T2": "no recovery if blocked" }
-      }
-    },
-    {
-      "type": "EDIT",
-      "section": "hypothesis_slate",
-      "target_id": "H2",
-      "payload": {
-        "predictions": { "T1": "recovery > 1000ms" }
-      }
-    },
-    {
-      "type": "KILL",
-      "section": "hypothesis_slate",
-      "target_id": "H1",
-      "reason": "Contradicted by EV-002#E3"
-    }
-  ]
+  "operation": "ADD",
+  "section": "hypothesis_slate",
+  "target_id": null,
+  "payload": {
+    "statement": "The observed depletion follows exponential decay",
+    "anchors": ["§58", "EV-001#E1"]
+  },
+  "rationale": "Addressing paradox from excerpt"
+}
+:::
+
+:::delta
+{
+  "operation": "EDIT",
+  "section": "hypothesis_slate",
+  "target_id": "H2",
+  "payload": {
+    "confidence": "high"
+  },
+  "rationale": "Updated based on test results"
+}
+:::
+
+:::delta
+{
+  "operation": "KILL",
+  "section": "hypothesis_slate",
+  "target_id": "H1",
+  "payload": {
+    "reason": "Contradicted by EV-002#E3"
+  },
+  "rationale": "Test T1 ruled out this hypothesis"
 }
 :::
 ```
@@ -1358,28 +1365,27 @@ The linter outputs structured violations:
 
 ```json
 {
-  "violations": [
-    {
-      "id": "HYPO-003",
-      "severity": "error",
-      "section": "hypothesis_slate",
-      "message": "Third alternative slot missing",
-      "suggestion": "Add H3 with statement acknowledging both H1 and H2 could be wrong"
-    },
-    {
-      "id": "TEST-007",
-      "severity": "warning",
-      "section": "tests",
-      "target": "T4",
-      "message": "Test does not discriminate between hypotheses",
-      "suggestion": "Specify which hypotheses T4 separates in the 'discriminates' field"
-    }
-  ],
+  "artifact": "RS-20251230-example",
+  "valid": false,
   "summary": {
     "errors": 1,
     "warnings": 1,
-    "passed": 48
-  }
+    "info": 0
+  },
+  "violations": [
+    {
+      "id": "EH-003",
+      "severity": "error",
+      "message": "Third alternative not explicitly labeled",
+      "fix": "Add 'third_alternative: true' to one hypothesis"
+    },
+    {
+      "id": "WP-001",
+      "severity": "warning",
+      "message": "P4 does not discriminate (all hypothesis outcomes identical or missing)",
+      "fix": "Adjust prediction so at least two hypotheses differ in expected outcome"
+    }
+  ]
 }
 ```
 
