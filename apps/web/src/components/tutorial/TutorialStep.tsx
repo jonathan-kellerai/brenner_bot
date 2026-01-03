@@ -16,7 +16,7 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, Clock, Check, BookOpen, Wrench, ChevronLeft, ChevronRight } from "lucide-react";
+import { Sparkles, Clock, Check, BookOpen, Wrench, ChevronLeft, ChevronRight, Target, Zap } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialStep as TutorialStepType, TroubleshootingItem } from "@/lib/tutorial-types";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
@@ -55,7 +55,8 @@ function LearningObjectives({ items }: { items: string[] }) {
     <Collapsible defaultOpen className="rounded-xl border border-primary/20 bg-primary/5">
       <CollapsibleTrigger className="w-full px-4 py-3 flex items-center gap-3 text-left">
         <div className="flex items-center justify-center size-8 rounded-lg bg-primary/20 text-primary">
-          <BookOpen className="size-5" />
+          {/* Target icon represents goals and objectives */}
+          <Target className="size-5" />
         </div>
         <div className="flex-1">
           <span className="text-sm font-medium text-primary">What you&apos;ll learn</span>
@@ -65,7 +66,7 @@ function LearningObjectives({ items }: { items: string[] }) {
         <ul className="px-4 pb-4 space-y-2">
           {items.map((item, i) => (
             <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-              <span className="mt-1 size-1.5 rounded-full bg-primary shrink-0" />
+              <BookOpen className="mt-0.5 size-3.5 text-primary/60 shrink-0" />
               {item}
             </li>
           ))}
@@ -81,13 +82,16 @@ function ActionChecklist({ items }: { items: string[] }) {
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-        <Check className="size-4 text-[oklch(0.72_0.19_145)]" />
+        {/* Zap icon represents quick actions and energy */}
+        <Zap className="size-4 text-[oklch(0.72_0.19_145)]" />
         <span>What you&apos;ll do</span>
       </div>
       <ul className="space-y-2">
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-            <span className="size-4 rounded border border-muted shrink-0" />
+            <span className="size-4 rounded border border-muted shrink-0 flex items-center justify-center">
+              <Check className="size-2.5 text-muted-foreground/0 group-data-[completed]:text-[oklch(0.72_0.19_145)]" />
+            </span>
             {item}
           </li>
         ))}

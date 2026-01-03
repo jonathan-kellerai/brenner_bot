@@ -15,8 +15,8 @@
  */
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, Terminal, Code, Command } from "lucide-react";
+import { motion, AnimatePresence, useMotionValue, useTransform } from "framer-motion";
+import { ChevronDown, Terminal, Code, Command, Copy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/ui/copy-button";
 import type { CodeLanguage, CodeDiff } from "@/lib/tutorial-types";
@@ -158,10 +158,17 @@ export function TutorialCodeBlock({
   const [isCollapsed, setIsCollapsed] = React.useState(defaultCollapsed);
   const [activeTab, setActiveTab] = React.useState<"before" | "after">("after");
   const [highlightedLine, setHighlightedLine] = React.useState<number | null>(null);
-  const [canScrollLeft, setCanScrollLeft] = React.useState(false);
-  const [canScrollRight, setCanScrollRight] = React.useState(false);
   const [isHovered, setIsHovered] = React.useState(false);
+  const [hasMoreToScroll, setHasMoreToScroll] = React.useState(false);
   const scrollContainerRef = React.useRef<HTMLDivElement>(null);
+
+  // Smooth scroll-linked opacity using motion values
+  const scrollProgress = useMotionValue(0);
+  const scrollEndProgress = useMotionValue(0);
+
+  // Transform scroll position to opacity (0 when at edge, 1 when scrolled)
+  const leftIndicatorOpacity = useTransform(scrollProgress, [0, 0.05], [0.15, 1]);
+  const rightIndicatorOpacity = useTransform(scrollEndProgress, [0, 0.05], [1, 0.15]);
 
   // If diff mode, use diff data
   const displayCode = diff ? (activeTab === "before" ? diff.before : diff.after) : code;
@@ -171,29 +178,42 @@ export function TutorialCodeBlock({
   // Calculate if code is "long" (more than 15 lines)
   const isLong = lines.length > 15;
 
-  // Detect horizontal scroll capability
-  const updateScrollIndicators = React.useCallback(() => {
+  // Track scroll position with motion values for smooth indicator transitions
+  const updateScrollProgress = React.useCallback(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
     const { scrollLeft, scrollWidth, clientWidth } = container;
-    setCanScrollLeft(scrollLeft > 5);
-    setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 5);
-  }, []);
+    const maxScroll = scrollWidth - clientWidth;
+
+    if (maxScroll > 0) {
+      // How far we've scrolled from the start (0-1)
+      scrollProgress.set(scrollLeft / maxScroll);
+      // How far we are from the end (0-1, inverted)
+      const endProgress = (maxScroll - scrollLeft) / maxScroll;
+      scrollEndProgress.set(endProgress);
+      // Track if there's more content to scroll (for mobile hint)
+      setHasMoreToScroll(endProgress > 0.1);
+    } else {
+      scrollProgress.set(0);
+      scrollEndProgress.set(0);
+      setHasMoreToScroll(false);
+    }
+  }, [scrollProgress, scrollEndProgress]);
 
   React.useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    updateScrollIndicators();
-    container.addEventListener("scroll", updateScrollIndicators);
-    window.addEventListener("resize", updateScrollIndicators);
+    updateScrollProgress();
+    container.addEventListener("scroll", updateScrollProgress);
+    window.addEventListener("resize", updateScrollProgress);
 
     return () => {
-      container.removeEventListener("scroll", updateScrollIndicators);
-      window.removeEventListener("resize", updateScrollIndicators);
+      container.removeEventListener("scroll", updateScrollProgress);
+      window.removeEventListener("resize", updateScrollProgress);
     };
-  }, [updateScrollIndicators, displayCode]);
+  }, [updateScrollProgress, displayCode]);
 
   // Detect platform for keyboard shortcut display
   const isMac = typeof navigator !== "undefined" && navigator.platform?.toLowerCase().includes("mac");
@@ -266,7 +286,7 @@ export function TutorialCodeBlock({
                 <span className="text-[10px]">Ctrl</span>
               )}
               <span>+</span>
-              <span className="text-[10px]">C</span>
+              <Copy className="size-3" />
             </motion.div>
           )}
         </AnimatePresence>
@@ -343,23 +363,19 @@ export function TutorialCodeBlock({
         </pre>
       </div>
 
-      {/* Enhanced scroll fade indicators with visibility based on scroll position */}
+      {/* Enhanced scroll fade indicators with smooth scroll-linked opacity */}
       <motion.div
         className="pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r from-[oklch(0.12_0.015_260)] via-[oklch(0.12_0.015_260/0.8)] to-transparent"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: canScrollLeft ? 1 : 0.3 }}
-        transition={{ duration: 0.2 }}
+        style={{ opacity: leftIndicatorOpacity }}
       />
       <motion.div
         className="pointer-events-none absolute inset-y-0 right-0 w-8 bg-gradient-to-l from-[oklch(0.12_0.015_260)] via-[oklch(0.12_0.015_260/0.8)] to-transparent"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: canScrollRight ? 1 : 0.3 }}
-        transition={{ duration: 0.2 }}
+        style={{ opacity: rightIndicatorOpacity }}
       />
 
-      {/* Scroll hint for mobile */}
+      {/* Scroll hint for mobile - shows when content is scrollable */}
       <AnimatePresence>
-        {canScrollRight && (
+        {hasMoreToScroll && (
           <motion.div
             initial={{ opacity: 0, x: -10 }}
             animate={{ opacity: 1, x: 0 }}

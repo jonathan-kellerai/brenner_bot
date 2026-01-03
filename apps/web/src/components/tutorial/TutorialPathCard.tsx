@@ -16,7 +16,7 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
-import { Check, Lock, Play, Clock, ChevronRight, Rocket, Cpu, Users, Sparkles } from "lucide-react";
+import { Check, Lock, Play, Clock, ChevronRight, Rocket, Cpu, Users, Sparkles, Zap, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialPath, DifficultyLevel } from "@/lib/tutorial-types";
 
@@ -67,7 +67,8 @@ const statusConfig = {
     pulse: true,
   },
   in_progress: {
-    icon: <Play className="size-4" />,
+    // Zap icon conveys active energy and work in progress
+    icon: <Zap className="size-4" />,
     iconBg: "bg-accent",
     iconText: "text-accent-foreground",
     border: "border-accent/30",
@@ -75,7 +76,8 @@ const statusConfig = {
     pulse: true,
   },
   completed: {
-    icon: <Check className="size-4" strokeWidth={2.5} />,
+    // Trophy icon for celebratory achievement feel
+    icon: <Trophy className="size-4" />,
     iconBg: "bg-[oklch(0.72_0.19_145)]",
     iconText: "text-[oklch(0.15_0.02_145)]",
     border: "border-[oklch(0.72_0.19_145/0.3)]",

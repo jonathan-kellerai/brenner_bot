@@ -12,8 +12,8 @@
  */
 
 import * as React from "react";
-import { motion } from "framer-motion";
-import { CheckCircle, ArrowRight, Trophy, Star } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { CheckCircle, ArrowRight, Trophy, Star, Sparkles, PartyPopper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { CheckpointData } from "@/lib/tutorial-types";
@@ -215,28 +215,61 @@ export function TutorialCheckpoint({
         />
       </div>
 
-      {/* Enhanced Confetti - burst + rain + sparkles */}
-      {showConfetti && hasAnimated && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          {/* Burst particles */}
-          {Array.from({ length: 25 }).map((_, i) => (
-            <ConfettiParticle key={`burst-${i}`} delay={i * 0.03} index={i} variant="burst" />
-          ))}
-          {/* Rain particles */}
-          {Array.from({ length: 15 }).map((_, i) => (
-            <ConfettiParticle key={`rain-${i}`} delay={0.5 + i * 0.08} index={i + 30} variant="rain" />
-          ))}
-          {/* Sparkle stars */}
-          {Array.from({ length: 8 }).map((_, i) => (
-            <SparkleParticle key={`sparkle-${i}`} delay={i * 0.1} index={i} />
-          ))}
-        </div>
-      )}
+      {/* Enhanced Confetti - burst + rain + sparkles with proper exit animations */}
+      <AnimatePresence>
+        {showConfetti && hasAnimated && (
+          <motion.div
+            initial={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="absolute inset-0 pointer-events-none overflow-hidden"
+          >
+            {/* Burst particles */}
+            {Array.from({ length: 25 }).map((_, i) => (
+              <ConfettiParticle key={`burst-${i}`} delay={i * 0.03} index={i} variant="burst" />
+            ))}
+            {/* Rain particles */}
+            {Array.from({ length: 15 }).map((_, i) => (
+              <ConfettiParticle key={`rain-${i}`} delay={0.5 + i * 0.08} index={i + 30} variant="rain" />
+            ))}
+            {/* Sparkle stars */}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SparkleParticle key={`sparkle-${i}`} delay={i * 0.1} index={i} />
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Content */}
       <div className="relative space-y-6">
-        {/* Trophy Icon with glow */}
+        {/* Trophy Icon with glow and orbiting sparkles */}
         <motion.div variants={itemVariants} className="relative mx-auto">
+          {/* Orbiting sparkles around trophy */}
+          <motion.div
+            className="absolute -top-2 -left-2"
+            animate={{ rotate: 360 }}
+            transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.3, 1], opacity: [0.6, 1, 0.6] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Sparkles className="size-5 text-amber-400" />
+            </motion.div>
+          </motion.div>
+          <motion.div
+            className="absolute -bottom-1 -right-3"
+            animate={{ rotate: -360 }}
+            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+          >
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2.5, repeat: Infinity, delay: 0.5 }}
+            >
+              <Sparkles className="size-4 text-primary" />
+            </motion.div>
+          </motion.div>
+
           <motion.div
             initial={{ scale: 0, rotate: -180 }}
             animate={{ scale: 1, rotate: 0 }}
@@ -259,13 +292,26 @@ export function TutorialCheckpoint({
           </motion.div>
         </motion.div>
 
-        {/* Title with gradient */}
-        <motion.h2
-          variants={itemVariants}
-          className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-[oklch(0.72_0.19_145)] bg-clip-text text-transparent"
-        >
-          {data.title}
-        </motion.h2>
+        {/* Title with gradient and celebratory party poppers */}
+        <motion.div variants={itemVariants} className="flex items-center justify-center gap-3">
+          <motion.div
+            initial={{ scale: 0, rotate: -30 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.4, type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <PartyPopper className="size-6 text-pink-400 -scale-x-100" />
+          </motion.div>
+          <h2 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-foreground via-foreground to-[oklch(0.72_0.19_145)] bg-clip-text text-transparent">
+            {data.title}
+          </h2>
+          <motion.div
+            initial={{ scale: 0, rotate: 30 }}
+            animate={{ scale: 1, rotate: 0 }}
+            transition={{ delay: 0.5, type: "spring", stiffness: 400, damping: 15 }}
+          >
+            <PartyPopper className="size-6 text-amber-400" />
+          </motion.div>
+        </motion.div>
 
         {/* Accomplishments with stagger */}
         <motion.div variants={itemVariants} className="space-y-3">
