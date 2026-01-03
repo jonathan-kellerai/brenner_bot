@@ -14,133 +14,9 @@
 import * as React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { Check, Lock, Play, Clock, ChevronRight, Rocket, Cpu, Users, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialPath, DifficultyLevel } from "@/lib/tutorial-types";
-
-// ============================================================================
-// Icons
-// ============================================================================
-
-const CheckIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2.5}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
-  </svg>
-);
-
-const LockIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z"
-    />
-  </svg>
-);
-
-const PlayIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.348a1.125 1.125 0 010 1.971l-11.54 6.347a1.125 1.125 0 01-1.667-.985V5.653z"
-    />
-  </svg>
-);
-
-const ClockIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-    />
-  </svg>
-);
-
-const ChevronRightIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-5", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
-  </svg>
-);
-
-// Path-specific icons
-const RocketIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-6", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z"
-    />
-  </svg>
-);
-
-const CpuChipIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-6", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 002.25-2.25V6.75a2.25 2.25 0 00-2.25-2.25H6.75A2.25 2.25 0 004.5 6.75v10.5a2.25 2.25 0 002.25 2.25zm.75-12h9v9h-9v-9z"
-    />
-  </svg>
-);
-
-const UsersIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-6", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z"
-    />
-  </svg>
-);
 
 // ============================================================================
 // Types
@@ -168,20 +44,20 @@ export interface TutorialPathCardProps {
 // ============================================================================
 
 const pathIcons: Record<string, React.ReactNode> = {
-  "quick-start": <RocketIcon />,
-  "agent-assisted": <CpuChipIcon />,
-  "multi-agent-cockpit": <UsersIcon />,
+  "quick-start": <Rocket className="size-6" />,
+  "agent-assisted": <Cpu className="size-6" />,
+  "multi-agent-cockpit": <Users className="size-6" />,
 };
 
 const difficultyColors: Record<DifficultyLevel, { bg: string; text: string }> = {
-  beginner: { bg: "bg-success/20", text: "text-success" },
+  beginner: { bg: "bg-[oklch(0.72_0.19_145/0.2)]", text: "text-[oklch(0.72_0.19_145)]" },
   intermediate: { bg: "bg-amber-500/20", text: "text-amber-600 dark:text-amber-400" },
   advanced: { bg: "bg-destructive/20", text: "text-destructive" },
 };
 
 const statusConfig = {
   available: {
-    icon: <PlayIcon />,
+    icon: <Play className="size-4" />,
     iconBg: "bg-primary",
     iconText: "text-primary-foreground",
     border: "border-primary/30",
@@ -189,7 +65,7 @@ const statusConfig = {
     pulse: true,
   },
   in_progress: {
-    icon: <PlayIcon />,
+    icon: <Play className="size-4" />,
     iconBg: "bg-accent",
     iconText: "text-accent-foreground",
     border: "border-accent/30",
@@ -197,15 +73,15 @@ const statusConfig = {
     pulse: true,
   },
   completed: {
-    icon: <CheckIcon />,
-    iconBg: "bg-success",
-    iconText: "text-success-foreground",
-    border: "border-success/30",
-    bg: "bg-success/5",
+    icon: <Check className="size-4" strokeWidth={2.5} />,
+    iconBg: "bg-[oklch(0.72_0.19_145)]",
+    iconText: "text-[oklch(0.15_0.02_145)]",
+    border: "border-[oklch(0.72_0.19_145/0.3)]",
+    bg: "bg-[oklch(0.72_0.19_145/0.05)]",
     pulse: false,
   },
   locked: {
-    icon: <LockIcon />,
+    icon: <Lock className="size-4" />,
     iconBg: "bg-muted",
     iconText: "text-muted-foreground",
     border: "border-border",
@@ -229,7 +105,7 @@ export function TutorialPathCard({
   const isAccessible = status !== "locked";
   const config = statusConfig[status];
   const diffColors = difficultyColors[path.difficulty];
-  const icon = pathIcons[path.id] || <RocketIcon />;
+  const icon = pathIcons[path.id] || <Rocket className="size-6" />;
 
   const cardContent = (
     <motion.div
@@ -272,10 +148,11 @@ export function TutorialPathCard({
           <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
         )}
 
-        {/* Recommended badge */}
+        {/* Recommended badge - premium inline style */}
         {recommended && isAccessible && (
-          <div className="absolute -right-8 top-4 rotate-45 bg-primary px-10 py-1 text-xs font-semibold text-primary-foreground shadow-md">
-            Recommended
+          <div className="absolute left-4 top-4 flex items-center gap-1.5 rounded-full bg-gradient-to-r from-primary to-accent px-3 py-1 text-xs font-semibold text-primary-foreground shadow-md">
+            <Sparkles className="size-3" />
+            <span>Recommended</span>
           </div>
         )}
 
@@ -307,10 +184,11 @@ export function TutorialPathCard({
           className={cn(
             "mb-4 flex items-center justify-center size-12 rounded-xl transition-all duration-300",
             status === "completed"
-              ? "bg-success/20 text-success"
+              ? "bg-[oklch(0.72_0.19_145/0.2)] text-[oklch(0.72_0.19_145)]"
               : status === "locked"
                 ? "bg-muted text-muted-foreground"
-                : "bg-primary/20 text-primary group-hover:bg-primary/30"
+                : "bg-primary/20 text-primary group-hover:bg-primary/30",
+            recommended && isAccessible && "mt-8" // Make room for badge
           )}
         >
           {icon}
@@ -348,7 +226,7 @@ export function TutorialPathCard({
 
           {/* Duration */}
           <span className="flex items-center gap-1 text-muted-foreground">
-            <ClockIcon className="size-3.5" />
+            <Clock className="size-3.5" />
             {path.estimatedDuration}
           </span>
 
@@ -370,7 +248,7 @@ export function TutorialPathCard({
 
         {/* Hover arrow */}
         {isAccessible && (
-          <ChevronRightIcon className="absolute bottom-4 right-4 text-primary/40 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary group-hover:opacity-100" />
+          <ChevronRight className="absolute bottom-4 right-4 size-5 text-primary/40 opacity-0 transition-all duration-300 group-hover:translate-x-1 group-hover:text-primary group-hover:opacity-100" />
         )}
       </div>
     </motion.div>

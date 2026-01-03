@@ -62,7 +62,8 @@ describe("TutorialTip", () => {
     it("applies pro variant styling", () => {
       render(<TutorialTip variant="pro">Content</TutorialTip>);
       const container = screen.getByRole("note");
-      expect(container.className).toMatch(/border-success/);
+      // Using OKLCH color for pro variant
+      expect(container.className).toMatch(/border-\[oklch\(0\.72_0\.19_145/);
     });
 
     it("applies warning variant styling", () => {

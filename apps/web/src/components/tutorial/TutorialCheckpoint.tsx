@@ -9,31 +9,10 @@
 
 import * as React from "react";
 import { motion } from "framer-motion";
+import { Sparkles, CheckCircle, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import type { CheckpointData } from "@/lib/tutorial-types";
-
-// ============================================================================
-// Icons
-// ============================================================================
-
-const SparklesIcon = ({ className }: { className?: string }) => (
-  <svg className={cn("size-6", className)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z" />
-  </svg>
-);
-
-const CheckCircleIcon = ({ className }: { className?: string }) => (
-  <svg className={cn("size-5", className)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-  </svg>
-);
-
-const ArrowRightIcon = ({ className }: { className?: string }) => (
-  <svg className={cn("size-5", className)} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
-  </svg>
-);
 
 // ============================================================================
 // Types
@@ -160,7 +139,7 @@ export function TutorialCheckpoint({
           transition={{ type: "spring", stiffness: 400, damping: 15, delay: 0.2 }}
           className="mx-auto flex items-center justify-center size-16 rounded-2xl bg-success shadow-lg shadow-success/30"
         >
-          <SparklesIcon className="text-success-foreground" />
+          <Sparkles className="size-6 text-[oklch(0.15_0.02_145)]" />
         </motion.div>
 
         {/* Title */}
@@ -190,7 +169,7 @@ export function TutorialCheckpoint({
                 transition={{ delay: 0.5 + i * 0.1 }}
                 className="flex items-center gap-2 text-muted-foreground"
               >
-                <CheckCircleIcon className="text-success shrink-0" />
+                <CheckCircle className="size-5 text-[oklch(0.72_0.19_145)] shrink-0" />
                 <span>{item}</span>
               </motion.li>
             ))}
@@ -223,7 +202,7 @@ export function TutorialCheckpoint({
             className="bg-success text-success-foreground hover:bg-success/90 shadow-lg shadow-success/25"
           >
             Continue
-            <ArrowRightIcon className="ml-2" />
+            <ArrowRight className="size-5 ml-2" />
           </Button>
         </motion.div>
       </div>

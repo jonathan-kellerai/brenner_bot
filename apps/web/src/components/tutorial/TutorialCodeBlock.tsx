@@ -14,57 +14,10 @@
 
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronDown, Terminal, Code } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/ui/copy-button";
 import type { CodeLanguage, CodeDiff } from "@/lib/tutorial-types";
-
-// ============================================================================
-// Icons
-// ============================================================================
-
-const ChevronIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2}
-  >
-    <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-  </svg>
-);
-
-const TerminalIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z"
-    />
-  </svg>
-);
-
-const CodeIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5"
-    />
-  </svg>
-);
 
 // ============================================================================
 // Types
@@ -108,13 +61,13 @@ const languageLabels: Record<CodeLanguage, string> = {
 };
 
 const languageIcons: Record<CodeLanguage, React.ReactNode> = {
-  bash: <TerminalIcon />,
-  typescript: <CodeIcon />,
-  javascript: <CodeIcon />,
-  markdown: <CodeIcon />,
-  json: <CodeIcon />,
-  yaml: <CodeIcon />,
-  text: <CodeIcon />,
+  bash: <Terminal className="size-4" />,
+  typescript: <Code className="size-4" />,
+  javascript: <Code className="size-4" />,
+  markdown: <Code className="size-4" />,
+  json: <Code className="size-4" />,
+  yaml: <Code className="size-4" />,
+  text: <Code className="size-4" />,
 };
 
 // ============================================================================
@@ -268,7 +221,7 @@ export function TutorialCodeBlock({
               animate={{ rotate: isCollapsed ? 0 : 180 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
             >
-              <ChevronIcon />
+              <ChevronDown className="size-4" />
             </motion.div>
           </button>
         )}
@@ -294,37 +247,42 @@ export function TutorialCodeBlock({
     </div>
   );
 
-  // Code content
+  // Code content with scroll fade indicators
   const codeContent = (
-    <div
-      className={cn(
-        "overflow-x-auto font-mono text-sm leading-relaxed",
-        maxHeight && "overflow-y-auto",
-        !collapsible && isLong && !maxHeight && "max-h-[400px] overflow-y-auto"
-      )}
-      style={maxHeight ? { maxHeight } : undefined}
-    >
-      <pre className="p-4 m-0">
-        <code className={`language-${displayLanguage}`}>
-          {lines.map((line, i) => (
-            <CodeLine
-              key={i}
-              line={line}
-              lineNumber={i + 1}
-              showLineNumber={showLineNumbers}
-              language={displayLanguage}
-            />
-          ))}
-        </code>
-      </pre>
+    <div className="relative">
+      <div
+        className={cn(
+          "overflow-x-auto font-mono text-sm leading-relaxed scrollbar-hide",
+          maxHeight && "overflow-y-auto",
+          !collapsible && isLong && !maxHeight && "max-h-[400px] overflow-y-auto"
+        )}
+        style={maxHeight ? { maxHeight } : undefined}
+      >
+        <pre className="p-4 m-0">
+          <code className={`language-${displayLanguage}`}>
+            {lines.map((line, i) => (
+              <CodeLine
+                key={i}
+                line={line}
+                lineNumber={i + 1}
+                showLineNumber={showLineNumbers}
+                language={displayLanguage}
+              />
+            ))}
+          </code>
+        </pre>
+      </div>
+      {/* Scroll fade indicators (ACFS pattern) */}
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-4 bg-gradient-to-r from-[oklch(0.12_0.015_260)] to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-4 bg-gradient-to-l from-[oklch(0.12_0.015_260)] to-transparent" />
     </div>
   );
 
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card overflow-hidden",
-        "shadow-sm transition-shadow hover:shadow-md",
+        "rounded-xl border border-border/50 bg-[oklch(0.12_0.015_260)] overflow-hidden",
+        "shadow-sm transition-all duration-300 hover:shadow-lg hover:border-primary/20",
         className
       )}
     >

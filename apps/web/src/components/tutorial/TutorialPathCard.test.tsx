@@ -102,7 +102,8 @@ describe("TutorialPathCard", () => {
       const { container } = render(
         <TutorialPathCard path={mockPath} status="completed" />
       );
-      const card = container.querySelector(".border-success\\/30");
+      // Using OKLCH color for completed status
+      const card = container.querySelector('[class*="border-[oklch(0.72_0.19_145"]');
       expect(card).toBeInTheDocument();
     });
 

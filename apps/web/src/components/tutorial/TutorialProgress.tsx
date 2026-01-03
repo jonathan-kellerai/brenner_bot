@@ -20,44 +20,9 @@
 import * as React from "react";
 import { motion } from "framer-motion";
 import { useDrag } from "@use-gesture/react";
+import { Check, Clock, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialStepMeta } from "@/lib/tutorial-types";
-
-// ============================================================================
-// Icons
-// ============================================================================
-
-const CheckIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-3.5", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={2.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M4.5 12.75l6 6 9-13.5"
-    />
-  </svg>
-);
-
-const ClockIcon = ({ className }: { className?: string }) => (
-  <svg
-    className={cn("size-4", className)}
-    fill="none"
-    viewBox="0 0 24 24"
-    stroke="currentColor"
-    strokeWidth={1.5}
-  >
-    <path
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"
-    />
-  </svg>
-);
 
 // ============================================================================
 // Types
@@ -130,7 +95,7 @@ function SidebarProgress({
     >
       {/* Time remaining */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-2">
-        <ClockIcon />
+        <Clock className="size-4" />
         <span>{timeRemaining}</span>
       </div>
 
@@ -172,8 +137,8 @@ function SidebarProgress({
                 <div
                   className={cn(
                     "relative z-10 flex items-center justify-center size-8 rounded-full shrink-0 text-sm font-medium transition-all duration-300",
-                    isCurrent && "bg-primary text-primary-foreground shadow-sm shadow-primary/30",
-                    isCompleted && !isCurrent && "bg-success/20 text-success shadow-sm shadow-success/20",
+                    isCurrent && "bg-primary text-primary-foreground shadow-sm shadow-primary/30 animate-glow-pulse",
+                    isCompleted && !isCurrent && "bg-[oklch(0.72_0.19_145)] text-[oklch(0.15_0.02_145)] shadow-sm shadow-[oklch(0.72_0.19_145/0.3)]",
                     !isCompleted && !isCurrent && "bg-muted text-muted-foreground"
                   )}
                 >
@@ -183,10 +148,10 @@ function SidebarProgress({
                       animate={{ scale: 1 }}
                       transition={{ type: "spring", stiffness: 400, damping: 20 }}
                     >
-                      <CheckIcon className="size-4" />
+                      <Check className="size-4" strokeWidth={2.5} />
                     </motion.div>
                   ) : isCurrent ? (
-                    <span className="size-3 rounded-full bg-primary-foreground" />
+                    <Circle className="size-3 fill-current" />
                   ) : (
                     <span className="font-mono text-xs">{step.stepNumber}</span>
                   )}
@@ -208,7 +173,7 @@ function SidebarProgress({
                     <div className="mt-0.5 text-xs text-primary">In progress</div>
                   )}
                   {isCompleted && (
-                    <div className="mt-0.5 text-xs text-success">Complete</div>
+                    <div className="mt-0.5 text-xs text-[oklch(0.72_0.19_145)]">Complete</div>
                   )}
                 </div>
 
@@ -255,7 +220,6 @@ function HeaderProgress({
   className,
 }: TutorialProgressProps) {
   const completedSet = new Set(completedSteps);
-  const timeRemaining = calculateTimeRemaining(steps, completedSteps);
   const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : -1;
   const progress = ((currentStep + 1) / steps.length) * 100;
 
@@ -329,7 +293,7 @@ function HeaderProgress({
               <motion.div
                 className={cn(
                   "rounded-full transition-colors",
-                  isCompleted && "bg-success",
+                  isCompleted && "bg-[oklch(0.72_0.19_145)]",
                   isCurrent && !isCompleted && "bg-primary",
                   !isCompleted && !isCurrent && "bg-muted-foreground/30"
                 )}
@@ -363,7 +327,7 @@ function HeaderProgress({
                   animate={{ scale: 1 }}
                   transition={{ type: "spring", stiffness: 500, damping: 25 }}
                 >
-                  <CheckIcon className="size-2.5 text-success-foreground" />
+                  <Check className="size-2.5 text-[oklch(0.15_0.02_145)]" strokeWidth={3} />
                 </motion.div>
               )}
             </motion.button>
@@ -385,10 +349,7 @@ function HeaderProgress({
         <p className="mt-0.5 text-xs text-muted-foreground">
           Step {currentStep + 1} of {steps.length}
           <span className="mx-1.5 opacity-50">|</span>
-          <span className="opacity-70 flex items-center gap-1 inline-flex">
-            <ClockIcon className="size-3" />
-            {timeRemaining}
-          </span>
+          <span className="opacity-70">Swipe to navigate</span>
         </p>
       </div>
     </nav>
