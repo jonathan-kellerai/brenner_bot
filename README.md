@@ -2370,6 +2370,433 @@ for (const delta of deltas) {
 
 ---
 
+## Multi-Agent Tribunal Personas
+
+The tribunal system uses four specialized AI agents, each with a comprehensive persona definition that governs their behavior, tone, and activation patterns.
+
+### The Four Tribunal Agents
+
+| Agent | Role | Tagline | Core Purpose |
+|-------|------|---------|--------------|
+| **Devil's Advocate** | `devils_advocate` | "Challenge everything. Trust nothing without evidence." | Attack hypotheses, expose assumptions, prevent confirmation bias |
+| **Experiment Designer** | `experiment_designer` | "Design tests that give clean answers." | Translate hypotheses into discriminative tests, ensure methodological rigor |
+| **Brenner Channeler** | `brenner_channeler` | "You've got to really find out." | Channel Sydney Brenner's voice, push for exclusion tests, demand experiments |
+| **Synthesis** | `synthesis` | "Distill clarity from complexity." | Integrate tribunal outputs, identify consensus, prioritize next steps |
+
+### Persona Architecture
+
+Each persona includes:
+
+```typescript
+interface AgentPersona {
+  role: TribunalAgentRole;
+  displayName: string;
+  tagline: string;
+  corePurpose: string;
+  behaviors: AgentBehavior[];      // Prioritized behavioral patterns
+  tone: ToneCalibration;           // Assertiveness, constructiveness, Socratic level
+  modelConfig: ModelConfig;        // Temperature, tokens, preferred tier
+  invocationTriggers: InvocationTrigger[];  // Events that activate this agent
+  activePhases: PersonaPhaseGroup[];        // Session phases where active
+  interactionPatterns: InteractionPattern[]; // Input→output examples
+  synergizesWith: TribunalAgentRole[];      // Complementary agents
+  systemPromptFragments: string[];          // Prompt building blocks
+}
+```
+
+### Tone Calibration
+
+Each agent's voice is tuned across four dimensions (0-1 scale):
+
+| Agent | Assertiveness | Constructiveness | Socratic Level | Formality |
+|-------|---------------|------------------|----------------|-----------|
+| Devil's Advocate | 0.8 | 0.7 | 0.6 | 0.5 |
+| Experiment Designer | 0.6 | 0.9 | 0.7 | 0.6 |
+| Brenner Channeler | 0.9 | 0.6 | 0.5 | 0.3 |
+| Synthesis | 0.5 | 0.95 | 0.2 | 0.7 |
+
+### Invocation Triggers
+
+Agents activate on specific events:
+
+| Trigger | Description | Agents Activated |
+|---------|-------------|------------------|
+| `hypothesis_submitted` | User submits initial hypothesis | Devil's Advocate, Experiment Designer, Brenner Channeler |
+| `hypothesis_refined` | Hypothesis is modified | Devil's Advocate, Brenner Channeler |
+| `prediction_locked` | Prediction committed (pre-registration) | Devil's Advocate |
+| `evidence_supports` | Evidence supports hypothesis | Devil's Advocate |
+| `test_designed` | New test proposed | Experiment Designer, Brenner Channeler |
+| `tribunal_requested` | Full tribunal session | All agents |
+| `phase_transition` | Moving between phases | Brenner Channeler, Synthesis |
+
+### Phase-Grouped Activation
+
+Agents are active during specific session phase groups:
+
+| Phase Group | Detailed Phases | Active Agents |
+|-------------|-----------------|---------------|
+| `intake` | intake | Devil's Advocate |
+| `hypothesis` | sharpening | All agents |
+| `operators` | level_split, exclusion_test, object_transpose, scale_check | Devil's Advocate, Experiment Designer, Brenner Channeler |
+| `agents` | agent_dispatch | All agents |
+| `evidence` | evidence_gathering | Devil's Advocate, Experiment Designer, Brenner Channeler |
+| `synthesis` | synthesis, revision | Brenner Channeler, Synthesis |
+
+### Behavior Examples
+
+**Devil's Advocate** (priority behaviors):
+1. **Identify Unstated Assumptions**: "You're assuming the correlation reflects causation, but what if both variables are caused by a third factor you haven't measured?"
+2. **Find Alternative Explanations**: "This pattern is also consistent with reverse causation, measurement artifact, or selection bias. How would you distinguish these?"
+
+**Experiment Designer** (priority behaviors):
+1. **Ask Probing Questions About Measurements**: "When you say you'll measure 'improvement', what specific metric are you using? How will you operationalize that?"
+2. **Identify Confounds**: "If you compare treated vs untreated groups, how will you control for the placebo effect and experimenter bias?"
+
+**Brenner Channeler** (priority behaviors):
+1. **Demand the Experiment**: "That's all very well, but what's the experiment? How would you actually test this?"
+2. **Seek Exclusion Over Confirmation**: "Exclusion is always a tremendously good thing in science. What observation would kill your hypothesis?"
+
+### Usage
+
+```typescript
+import {
+  getPersona,
+  getActivePersonasForPhase,
+  getPersonasForTrigger,
+  buildSystemPromptContext,
+} from "@/lib/brenner-loop";
+
+// Get all personas active during the operators phase
+const operatorAgents = getActivePersonasForPhase("level_split");
+// → [Devil's Advocate, Experiment Designer, Brenner Channeler]
+
+// Get personas triggered by hypothesis submission
+const triggered = getPersonasForTrigger("hypothesis_submitted");
+// → [Devil's Advocate, Experiment Designer, Brenner Channeler]
+
+// Build system prompt for an agent
+const prompt = buildSystemPromptContext("devils_advocate");
+```
+
+---
+
+## Prediction Lock System
+
+The prediction lock system provides cryptographic pre-registration for scientific predictions. Predictions are hashed before evidence is collected, ensuring that claimed predictions were actually made in advance.
+
+### Lock States
+
+| State | Symbol | Description |
+|-------|--------|-------------|
+| `draft` | — | Freely editable, not yet committed |
+| `locked` | 🔒 | SHA-256 sealed, waiting for evidence |
+| `revealed` | 🔓 | Evidence collected, prediction compared to outcome |
+| `amended` | ⚠️ | Modified after evidence (flagged for integrity) |
+
+### Lock Workflow
+
+```
+Draft → Lock (SHA-256 hash) → Evidence Collection → Reveal → Compare
+                                                       ↓
+                                                 [Amendment] (if changed post-hoc)
+```
+
+### Prediction Types
+
+| Type | Description |
+|------|-------------|
+| `qualitative` | "X will increase" |
+| `quantitative` | "X will be > 5.0" |
+| `comparative` | "X > Y" |
+| `temporal` | "X before Y" |
+| `null` | "No effect" |
+
+### Cryptographic Sealing
+
+When a prediction is locked:
+1. SHA-256 hash computed: `hash(prediction_text + timestamp)`
+2. Original text becomes immutable
+3. Hash stored for later verification
+
+### Amendment Tracking
+
+If interpretations change post-evidence:
+- Each amendment logged with type: `clarification`, `reinterpretation`, `scope_change`, `retraction`
+- Amendments penalize integrity score
+- Visual warnings displayed in UI
+
+### Integrity Score
+
+```
+integrityScore = (1 - amendmentPenalty) × 100
+```
+
+High integrity = predictions were locked before evidence and not modified after.
+
+### Robustness Multiplier
+
+Predictions with higher integrity get weighted more heavily in confidence updates:
+
+| Integrity | Multiplier |
+|-----------|------------|
+| 100% (no amendments) | 1.0× |
+| 75-99% | 0.8× |
+| 50-74% | 0.5× |
+| < 50% | 0.2× |
+
+### Usage
+
+```typescript
+import {
+  lockPrediction,
+  revealPrediction,
+  verifyPrediction,
+  calculatePredictionLockStats,
+} from "@/lib/brenner-loop";
+
+// Lock a prediction before evidence
+const lockResult = await lockPrediction({
+  hypothesisId: "H-RS20251230-001",
+  predictionText: "Recovery time constant will be < 500ms",
+  predictionType: "quantitative",
+});
+// → { lockedAt, hash, state: "locked" }
+
+// After evidence, reveal and compare
+const revealResult = await revealPrediction({
+  predictionId: lockResult.id,
+  observedOutcome: "Recovery time was 487 ± 32ms",
+  result: "confirmed", // confirmed | refuted | inconclusive
+});
+
+// Verify a prediction's hash
+const valid = await verifyPrediction(lockResult.id, lockResult.hash);
+```
+
+---
+
+## Hypothesis Arena
+
+The hypothesis arena provides head-to-head competitive testing between multiple hypotheses. Instead of evaluating hypotheses in isolation, the arena tracks how they perform relative to each other on shared discriminative tests.
+
+### Arena Concepts
+
+| Concept | Description |
+|---------|-------------|
+| **Arena** | A competitive space where multiple hypotheses face the same tests |
+| **Competitor** | A hypothesis entered into the arena |
+| **Shared Test** | A test that applies to multiple hypotheses |
+| **Elimination** | When a test definitively rules out a hypothesis |
+| **Champion** | The hypothesis that survives with highest score |
+
+### Hypothesis Status
+
+| Status | Description |
+|--------|-------------|
+| `active` | Still competing |
+| `eliminated` | Definitively ruled out by a test |
+| `suspended` | Temporarily set aside |
+| `champion` | Won the arena |
+
+### Boldness Scoring
+
+Predictions are scored by specificity and risk:
+
+| Boldness | Description | Multiplier |
+|----------|-------------|------------|
+| `vague` | "Things will improve" | 1.0× |
+| `specific` | "Score increases 5-10%" | 1.5× |
+| `precise` | "Score will be exactly 7.3" | 2.0× |
+| `surprising` | "Contrary to consensus, X will occur" | 3.0× |
+
+**Scoring formula:**
+- Confirmed bold prediction: `+base_score × boldness_multiplier`
+- Refuted bold prediction: `-base_score × boldness_multiplier`
+
+Bold predictions that succeed earn more; bold predictions that fail cost more. This incentivizes making specific, risky predictions.
+
+### Comparison Matrix
+
+The arena generates a comparison matrix showing:
+
+| Hypothesis | Test T1 | Test T2 | Test T3 | Total Score |
+|------------|---------|---------|---------|-------------|
+| H1 | +3 ✓ | -2 ✗ | +4 ✓ | 5 |
+| H2 | +1 ✓ | +2 ✓ | ELIM | — |
+| H3 | 0 | +2 ✓ | +1 ✓ | 3 |
+
+### Discriminative Power
+
+Tests are evaluated for how well they distinguish hypotheses:
+
+```
+discriminativePower = variance(predictions across hypotheses)
+```
+
+A test where all hypotheses predict the same outcome has zero discriminative power and is flagged.
+
+### Usage
+
+```typescript
+import {
+  createArena,
+  addCompetitor,
+  createArenaTest,
+  recordTestResult,
+  buildComparisonMatrix,
+  getLeader,
+} from "@/lib/brenner-loop";
+
+// Create an arena for competing hypotheses
+const arena = createArena("Mechanism of X");
+
+// Add competitors
+const h1 = addCompetitor(arena, hypothesis1);
+const h2 = addCompetitor(arena, hypothesis2);
+const h3 = addCompetitor(arena, hypothesis3);
+
+// Create a shared test
+const test = createArenaTest(arena, {
+  description: "Measure response time under condition Y",
+  predictions: {
+    [h1.id]: { outcome: "< 500ms", boldness: "specific" },
+    [h2.id]: { outcome: "> 1000ms", boldness: "specific" },
+    [h3.id]: { outcome: "500-1000ms", boldness: "vague" },
+  },
+});
+
+// Record result and update scores
+recordTestResult(arena, test.id, {
+  observed: "487ms",
+  hypothesisResults: {
+    [h1.id]: "confirmed",
+    [h2.id]: "refuted",
+    [h3.id]: "refuted",
+  },
+});
+
+// Get rankings
+const matrix = buildComparisonMatrix(arena);
+const leader = getLeader(arena);
+```
+
+---
+
+## Hypothesis Lifecycle State Machine
+
+Individual hypotheses progress through a defined lifecycle managed by a state machine. This ensures proper tracking of hypothesis status and enforces valid transitions.
+
+### Hypothesis States
+
+| State | Symbol | Description |
+|-------|--------|-------------|
+| `draft` | ○ | Initial formulation, freely editable |
+| `proposed` | ◐ | Submitted for evaluation |
+| `active` | ● | Under active investigation |
+| `under_attack` | ⚔ | Facing serious challenges |
+| `assumption_undermined` | ⚠ | Key assumption falsified |
+| `refined` | ↻ | Evolved based on feedback |
+| `dormant` | ◇ | Parked for later |
+| `killed` | ✗ | Definitively falsified |
+| `validated` | ✓ | Survived rigorous testing |
+
+### State Transitions
+
+```
+draft → proposed → active ─┬→ under_attack → killed
+                           ├→ assumption_undermined → killed
+                           ├→ refined → active (cycle)
+                           ├→ dormant → active (reactivation)
+                           └→ validated
+```
+
+### Transition Events
+
+| Event | From States | To State |
+|-------|-------------|----------|
+| `submit` | draft | proposed |
+| `activate` | proposed | active |
+| `challenge` | active | under_attack |
+| `undermine_assumption` | active, under_attack | assumption_undermined |
+| `refine` | active, under_attack | refined |
+| `park` | active | dormant |
+| `reactivate` | dormant | active |
+| `kill` | under_attack, assumption_undermined | killed |
+| `validate` | active | validated |
+
+### Terminal States
+
+Once a hypothesis reaches `killed` or `validated`, no further transitions are possible. These are terminal states that represent the end of the hypothesis lifecycle.
+
+### State Configuration
+
+Each state has associated configuration:
+
+```typescript
+interface HypothesisStateConfig {
+  label: string;           // Display name
+  description: string;     // What this state means
+  icon: string;            // Visual indicator
+  colors: {
+    bg: string;            // Background color class
+    text: string;          // Text color class
+    border: string;        // Border color class
+  };
+  isEditable: boolean;     // Can hypothesis be modified?
+  isDeletable: boolean;    // Can hypothesis be deleted?
+  isTerminal: boolean;     // End of lifecycle?
+}
+```
+
+### Usage
+
+```typescript
+import {
+  transitionHypothesis,
+  getAvailableTransitions,
+  canTransition,
+  isTerminalState,
+  createHypothesisWithLifecycle,
+} from "@/lib/brenner-loop";
+
+// Create a hypothesis with lifecycle tracking
+const hypothesis = createHypothesisWithLifecycle({
+  statement: "X causes Y through mechanism Z",
+  mechanism: "Z enables X to produce Y",
+  predictionsIfTrue: ["Blocking Z prevents effect"],
+  impossibleIfTrue: ["Effect without Z present"],
+});
+// → state: "draft"
+
+// Check available transitions
+const events = getAvailableTransitions(hypothesis);
+// → ["submit"]
+
+// Transition to next state
+const result = transitionHypothesis(hypothesis, "submit");
+if (result.success) {
+  // hypothesis.state is now "proposed"
+}
+
+// Check if we can transition
+if (canTransition(hypothesis, "activate")) {
+  transitionHypothesis(hypothesis, "activate");
+}
+```
+
+### Side Effects
+
+Certain transitions trigger side effects:
+
+| Transition | Side Effect |
+|------------|-------------|
+| `kill` | Records kill reason, updates arena if applicable |
+| `validate` | Marks as champion in arena if applicable |
+| `refine` | Creates new version, preserves history link |
+| `undermine_assumption` | Propagates to dependent tests |
+
+---
+
 ## Session Kickoff System
 
 The session kickoff system composes role-specific prompts for multi-agent sessions. It supports both unified mode (all agents get the same prompt) and roster mode (each agent gets a role-tailored prompt).
