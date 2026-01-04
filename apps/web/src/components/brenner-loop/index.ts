@@ -6,3 +6,6 @@
 
 export { HypothesisCard, HypothesisCardList } from "./HypothesisCard";
 export type { HypothesisCardProps, HypothesisCardMode } from "./HypothesisCard";
+
+export { HypothesisIntake } from "./HypothesisIntake";
+export type { HypothesisIntakeProps } from "./HypothesisIntake";
