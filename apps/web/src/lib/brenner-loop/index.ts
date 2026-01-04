@@ -498,6 +498,41 @@ export {
 } from "./artifacts/research-brief-template";
 
 // ============================================================================
+// Robustness Score (bead an1n.4)
+// ============================================================================
+
+export type {
+  RobustnessInterpretation,
+  RobustnessComponents,
+  RobustnessScore,
+  RobustnessConfig,
+} from "./robustness";
+
+export {
+  // Constants
+  DEFAULT_ROBUSTNESS_CONFIG,
+  ROBUSTNESS_LABELS,
+
+  // Core calculation
+  computeSpecificityScore,
+  computeFalsifiabilityScore,
+  computeRobustness,
+
+  // Type guards
+  isRobustnessInterpretation,
+  isRobustnessScore,
+
+  // Display helpers
+  getRobustnessDisplay,
+  formatRobustnessScore,
+  summarizeRobustness,
+
+  // Comparison & aggregation
+  compareRobustness,
+  aggregateRobustness,
+} from "./robustness";
+
+// ============================================================================
 // Embeddings (bead ukd1.1)
 // ============================================================================
 
