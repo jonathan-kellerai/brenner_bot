@@ -165,3 +165,48 @@ export {
   OBJECT_TRANSPOSE_QUOTE_ANCHORS,
   OBJECT_TRANSPOSE_FALLBACK_QUOTES,
 } from "./object-transpose";
+
+// ============================================================================
+// Scale Check Operator (bead vw6p.5)
+// ============================================================================
+
+export type {
+  EffectSizeType,
+  EffectDirection,
+  EffectMagnitude,
+  EffectSizeSpec,
+  DomainContext,
+  TypicalEffect,
+  Benchmark,
+  ContextComparison,
+  MeasurementAssessment,
+  PracticalSignificance,
+  PopulationConsideration,
+  ScaleCheckResult,
+} from "./scale-check";
+
+export {
+  // Step configurations
+  SCALE_CHECK_STEP_IDS,
+  SCALE_CHECK_STEPS,
+
+  // Effect size utilities
+  EFFECT_SIZE_CONVENTIONS,
+  estimateToValue,
+  classifyEffectSize,
+  varianceExplained,
+  approximateSampleSize,
+
+  // Domain context
+  DOMAIN_CONTEXTS,
+  getDomainContext,
+
+  // Generation functions
+  generateContextComparison,
+  generatePopulationConsiderations,
+  buildScaleCheckResult,
+
+  // Quote references
+  SCALE_CHECK_QUOTE_ANCHORS,
+  SCALE_CHECK_FALLBACK_QUOTES,
+} from "./scale-check";
