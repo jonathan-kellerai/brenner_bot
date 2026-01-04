@@ -40,7 +40,7 @@ export type HypothesisState =
  * Events that can trigger state transitions.
  */
 export type HypothesisLifecycleEvent =
-  | { type: "LOCK_PREDICTION" }
+  | { type: "LOCK_PREDICTION"; predictionIndex: number }
   | { type: "START_TESTING" }
   | { type: "RECORD_SUPPORT"; confidence: number }
   | { type: "RECORD_FALSIFICATION"; reason: string }
@@ -252,17 +252,32 @@ type TransitionGuard = (
 
 /**
  * Guard: Hypothesis must have at least one prediction to lock.
+ * Also validates that the specified prediction index is valid and not already locked.
  */
-const hasUnlockedPredictions: TransitionGuard = (hypothesis) => {
+const hasUnlockedPredictions: TransitionGuard = (hypothesis, event) => {
   const allPredictions = [
     ...hypothesis.predictionsIfTrue,
     ...hypothesis.predictionsIfFalse,
   ];
-  const unlockedCount = allPredictions.length - hypothesis.lockedPredictions.length;
 
-  if (unlockedCount === 0) {
+  if (allPredictions.length === 0) {
     return { valid: false, error: "No predictions available to lock" };
   }
+
+  // Check if the specific prediction index is valid
+  if (event.type === "LOCK_PREDICTION") {
+    const { predictionIndex } = event as { type: "LOCK_PREDICTION"; predictionIndex: number };
+
+    if (predictionIndex < 0 || predictionIndex >= allPredictions.length) {
+      return { valid: false, error: `Invalid prediction index: ${predictionIndex}` };
+    }
+
+    // Check if already locked (using index as string identifier)
+    if (hypothesis.lockedPredictions.includes(String(predictionIndex))) {
+      return { valid: false, error: "Prediction is already locked" };
+    }
+  }
+
   return { valid: true };
 };
 
@@ -324,10 +339,13 @@ const TRANSITIONS: Record<HypothesisLifecycleEvent["type"], TransitionDef> = {
     from: ["draft"],
     to: "active",
     guards: [hasUnlockedPredictions],
-    action: (hypothesis) => ({
-      // In real implementation, would lock specific prediction
-      lockedPredictions: [...hypothesis.predictionsIfTrue.slice(0, 1)],
-    }),
+    action: (hypothesis, event) => {
+      const { predictionIndex } = event as { type: "LOCK_PREDICTION"; predictionIndex: number };
+      return {
+        // Append the new prediction index to existing locked predictions
+        lockedPredictions: [...hypothesis.lockedPredictions, String(predictionIndex)],
+      };
+    },
   },
 
   START_TESTING: {
@@ -511,9 +529,13 @@ export function getAvailableTransitions(
 /**
  * Check if a specific transition is available.
  *
+ * For events that require additional parameters (like LOCK_PREDICTION),
+ * this only checks the basic state transition validity, not parameter-specific guards.
+ * Use `canTransitionWithEvent` for full validation including parameters.
+ *
  * @param hypothesis - The hypothesis to check
  * @param eventType - The event type to check
- * @returns Whether the transition is available
+ * @returns Whether the transition is generally available from current state
  */
 export function canTransition(
   hypothesis: HypothesisWithLifecycle,
@@ -522,11 +544,30 @@ export function canTransition(
   const transition = TRANSITIONS[eventType];
   if (!transition) return false;
 
+  return transition.from.includes(hypothesis.state);
+}
+
+/**
+ * Check if a specific transition with full event payload is available.
+ *
+ * This runs all guards including those that check event parameters.
+ *
+ * @param hypothesis - The hypothesis to check
+ * @param event - The full event to check
+ * @returns Whether the transition is available
+ */
+export function canTransitionWithEvent(
+  hypothesis: HypothesisWithLifecycle,
+  event: HypothesisLifecycleEvent
+): boolean {
+  const transition = TRANSITIONS[event.type];
+  if (!transition) return false;
+
   if (!transition.from.includes(hypothesis.state)) return false;
 
-  // Run guards
+  // Run guards with full event
   for (const guard of transition.guards) {
-    const result = guard(hypothesis, { type: eventType } as HypothesisLifecycleEvent);
+    const result = guard(hypothesis, event);
     if (!result.valid) return false;
   }
 
@@ -777,20 +818,33 @@ export function calculateLifecycleStats(
   for (const h of hypotheses) {
     byState[h.state]++;
 
-    // Calculate time in draft
+    // Note: We can only accurately measure time from creation to current state.
+    // For multi-step transitions (draft → active → testing → supported),
+    // we don't have granular state transition history.
+    // This calculates "time from creation to first state change" which is
+    // accurate when hypotheses go directly from draft to their current state.
+
+    // Calculate time from creation to current state (approximates time in draft)
     if (h.state !== "draft") {
-      const daysInDraft =
+      // This is actually time from creation to current state entry,
+      // which equals time in draft only for direct draft→current transitions
+      const daysFromCreation =
         (h.stateEnteredAt.getTime() - h.createdAt.getTime()) / (1000 * 60 * 60 * 24);
-      totalDaysInDraft += daysInDraft;
-      draftCount++;
+      // Only count non-negative values (handles edge case of clock skew)
+      if (daysFromCreation >= 0) {
+        totalDaysInDraft += daysFromCreation;
+        draftCount++;
+      }
     }
 
-    // Calculate time to resolution
+    // Calculate time to resolution (accurate for terminal states)
     if (isTerminalState(h.state)) {
       const daysToResolution =
         (h.stateEnteredAt.getTime() - h.createdAt.getTime()) / (1000 * 60 * 60 * 24);
-      totalDaysToResolution += daysToResolution;
-      resolvedCount++;
+      if (daysToResolution >= 0) {
+        totalDaysToResolution += daysToResolution;
+        resolvedCount++;
+      }
 
       if (h.state === "falsified") falsifiedCount++;
       if (h.state === "superseded") supersededCount++;

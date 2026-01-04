@@ -341,6 +341,7 @@ export {
   transitionHypothesis,
   getAvailableTransitions,
   canTransition,
+  canTransitionWithEvent,
 
   // State queries
   isTerminalState,

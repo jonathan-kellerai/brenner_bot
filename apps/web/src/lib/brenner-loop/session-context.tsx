@@ -579,7 +579,7 @@ export function SessionProvider({
       // Don't allow removing the primary hypothesis
       if (id === state.session.primaryHypothesisId) return;
 
-      const { [id]: removed, ...remainingCards } = state.session.hypothesisCards;
+      const { [id]: _removed, ...remainingCards } = state.session.hypothesisCards;
 
       const updatedSession: Session = {
         ...state.session,
