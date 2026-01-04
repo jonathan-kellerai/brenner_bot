@@ -125,8 +125,8 @@ function buildQuoteEntries(markdown: string): EmbeddingEntry[] {
     const tagsLine = lines.find((line) => line.trim().startsWith("Tags:"));
 
     const quoteText = normalizeText(stripBlockquotes(quoteLines.join("\n")));
-    const takeawayText = takeawayLine ? normalizeText(takeawayLine.replace(/^Takeaway:\s*/, "")) : "";
-    const tagsText = tagsLine ? normalizeText(tagsLine.replace(/^Tags:\s*/, "")) : "";
+    const takeawayText = takeawayLine ? normalizeText(takeawayLine.trim().replace(/^Takeaway:\s*/, "")) : "";
+    const tagsText = tagsLine ? normalizeText(tagsLine.trim().replace(/^Tags:\s*/, "")) : "";
 
     const combined = [quoteText, takeawayText && `Takeaway: ${takeawayText}`, tagsText && `Tags: ${tagsText}`]
       .filter(Boolean)
