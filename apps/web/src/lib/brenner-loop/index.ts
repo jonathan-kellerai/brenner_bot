@@ -527,4 +527,31 @@ export {
   buildSystemPromptContext,
   getInteractionExamples,
   getModelConfig,
+
+  // Agent dispatch types (bead xlk2.2)
+  type AgentTaskStatus,
+  type AgentTask,
+  type TribunalAgentResponse,
+  type OperatorResults,
+  type AgentDispatch,
+  type CreateDispatchOptions,
+  type PollOptions,
+
+  // Agent dispatch constants
+  DEFAULT_DISPATCH_ROLES,
+  DISPATCH_SUBJECT_PREFIX,
+  FALLBACK_BRENNER_QUOTES,
+
+  // Agent dispatch functions
+  createDispatch,
+  generateThreadId,
+  formatHypothesisForPrompt,
+  formatOperatorResultsForPrompt,
+  buildAgentPrompt,
+  dispatchAgentTask,
+  dispatchAllTasks,
+  pollForResponses,
+  checkAgentAvailability,
+  getFallbackContent,
+  getDispatchStatus,
 } from "./agents";
