@@ -228,6 +228,8 @@ export type DocumentType =
   | 'session'
   | 'landing';
 
+const FIRST_DOC_READ_KEY = 'brennerbot_first_doc_read';
+
 /**
  * Track when a user views a document
  */
@@ -243,6 +245,12 @@ export function trackDocumentView(
     document_title: documentTitle,
     content_discovery_source: source || 'direct',
   });
+
+  // Track first document read conversion (only fires once ever)
+  if (!safeGetItem(FIRST_DOC_READ_KEY) && documentType !== 'landing') {
+    safeSetItem(FIRST_DOC_READ_KEY, new Date().toISOString());
+    trackConversion('first_document_read', 1);
+  }
 }
 
 /**
@@ -401,6 +409,13 @@ const jargonViewedInSession = new Set<string>();
 
 export function trackJargonEngagement(term: string, category: JargonCategory): void {
   jargonViewedInSession.add(term);
+
+  // Track the specific category being explored
+  sendEvent('jargon_engagement', {
+    jargon_term: term,
+    jargon_category: category,
+    unique_terms_viewed: jargonViewedInSession.size,
+  });
 
   if (jargonViewedInSession.size === 3) {
     trackConversion('glossary_engaged', 3);
@@ -921,11 +936,6 @@ export function trackSessionStart(): void {
 
   if (visitCount === 2) {
     trackConversion('return_visitor', 5);
-  }
-
-  // Track first document view conversion
-  if (isFirstVisit) {
-    trackConversion('first_document_read', 1);
   }
 }
 

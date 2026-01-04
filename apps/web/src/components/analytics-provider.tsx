@@ -87,9 +87,15 @@ function AnalyticsTracker() {
 
       // Track performance after page load
       if (typeof window !== 'undefined') {
-        window.addEventListener('load', () => {
+        if (document.readyState === 'complete') {
+          // Page already loaded, track immediately
           setTimeout(trackPagePerformance, 100);
-        });
+        } else {
+          // Wait for load event
+          window.addEventListener('load', () => {
+            setTimeout(trackPagePerformance, 100);
+          }, { once: true });
+        }
       }
     }
   }, [gaId]);
