@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { RefreshControls } from "@/components/sessions";
+import { SessionList } from "@/components/brenner-loop";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
 import { computeThreadStatus, type SessionPhase } from "@/lib/threadStatus";
@@ -299,7 +300,7 @@ export default async function SessionsListPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8">
+    <div className="max-w-4xl mx-auto space-y-10">
       {/* Header */}
       <header className="flex items-center justify-between gap-4 animate-fade-in-up">
         <div>
@@ -338,6 +339,16 @@ export default async function SessionsListPage() {
           ))}
         </div>
       )}
+
+      <section className="space-y-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Local Sessions</h2>
+          <p className="text-sm text-muted-foreground">
+            Import or review sessions stored in your browser.
+          </p>
+        </div>
+        <SessionList />
+      </section>
     </div>
   );
 }
