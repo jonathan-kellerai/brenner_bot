@@ -225,3 +225,38 @@ export {
   getInteractionExamples,
   getModelConfig,
 } from "./agent-personas";
+
+// ============================================================================
+// Agent Dispatch (bead xlk2.2)
+// ============================================================================
+
+export type {
+  // Task types
+  AgentTaskStatus,
+  AgentTask,
+  TribunalAgentResponse,
+  OperatorResults,
+  AgentDispatch,
+  CreateDispatchOptions,
+  PollOptions,
+} from "./dispatch";
+
+export {
+  // Constants
+  DEFAULT_DISPATCH_ROLES,
+  DISPATCH_SUBJECT_PREFIX,
+  FALLBACK_BRENNER_QUOTES,
+
+  // Core functions
+  createDispatch,
+  generateThreadId,
+  formatHypothesisForPrompt,
+  formatOperatorResultsForPrompt,
+  buildAgentPrompt,
+  dispatchAgentTask,
+  dispatchAllTasks,
+  pollForResponses,
+  checkAgentAvailability,
+  getFallbackContent,
+  getDispatchStatus,
+} from "./dispatch";
