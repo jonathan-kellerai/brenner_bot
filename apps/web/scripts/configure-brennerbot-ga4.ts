@@ -62,17 +62,20 @@ const CUSTOM_DIMENSIONS = [
   { name: 'platform', scope: 'EVENT', description: 'Platform (macOS, Windows, Linux, iOS, Android)' },
 ];
 
-// Conversion events
+// Conversion events - MUST match ConversionType in analytics.ts exactly
 const CONVERSION_EVENTS = [
-  'tutorial_start',
-  'tutorial_complete',
-  'document_deep_read',
-  'search_conversion',
-  'excerpt_saved',
-  'session_deep_engagement',
-  'return_visitor_engaged',
-  'corpus_explorer',
-  'conversion',
+  'first_document_read',    // User read first document beyond landing
+  'deep_reading',           // User spent 3+ minutes on a document
+  'corpus_explorer',        // User viewed 5+ documents
+  'search_engaged',         // User clicked search result in top 3
+  'tutorial_started',       // User started the tutorial
+  'tutorial_step_complete', // User completed a tutorial step
+  'tutorial_complete',      // User completed full tutorial
+  'glossary_engaged',       // User explored 3+ jargon terms
+  'operator_studied',       // User studied an operator in detail
+  'return_visitor',         // User returned (2nd visit)
+  'power_user',             // User viewed 20+ documents
+  'conversion',             // Generic conversion wrapper event
 ];
 
 async function configureProperty() {
