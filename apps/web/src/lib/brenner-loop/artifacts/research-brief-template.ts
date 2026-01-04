@@ -105,7 +105,7 @@ export function renderResearchBriefTemplate(input: ResearchBriefTemplateInput = 
   lines.push(`session_id: ${metadata.sessionId}`);
   lines.push(`hypothesis_id: ${metadata.hypothesisId}`);
   lines.push(`created_at: ${metadata.createdAt}`);
-  lines.push(`final_confidence: ${metadata.finalConfidence}`);
+  lines.push(`final_confidence: ${formatConfidence(metadata.finalConfidence)}`);
   lines.push(`status: ${metadata.status}`);
   lines.push(`operators_applied: ${formatYamlList(metadata.operatorsApplied)}`);
   lines.push(`agents_consulted: ${formatYamlList(metadata.agentsConsulted)}`);
@@ -182,7 +182,12 @@ export const createResearchBriefTemplate = renderResearchBriefTemplate;
 // Helpers
 // ============================================================================
 
-function normalizeMetadata(metadata?: Partial<ResearchBriefMetadata>): Required<ResearchBriefMetadata> {
+/** Normalized metadata with all fields defined */
+type NormalizedMetadata = Omit<Required<ResearchBriefMetadata>, "finalConfidence"> & {
+  finalConfidence: number | null;
+};
+
+function normalizeMetadata(metadata?: Partial<ResearchBriefMetadata>): NormalizedMetadata {
   const now = new Date().toISOString();
   return {
     type: "research_brief",
@@ -190,9 +195,7 @@ function normalizeMetadata(metadata?: Partial<ResearchBriefMetadata>): Required<
     sessionId: metadata?.sessionId ?? "unknown",
     hypothesisId: metadata?.hypothesisId ?? "unknown",
     createdAt: metadata?.createdAt ?? now,
-    finalConfidence: typeof metadata?.finalConfidence === "number"
-      ? `${Math.round(metadata.finalConfidence)}%`
-      : "unknown",
+    finalConfidence: typeof metadata?.finalConfidence === "number" ? metadata.finalConfidence : null,
     status: metadata?.status ?? "draft",
     operatorsApplied: metadata?.operatorsApplied ?? [],
     agentsConsulted: metadata?.agentsConsulted ?? [],
@@ -200,6 +203,11 @@ function normalizeMetadata(metadata?: Partial<ResearchBriefMetadata>): Required<
     testsCompleted: typeof metadata?.testsCompleted === "number" ? metadata.testsCompleted : 0,
     brennerCitations: metadata?.brennerCitations ?? [],
   };
+}
+
+function formatConfidence(value: number | null): string {
+  if (value === null) return "unknown";
+  return `${Math.round(value)}%`;
 }
 
 function formatYamlList(items?: string[]): string {
