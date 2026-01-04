@@ -154,12 +154,19 @@ function InlineTip({
 // Card Tip (more prominent, for step headers)
 // ============================================================================
 
+interface CardTipProps {
+  tip: OperatorStepTip;
+  showExample?: boolean;
+  showAntiPattern?: boolean;
+  className?: string;
+}
+
 function CardTip({
   tip,
   showExample = true,
   showAntiPattern = true,
   className,
-}: InlineTipProps) {
+}: CardTipProps) {
   return (
     <div
       className={cn(
