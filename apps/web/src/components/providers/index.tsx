@@ -17,6 +17,7 @@ import * as React from "react";
 import { QueryProvider } from "./QueryProvider";
 import { ExcerptBasketProvider } from "@/components/excerpt";
 import { SectionDataProvider } from "@/components/section-data-provider";
+import { AnalyticsProvider } from "@/components/analytics-provider";
 
 interface ProvidersProps {
   children: React.ReactNode;
@@ -48,11 +49,13 @@ interface ProvidersProps {
  */
 export function Providers({ children }: ProvidersProps) {
   return (
-    <QueryProvider>
-      <SectionDataProvider>
-        <ExcerptBasketProvider>{children}</ExcerptBasketProvider>
-      </SectionDataProvider>
-    </QueryProvider>
+    <AnalyticsProvider>
+      <QueryProvider>
+        <SectionDataProvider>
+          <ExcerptBasketProvider>{children}</ExcerptBasketProvider>
+        </SectionDataProvider>
+      </QueryProvider>
+    </AnalyticsProvider>
   );
 }
 
