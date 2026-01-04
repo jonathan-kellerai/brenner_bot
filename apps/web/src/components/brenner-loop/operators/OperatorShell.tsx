@@ -14,6 +14,8 @@
 import * as React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, HelpCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -89,6 +91,9 @@ function useKeyboardNavigation({
   onStepClick?: (stepIndex: number) => void;
 }) {
   React.useEffect(() => {
+    const firstIncompleteIndex = steps.findIndex((step) => !step.complete && !step.skipped);
+    const lastReachableIndex = firstIncompleteIndex === -1 ? steps.length - 1 : firstIncompleteIndex;
+
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignore if user is typing in an input/textarea
       if (
@@ -133,7 +138,11 @@ function useKeyboardNavigation({
             const targetIndex = num - 1;
             const targetStep = steps[targetIndex];
             // Can only navigate to completed, skipped, or current/previous steps
-            if (targetStep?.complete || targetStep?.skipped || targetIndex <= steps.findIndex(s => !s.complete && !s.skipped)) {
+            if (
+              targetStep?.complete ||
+              targetStep?.skipped ||
+              targetIndex <= lastReachableIndex
+            ) {
               e.preventDefault();
               onStepClick(targetIndex);
             }
@@ -246,8 +255,11 @@ function HelpPanel({ helpText, className }: HelpPanelProps) {
         >
           <div
             className="text-sm text-muted-foreground prose prose-sm dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: helpText }}
-          />
+          >
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {helpText}
+            </ReactMarkdown>
+          </div>
         </motion.div>
       </CollapsibleContent>
     </Collapsible>
