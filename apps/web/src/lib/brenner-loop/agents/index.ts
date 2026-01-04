@@ -117,12 +117,16 @@ export async function loadPrompt(role: TribunalAgentRole): Promise<string> {
 }
 
 /**
- * Fetch prompt content from the appropriate source
+ * Fetch prompt content from the appropriate source.
+ *
+ * TODO: Implement actual prompt loading when Agent Mail integration is built.
+ * This stub returns a placeholder - the actual prompts are in the prompts/ directory.
  */
 async function fetchPromptContent(promptPath: string): Promise<string> {
-  // In server context, we could read from filesystem
-  // For now, return the path - actual loading will be implemented
-  // when the Agent Mail integration is built
+  // TODO(xlk2.2): Implement actual prompt loading via:
+  // - Server: fs.readFile for the markdown files
+  // - Client: fetch from API route that serves prompt content
+  // For now, return the path as a placeholder
   return `[Prompt at: ${promptPath}]`;
 }
 
@@ -168,11 +172,16 @@ export function getAgentConfig(
 // ============================================================================
 
 /**
+ * All valid tribunal agent role values (derived from TRIBUNAL_AGENTS keys)
+ */
+const VALID_TRIBUNAL_ROLES = Object.keys(TRIBUNAL_AGENTS) as TribunalAgentRole[];
+
+/**
  * Check if a string is a valid tribunal agent role
  */
 export function isTribunalAgentRole(value: unknown): value is TribunalAgentRole {
   return (
     typeof value === "string" &&
-    ["devils_advocate", "experiment_designer", "brenner_channeler", "synthesis"].includes(value)
+    VALID_TRIBUNAL_ROLES.includes(value as TribunalAgentRole)
   );
 }
