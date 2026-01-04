@@ -933,7 +933,7 @@ export function createHypothesisCard(input: {
  */
 export function evolveHypothesisCard(
   current: HypothesisCard,
-  changes: Partial<Omit<HypothesisCard, "id" | "version" | "parentVersion" | "createdAt">>,
+  changes: Partial<Omit<HypothesisCard, "id" | "version" | "parentVersion" | "createdAt" | "updatedAt" | "evolutionReason" | "createdBy">>,
   reason: string,
   createdBy?: string
 ): HypothesisCard {
@@ -1038,10 +1038,11 @@ export function calculateSpecificityScore(card: HypothesisCard): number {
   let score = 0;
 
   // Filter out empty/whitespace-only strings for accurate scoring
-  const validPredictions = card.predictionsIfTrue.filter(
+  // Use defensive access pattern for runtime safety (e.g., malformed JSON input)
+  const validPredictions = (card.predictionsIfTrue || []).filter(
     (s) => s.trim().length > 0
   );
-  const validDomains = card.domain.filter((s) => s.trim().length > 0);
+  const validDomains = (card.domain || []).filter((s) => s.trim().length > 0);
 
   // Score based on predictions if true
   if (validPredictions.length > 0) {
@@ -1050,7 +1051,7 @@ export function calculateSpecificityScore(card: HypothesisCard): number {
   }
 
   // Score based on mechanism detail (use trimmed length)
-  const mechanismLength = card.mechanism.trim().length;
+  const mechanismLength = (card.mechanism || "").trim().length;
   if (mechanismLength > 100) score += 20;
   else if (mechanismLength > 50) score += 10;
 
@@ -1059,9 +1060,10 @@ export function calculateSpecificityScore(card: HypothesisCard): number {
   if (validDomains.length > 1) score += 10;
 
   // Score based on confound identification
-  if (card.confounds.length > 0) {
+  const confoundsCount = (card.confounds || []).length;
+  if (confoundsCount > 0) {
     score += 10;
-    score += Math.min(card.confounds.length * 5, 10);
+    score += Math.min(confoundsCount * 5, 10);
   }
 
   return Math.max(0, Math.min(100, score));
