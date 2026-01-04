@@ -309,4 +309,225 @@ export class AgentMailClient {
       message_id: args.messageId,
     });
   }
+
+  // ============================================================================
+  // Project & Agent Management
+  // ============================================================================
+
+  /**
+   * Ensure a project exists for the given human key (absolute path).
+   * Safe to call multiple times - idempotent.
+   */
+  async ensureProject(args: { humanKey: string }): Promise<AgentMailProject> {
+    const result = await this.toolsCall("ensure_project", {
+      human_key: args.humanKey,
+    });
+    return result as AgentMailProject;
+  }
+
+  /**
+   * Register or update an agent identity within a project.
+   * Agent names should be adjective+noun combinations (e.g., "BlueLake").
+   */
+  async registerAgent(args: {
+    projectKey: string;
+    program: string;
+    model: string;
+    name?: string;
+    taskDescription?: string;
+  }): Promise<AgentMailAgent> {
+    const result = await this.toolsCall("register_agent", {
+      project_key: args.projectKey,
+      program: args.program,
+      model: args.model,
+      ...(args.name && { name: args.name }),
+      ...(args.taskDescription && { task_description: args.taskDescription }),
+    });
+    return result as AgentMailAgent;
+  }
+
+  // ============================================================================
+  // Message Operations
+  // ============================================================================
+
+  /**
+   * Send a message to one or more recipients.
+   */
+  async sendMessage(args: {
+    projectKey: string;
+    senderName: string;
+    to: string[];
+    subject: string;
+    bodyMd: string;
+    cc?: string[];
+    bcc?: string[];
+    threadId?: string;
+    importance?: AgentMailImportance;
+    ackRequired?: boolean;
+  }): Promise<AgentMailSendResult> {
+    const result = await this.toolsCall("send_message", {
+      project_key: args.projectKey,
+      sender_name: args.senderName,
+      to: args.to,
+      subject: args.subject,
+      body_md: args.bodyMd,
+      ...(args.cc && { cc: args.cc }),
+      ...(args.bcc && { bcc: args.bcc }),
+      ...(args.threadId && { thread_id: args.threadId }),
+      ...(args.importance && { importance: args.importance }),
+      ...(args.ackRequired !== undefined && { ack_required: args.ackRequired }),
+    });
+    return result as AgentMailSendResult;
+  }
+
+  /**
+   * Reply to an existing message, preserving the thread.
+   */
+  async replyMessage(args: {
+    projectKey: string;
+    messageId: number;
+    senderName: string;
+    bodyMd: string;
+    to?: string[];
+    cc?: string[];
+    bcc?: string[];
+  }): Promise<AgentMailSendResult> {
+    const result = await this.toolsCall("reply_message", {
+      project_key: args.projectKey,
+      message_id: args.messageId,
+      sender_name: args.senderName,
+      body_md: args.bodyMd,
+      ...(args.to && { to: args.to }),
+      ...(args.cc && { cc: args.cc }),
+      ...(args.bcc && { bcc: args.bcc }),
+    });
+    return result as AgentMailSendResult;
+  }
+
+  /**
+   * Fetch inbox using the tools/call endpoint (alternative to resource read).
+   * Note: The call() method already unwraps the JSON-RPC response, so the result
+   * is the tool output directly (an array of messages).
+   */
+  async fetchInbox(args: {
+    projectKey: string;
+    agentName: string;
+    limit?: number;
+    urgentOnly?: boolean;
+    includeBodies?: boolean;
+    sinceTs?: string;
+  }): Promise<AgentMailMessage[]> {
+    const result = await this.toolsCall("fetch_inbox", {
+      project_key: args.projectKey,
+      agent_name: args.agentName,
+      limit: args.limit ?? 20,
+      urgent_only: args.urgentOnly ?? false,
+      include_bodies: args.includeBodies ?? false,
+      ...(args.sinceTs && { since_ts: args.sinceTs }),
+    });
+    // The call() method already extracts the JSON-RPC result field,
+    // so we receive the tool output directly
+    return (result ?? []) as AgentMailMessage[];
+  }
+
+  /**
+   * Search messages using full-text search.
+   */
+  async searchMessages(args: {
+    projectKey: string;
+    query: string;
+    limit?: number;
+  }): Promise<AgentMailMessage[]> {
+    const result = await this.toolsCall("search_messages", {
+      project_key: args.projectKey,
+      query: args.query,
+      limit: args.limit ?? 20,
+    });
+    return result as AgentMailMessage[];
+  }
+
+  /**
+   * Get thread summary with participants, key points, and action items.
+   */
+  async summarizeThread(args: {
+    projectKey: string;
+    threadId: string;
+    includeExamples?: boolean;
+  }): Promise<AgentMailThreadSummary> {
+    const result = await this.toolsCall("summarize_thread", {
+      project_key: args.projectKey,
+      thread_id: args.threadId,
+      include_examples: args.includeExamples ?? false,
+    });
+    return result as AgentMailThreadSummary;
+  }
+
+  /**
+   * Start a session with project+agent registration and inbox fetch.
+   * Convenience macro for initialization.
+   */
+  async startSession(args: {
+    humanKey: string;
+    program: string;
+    model: string;
+    agentName?: string;
+    taskDescription?: string;
+    inboxLimit?: number;
+  }): Promise<AgentMailSessionStart> {
+    const result = await this.toolsCall("macro_start_session", {
+      human_key: args.humanKey,
+      program: args.program,
+      model: args.model,
+      ...(args.agentName && { agent_name: args.agentName }),
+      ...(args.taskDescription && { task_description: args.taskDescription }),
+      inbox_limit: args.inboxLimit ?? 10,
+    });
+    return result as AgentMailSessionStart;
+  }
 }
+
+// ============================================================================
+// Additional Types
+// ============================================================================
+
+export type AgentMailProject = {
+  id: number;
+  slug: string;
+  human_key: string;
+  created_at: string;
+};
+
+export type AgentMailAgent = {
+  id: number;
+  name: string;
+  program: string;
+  model: string;
+  task_description: string;
+  inception_ts: string;
+  last_active_ts: string;
+  project_id: number;
+};
+
+export type AgentMailSendResult = {
+  deliveries: Array<{
+    project: string;
+    payload: AgentMailMessage;
+  }>;
+  count: number;
+};
+
+export type AgentMailThreadSummary = {
+  thread_id: string;
+  summary: {
+    participants: string[];
+    key_points: string[];
+    action_items: string[];
+  };
+  examples?: AgentMailMessage[];
+};
+
+export type AgentMailSessionStart = {
+  project: AgentMailProject;
+  agent: AgentMailAgent;
+  inbox: AgentMailMessage[];
+};
