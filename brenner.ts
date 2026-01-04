@@ -38,6 +38,9 @@ import {
   mergeArtifactWithTimestamps,
   renderArtifactMarkdown,
   type Artifact,
+  type LintReport,
+  type LintSeverity,
+  type LintViolation,
 } from "./apps/web/src/lib/artifact-merge";
 import {
   computeThreadStatusFromThread,
