@@ -64,8 +64,10 @@ test.describe("Mobile Tutorial Menu", () => {
     await waitForContent(page, logger, 'text="All Tutorials"');
     await takeScreenshot(page, logger, "tutorial-mobile-menu-open");
 
-    const menuPanel = page.locator('[class*="shadow-2xl"]').first();
-    const closeButton = menuPanel.locator("button").first();
+    const overlay = page
+      .locator('div[class*="inset-0"][class*="z-50"][class*="lg:hidden"]')
+      .first();
+    const closeButton = overlay.locator("button").first();
     if (await closeButton.isVisible()) {
       await clickElement(page, logger, closeButton, "Tutorial menu close button");
     } else {
@@ -74,7 +76,7 @@ test.describe("Mobile Tutorial Menu", () => {
       await clickElement(page, logger, backdrop, "Tutorial menu backdrop");
     }
 
-    await expect(page.locator('text="All Tutorials"')).toBeHidden();
+    await expect(overlay).toBeHidden();
     await takeScreenshot(page, logger, "tutorial-mobile-menu-closed");
   });
 });
