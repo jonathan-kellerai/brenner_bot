@@ -16,7 +16,6 @@ import type { HypothesisCard } from "@/lib/brenner-loop/hypothesis";
 import type {
   OperatorType,
   OperatorSession,
-  OperatorSessionAction,
   OperatorStepConfig,
   OperatorStepState,
   OperatorInsight,

@@ -20,11 +20,6 @@
  * @see brenner_bot-1v26.1 (bead)
  */
 
-import type { Hypothesis, HypothesisState, HypothesisConfidence } from "../schemas/hypothesis";
-import type { Prediction } from "../schemas/prediction";
-import type { TestRecord } from "../schemas/test-record";
-import type { Assumption } from "../schemas/assumption";
-
 // Import and re-export HypothesisCard and related items from the dedicated module (bead an1n.1)
 // This avoids duplication while making them available from this module
 import type { HypothesisCard, IdentifiedConfound } from "./hypothesis";

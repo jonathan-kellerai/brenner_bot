@@ -26,12 +26,13 @@ describe("transcriptParser", () => {
     const result = parseTranscript(content);
 
     expect(result.sections).toHaveLength(2);
-    expect(result.sections[0]!.anchor).toBe("§1");
-    expect(result.sections[0]!.body).toContain("hello");
-    expect(result.sections[0]!.body).toContain("world");
-    expect(result.sections[0]!.body).not.toContain("---");
-    expect(result.sections[1]!.plainText).toContain("quoted line");
-    expect(result.sections[1]!.plainText).toContain("[Q]");
+    const [firstSection, secondSection] = result.sections;
+    expect(firstSection?.anchor).toBe("§1");
+    expect(firstSection?.body).toContain("hello");
+    expect(firstSection?.body).toContain("world");
+    expect(firstSection?.body).not.toContain("---");
+    expect(secondSection?.plainText).toContain("quoted line");
+    expect(secondSection?.plainText).toContain("[Q]");
 
     // For a toy sample we should get an expected-count error
     expect(result.errors.some((e) => e.type === "error")).toBe(true);
@@ -55,9 +56,12 @@ describe("transcriptParser", () => {
     const errors = validateSections(sections);
     expect(errors.some((e) => e.type === "error")).toBe(true);
 
-    const mutated = [{ ...sections[0]!, title: "" }];
+    const [firstSection] = sections;
+    if (!firstSection) {
+      throw new Error("Expected a parsed section for validation");
+    }
+    const mutated = [{ ...firstSection, title: "" }];
     const titleErrors = validateSections(mutated);
     expect(titleErrors.some((e) => /empty title/i.test(e.message))).toBe(true);
   });
 });
-

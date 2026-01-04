@@ -17,10 +17,9 @@ import {
   deferHypothesis,
   reactivateHypothesis,
   TransitionHistoryStore,
-  type TransitionTrigger,
   type StateTransition,
 } from "./hypothesis-lifecycle";
-import { type Hypothesis, type HypothesisState } from "./hypothesis";
+import { type Hypothesis } from "./hypothesis";
 
 // ============================================================================
 // Test Fixtures

@@ -15,10 +15,9 @@ import {
   falsifyAssumption,
   computeFalsificationPropagation,
   AssumptionTransitionHistoryStore,
-  type AssumptionTrigger,
   type AssumptionTransition,
 } from "./assumption-lifecycle";
-import { type Assumption, type AssumptionStatus, createAssumption } from "./assumption";
+import { type Assumption, createAssumption } from "./assumption";
 
 // ============================================================================
 // Test Fixtures

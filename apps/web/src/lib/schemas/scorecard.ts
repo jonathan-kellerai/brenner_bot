@@ -1,13 +1,5 @@
 import { z } from "zod";
-import type {
-  Artifact,
-  HypothesisItem,
-  TestItem,
-  AssumptionItem,
-  AnomalyItem,
-  CritiqueItem,
-  ResearchThreadItem,
-} from "../artifact-merge";
+import type { Artifact } from "../artifact-merge";
 
 /**
  * Brenner Method Scorecard Schema

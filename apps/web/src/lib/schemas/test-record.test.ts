@@ -3,10 +3,8 @@ import {
   TestRecordSchema,
   PotencyCheckSchema,
   EvidencePerWeekScoreSchema,
-  ObjectTranspositionSchema,
   TestFeasibilitySchema,
   ExpectedOutcomeSchema,
-  TestExecutionSchema,
   TestStatusSchema,
   calculatePotencyScore,
   calculateTotalScore,
@@ -333,7 +331,7 @@ describe("Test Record Schema", () => {
     });
 
     it("requires potencyCheck", () => {
-      const { potencyCheck, ...withoutPotency } = validTest;
+      const { potencyCheck: _potencyCheck, ...withoutPotency } = validTest;
       expect(() => TestRecordSchema.parse(withoutPotency)).toThrow();
     });
   });

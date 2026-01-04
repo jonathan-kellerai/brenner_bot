@@ -397,13 +397,13 @@ describe("validateEvidencePack", () => {
     });
 
     it("rejects missing id", () => {
-      const { id, ...record } = minimalValidRecord;
+      const { id: _id, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'id' field");
     });
 
     it("rejects missing type", () => {
-      const { type, ...record } = minimalValidRecord;
+      const { type: _type, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'type' field");
     });
@@ -426,19 +426,19 @@ describe("validateEvidencePack", () => {
     });
 
     it("rejects missing title", () => {
-      const { title, ...record } = minimalValidRecord;
+      const { title: _title, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'title' field");
     });
 
     it("rejects missing source", () => {
-      const { source, ...record } = minimalValidRecord;
+      const { source: _source, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'source' field");
     });
 
     it("rejects missing access_method", () => {
-      const { access_method, ...record } = minimalValidRecord;
+      const { access_method: _access_method, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'access_method' field");
     });
@@ -458,25 +458,25 @@ describe("validateEvidencePack", () => {
     });
 
     it("rejects missing imported_at", () => {
-      const { imported_at, ...record } = minimalValidRecord;
+      const { imported_at: _imported_at, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'imported_at' field");
     });
 
     it("rejects missing imported_by", () => {
-      const { imported_by, ...record } = minimalValidRecord;
+      const { imported_by: _imported_by, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'imported_by' field");
     });
 
     it("rejects missing relevance", () => {
-      const { relevance, ...record } = minimalValidRecord;
+      const { relevance: _relevance, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'relevance' field");
     });
 
     it("rejects missing verified", () => {
-      const { verified, ...record } = minimalValidRecord;
+      const { verified: _verified, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing or invalid 'verified' field");
     });
@@ -488,13 +488,13 @@ describe("validateEvidencePack", () => {
     });
 
     it("rejects missing key_findings", () => {
-      const { key_findings, ...record } = minimalValidRecord;
+      const { key_findings: _key_findings, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'key_findings' array");
     });
 
     it("rejects missing excerpts", () => {
-      const { excerpts, ...record } = minimalValidRecord;
+      const { excerpts: _excerpts, ...record } = minimalValidRecord;
       expect(() => validateEvidencePack(packWithRecord(record)))
         .toThrow("missing 'excerpts' array");
     });

@@ -48,11 +48,13 @@ describe.sequential("ProgramStorage", () => {
 
     const loaded = await storage.loadPrograms();
     expect(loaded).toHaveLength(1);
-    expect(loaded[0]!.id).toBe(program.id);
+    const [firstProgram] = loaded;
+    expect(firstProgram?.id).toBe(program.id);
 
     const index = await storage.rebuildIndex();
     expect(index.entries).toHaveLength(1);
-    expect(index.entries[0]!.sessionCount).toBe(1);
+    const [firstEntry] = index.entries;
+    expect(firstEntry?.sessionCount).toBe(1);
   });
 
   it("saveProgram upserts by id and deleteProgram returns boolean", async () => {
