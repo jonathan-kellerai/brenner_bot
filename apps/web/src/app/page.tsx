@@ -165,6 +165,73 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Research Lab CTA - Always visible */}
+      <section className="animate-fade-in-up px-4 sm:px-0">
+        <div className="relative overflow-hidden rounded-xl sm:rounded-2xl border border-border bg-gradient-to-br from-muted/30 via-card to-muted/20 p-6 sm:p-8">
+          {/* Decorative elements */}
+          <div className="absolute top-0 right-0 -mt-8 -mr-8 size-32 sm:size-40 bg-primary/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 -mb-8 -ml-8 size-24 sm:size-32 bg-accent/5 rounded-full blur-3xl" />
+
+          <div className="relative space-y-6">
+            {/* Header */}
+            <div className="space-y-3">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium">
+                <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 5.07a1.125 1.125 0 01-1.135 1.416H3.933a1.125 1.125 0 01-1.135-1.416L5 14.5" />
+                </svg>
+                Research Lab
+              </div>
+              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">
+                Apply the Method to Your Research
+              </h2>
+              <p className="text-sm sm:text-base text-muted-foreground max-w-2xl leading-relaxed">
+                The <Jargon term="brenner-loop">Brenner Loop</Jargon> is an interactive research framework that helps you develop <Jargon term="discriminative-hypothesis">discriminative hypotheses</Jargon> using four cognitive operators. Run structured sessions and track your evolving understanding.
+              </p>
+            </div>
+
+            {/* Operator preview */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { symbol: "Σ", name: "Level Split", description: "Decompose into measurable levels" },
+                { symbol: "⊘", name: "Exclusion Test", description: "Design decisive experiments" },
+                { symbol: "⟳", name: "Object Transpose", description: "Challenge causal assumptions" },
+                { symbol: "⊙", name: "Scale Check", description: "Verify effect magnitudes" },
+              ].map((op) => (
+                <div key={op.symbol} className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl bg-background/60 border border-border/50">
+                  <span className="text-xl sm:text-2xl font-bold text-primary">{op.symbol}</span>
+                  <span className="text-xs sm:text-sm font-medium text-foreground text-center">{op.name}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <Link
+                href="/sessions"
+                className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/20 hover:shadow-xl hover:shadow-primary/25 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
+              >
+                Explore Sessions
+                <ArrowRightIcon />
+              </Link>
+              <Link
+                href="/operators"
+                className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
+              >
+                View Operators
+                <ArrowRightIcon />
+              </Link>
+              <Link
+                href="/tutorial"
+                className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
+              >
+                Start Tutorial
+                <ArrowRightIcon />
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Lab Mode Card */}
       {labModeEnabled && (
         <section className="animate-fade-in-up px-4 sm:px-0">
