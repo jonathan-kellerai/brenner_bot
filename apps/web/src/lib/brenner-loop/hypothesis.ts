@@ -423,10 +423,10 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
 
   // === Confidence ===
 
-  if (typeof card.confidence !== "number") {
+  if (typeof card.confidence !== "number" || !Number.isFinite(card.confidence)) {
     errors.push({
       field: "confidence",
-      message: "Confidence must be a number",
+      message: "Confidence must be a finite number",
       code: "INVALID_TYPE",
     });
   } else if (card.confidence < 0 || card.confidence > 100) {
@@ -439,7 +439,12 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
 
   // === Version ===
 
-  if (typeof card.version !== "number" || card.version < 1) {
+  if (
+    typeof card.version !== "number" ||
+    !Number.isFinite(card.version) ||
+    !Number.isInteger(card.version) ||
+    card.version < 1
+  ) {
     errors.push({
       field: "version",
       message: "Version must be a positive integer",
@@ -472,7 +477,7 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
       const confound = card.confounds[i];
       const prefix = `confounds[${i}]`;
 
-      if (!confound.id) {
+      if (!confound.id || confound.id.trim().length === 0) {
         errors.push({
           field: `${prefix}.id`,
           message: "Confound ID is required",
@@ -498,12 +503,13 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
 
       if (
         typeof confound.likelihood !== "number" ||
+        !Number.isFinite(confound.likelihood) ||
         confound.likelihood < 0 ||
         confound.likelihood > 1
       ) {
         errors.push({
           field: `${prefix}.likelihood`,
-          message: "Confound likelihood must be between 0 and 1",
+          message: "Confound likelihood must be a finite number between 0 and 1",
           code: "CONFOUND_INVALID",
         });
       }
@@ -601,10 +607,10 @@ export function validateConfound(confound: IdentifiedConfound): ValidationResult
     });
   }
 
-  if (typeof confound.likelihood !== "number") {
+  if (typeof confound.likelihood !== "number" || !Number.isFinite(confound.likelihood)) {
     errors.push({
       field: "likelihood",
-      message: "Likelihood must be a number",
+      message: "Likelihood must be a finite number",
       code: "INVALID_TYPE",
     });
   } else if (confound.likelihood < 0 || confound.likelihood > 1) {
@@ -694,9 +700,9 @@ export function isHypothesisCard(obj: unknown): obj is HypothesisCard {
   if (!isValidDateOrString(card.createdAt)) return false;
   if (!isValidDateOrString(card.updatedAt)) return false;
 
-  // Validate ranges
-  if (card.confidence < 0 || card.confidence > 100) return false;
-  if (card.version < 1) return false;
+  // Validate ranges (use Number.isFinite to catch NaN/Infinity)
+  if (!Number.isFinite(card.confidence) || card.confidence < 0 || card.confidence > 100) return false;
+  if (!Number.isInteger(card.version) || card.version < 1) return false;
 
   return true;
 }
@@ -720,8 +726,8 @@ export function isIdentifiedConfound(obj: unknown): obj is IdentifiedConfound {
   if (typeof confound.likelihood !== "number") return false;
   if (typeof confound.domain !== "string") return false;
 
-  // Validate range
-  if (confound.likelihood < 0 || confound.likelihood > 1) return false;
+  // Validate range (use Number.isFinite to catch NaN/Infinity)
+  if (!Number.isFinite(confound.likelihood) || confound.likelihood < 0 || confound.likelihood > 1) return false;
 
   return true;
 }
