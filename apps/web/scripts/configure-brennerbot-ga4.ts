@@ -159,3 +159,63 @@ async function configureProperty() {
 }
 
 configureProperty().catch(console.error);
+
+// =============================================================================
+// Additional User Property Dimensions (run separately if needed)
+// =============================================================================
+
+const ADDITIONAL_USER_DIMENSIONS = [
+  { name: 'first_visit_date', scope: 'USER', description: 'Timestamp of first visit' },
+  { name: 'first_traffic_source', scope: 'USER', description: 'Traffic source on first visit' },
+  { name: 'first_traffic_medium', scope: 'USER', description: 'Traffic medium on first visit' },
+  { name: 'first_landing_page', scope: 'USER', description: 'Landing page on first visit' },
+  { name: 'latest_traffic_source', scope: 'USER', description: 'Traffic source in current session' },
+  { name: 'latest_traffic_medium', scope: 'USER', description: 'Traffic medium in current session' },
+  { name: 'visit_count', scope: 'USER', description: 'Total visit count' },
+  { name: 'is_returning_user', scope: 'USER', description: 'Whether user has visited before' },
+  { name: 'tutorial_completed', scope: 'USER', description: 'Whether user completed tutorial' },
+];
+
+async function addUserDimensions() {
+  const client = new AnalyticsAdminServiceClient();
+  
+  console.log("\nAdding user-scoped dimensions...");
+  
+  // Get existing
+  const existingDimensions = new Set<string>();
+  try {
+    const [dimensions] = await client.listCustomDimensions({ parent: PROPERTY_NAME });
+    for (const dim of dimensions || []) {
+      existingDimensions.add(dim.parameterName || '');
+    }
+  } catch (e) {
+    console.error("Error listing dimensions");
+  }
+  
+  for (const dim of ADDITIONAL_USER_DIMENSIONS) {
+    if (existingDimensions.has(dim.name)) {
+      console.log(`  • ${dim.name} (exists)`);
+      continue;
+    }
+    
+    try {
+      await client.createCustomDimension({
+        parent: PROPERTY_NAME,
+        customDimension: {
+          parameterName: dim.name,
+          displayName: dim.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          description: dim.description,
+          scope: dim.scope as 'EVENT' | 'USER',
+        },
+      });
+      console.log(`  ✓ ${dim.name}`);
+    } catch (error: any) {
+      console.error(`  ✗ ${dim.name}: ${error.message}`);
+    }
+  }
+}
+
+// Run if called with --add-user-dims flag
+if (process.argv.includes('--add-user-dims')) {
+  addUserDimensions().catch(console.error);
+}

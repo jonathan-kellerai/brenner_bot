@@ -753,7 +753,93 @@ export function trackConversion(
 // =============================================================================
 
 /**
- * Track session start with device info
+ * Extract UTM parameters and referrer from current URL
+ */
+function getAcquisitionData(): {
+  utm_source: string;
+  utm_medium: string;
+  utm_campaign: string;
+  utm_term: string;
+  utm_content: string;
+  referrer: string;
+  referrer_domain: string;
+  landing_page: string;
+} {
+  if (typeof window === 'undefined') {
+    return {
+      utm_source: 'direct',
+      utm_medium: 'none',
+      utm_campaign: '',
+      utm_term: '',
+      utm_content: '',
+      referrer: '',
+      referrer_domain: '',
+      landing_page: '',
+    };
+  }
+
+  const params = new URLSearchParams(window.location.search);
+  const referrer = document.referrer || '';
+  let referrerDomain = '';
+
+  try {
+    if (referrer) {
+      referrerDomain = new URL(referrer).hostname;
+    }
+  } catch {
+    // Invalid URL
+  }
+
+  // Determine source from UTM or referrer
+  let source = params.get('utm_source') || '';
+  let medium = params.get('utm_medium') || '';
+
+  if (!source && referrer) {
+    // Infer source from referrer
+    if (referrerDomain.includes('google')) {
+      source = 'google';
+      medium = medium || 'organic';
+    } else if (referrerDomain.includes('bing')) {
+      source = 'bing';
+      medium = medium || 'organic';
+    } else if (referrerDomain.includes('twitter') || referrerDomain.includes('x.com')) {
+      source = 'twitter';
+      medium = medium || 'social';
+    } else if (referrerDomain.includes('linkedin')) {
+      source = 'linkedin';
+      medium = medium || 'social';
+    } else if (referrerDomain.includes('facebook')) {
+      source = 'facebook';
+      medium = medium || 'social';
+    } else if (referrerDomain.includes('reddit')) {
+      source = 'reddit';
+      medium = medium || 'social';
+    } else if (referrerDomain.includes('github')) {
+      source = 'github';
+      medium = medium || 'referral';
+    } else if (referrerDomain) {
+      source = referrerDomain;
+      medium = medium || 'referral';
+    }
+  }
+
+  return {
+    utm_source: source || 'direct',
+    utm_medium: medium || 'none',
+    utm_campaign: params.get('utm_campaign') || '',
+    utm_term: params.get('utm_term') || '',
+    utm_content: params.get('utm_content') || '',
+    referrer,
+    referrer_domain: referrerDomain,
+    landing_page: window.location.pathname,
+  };
+}
+
+const FIRST_VISIT_KEY = 'brennerbot_first_visit';
+const FIRST_SOURCE_KEY = 'brennerbot_first_source';
+
+/**
+ * Track session start with device info, UTM parameters, and referrer
  */
 export function trackSessionStart(): void {
   if (typeof window === 'undefined') return;
@@ -762,28 +848,84 @@ export function trackSessionStart(): void {
   const screenHeight = window.screen.height;
   const devicePixelRatio = window.devicePixelRatio || 1;
   const isTouchDevice = 'ontouchstart' in window;
+  const acquisition = getAcquisitionData();
+
+  // Check for first visit
+  const isFirstVisit = !safeGetItem(FIRST_VISIT_KEY);
+  const now = new Date().toISOString();
+
+  if (isFirstVisit) {
+    safeSetItem(FIRST_VISIT_KEY, now);
+    safeSetJSON(FIRST_SOURCE_KEY, {
+      source: acquisition.utm_source,
+      medium: acquisition.utm_medium,
+      campaign: acquisition.utm_campaign,
+      landing_page: acquisition.landing_page,
+      referrer: acquisition.referrer,
+    });
+  }
+
+  // Get first visit data for user properties
+  const firstVisitDate = safeGetItem(FIRST_VISIT_KEY) || now;
+  const firstSource = safeGetJSON<{
+    source: string;
+    medium: string;
+    campaign: string;
+    landing_page: string;
+  }>(FIRST_SOURCE_KEY);
 
   sendEvent('session_start_enhanced', {
+    // Device info
     screen_width: screenWidth,
     screen_height: screenHeight,
     device_pixel_ratio: devicePixelRatio,
     is_touch_device: isTouchDevice,
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     language: navigator.language,
-    platform: navigator.platform,
+    platform: navigator.userAgent.includes('Mac') ? 'macOS'
+      : navigator.userAgent.includes('Win') ? 'Windows'
+      : navigator.userAgent.includes('Linux') ? 'Linux'
+      : navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad') ? 'iOS'
+      : navigator.userAgent.includes('Android') ? 'Android'
+      : 'unknown',
+    // Acquisition data
+    utm_source: acquisition.utm_source,
+    utm_medium: acquisition.utm_medium,
+    utm_campaign: acquisition.utm_campaign,
+    utm_term: acquisition.utm_term,
+    utm_content: acquisition.utm_content,
+    referrer: acquisition.referrer,
+    referrer_domain: acquisition.referrer_domain,
+    landing_page: acquisition.landing_page,
+    is_first_visit: isFirstVisit,
   });
 
   // Check for returning user
   const visitCount = parseInt(safeGetItem('brennerbot_visit_count') || '0', 10) + 1;
   safeSetItem('brennerbot_visit_count', String(visitCount));
 
+  // Set comprehensive user properties
   setUserProperties({
+    // Visit tracking
     visit_count: visitCount,
     is_returning_user: visitCount > 1,
+    // First visit attribution (persists across sessions)
+    first_visit_date: firstVisitDate,
+    first_traffic_source: firstSource?.source || acquisition.utm_source,
+    first_traffic_medium: firstSource?.medium || acquisition.utm_medium,
+    first_landing_page: firstSource?.landing_page || acquisition.landing_page,
+    // Current session attribution
+    latest_traffic_source: acquisition.utm_source,
+    latest_traffic_medium: acquisition.utm_medium,
   });
 
   if (visitCount === 2) {
     trackConversion('return_visitor', 5);
+  }
+
+  // Track first document view conversion
+  if (isFirstVisit) {
+    trackConversion('first_document_read', 1);
   }
 }
 
