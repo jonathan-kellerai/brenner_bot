@@ -95,13 +95,13 @@ const PATH_CONFIGS: Record<string, PathConfig> = {
     shortTitle: "Quick Start",
     accent: "oklch(0.72 0.19 145)",
     steps: [
-      { id: "qs-1", stepNumber: 1, title: "Pick a Research Question", estimatedTime: "~3 min", completed: false },
-      { id: "qs-2", stepNumber: 2, title: "Form Your Initial Hypothesis", estimatedTime: "~5 min", completed: false },
-      { id: "qs-3", stepNumber: 3, title: "Identify Discriminative Predictions", estimatedTime: "~5 min", completed: false },
-      { id: "qs-4", stepNumber: 4, title: "Surface Your Assumptions", estimatedTime: "~5 min", completed: false },
-      { id: "qs-5", stepNumber: 5, title: "Design Your First Test", estimatedTime: "~5 min", completed: false },
-      { id: "qs-6", stepNumber: 6, title: "Run the Test", estimatedTime: "~5 min", completed: false },
-      { id: "qs-7", stepNumber: 7, title: "Iterate or Celebrate", estimatedTime: "~2 min", completed: false },
+      { id: "qs-1", stepNumber: 1, title: "What Is This?", estimatedTime: "~3 min", completed: false },
+      { id: "qs-2", stepNumber: 2, title: "Prerequisites", estimatedTime: "~2 min", completed: false },
+      { id: "qs-3", stepNumber: 3, title: "Clone & Install", estimatedTime: "~5 min", completed: false },
+      { id: "qs-4", stepNumber: 4, title: "Search the Corpus", estimatedTime: "~5 min", completed: false },
+      { id: "qs-5", stepNumber: 5, title: "Build an Excerpt", estimatedTime: "~5 min", completed: false },
+      { id: "qs-6", stepNumber: 6, title: "Your First Session", estimatedTime: "~8 min", completed: false },
+      { id: "qs-7", stepNumber: 7, title: "Understand the Output", estimatedTime: "~5 min", completed: false },
     ],
   },
   "agent-assisted": {
@@ -160,7 +160,9 @@ function useCurrentPath(): PathConfig | null {
 
 function useIsStepPage(): boolean {
   const pathname = usePathname();
-  return pathname.includes("/step/");
+  // Match both /step/N and /N patterns for step pages
+  // Examples: /tutorial/quick-start/step/1, /tutorial/quick-start/1
+  return pathname.includes("/step/") || /\/tutorial\/[^/]+\/\d+$/.test(pathname);
 }
 
 // ============================================================================

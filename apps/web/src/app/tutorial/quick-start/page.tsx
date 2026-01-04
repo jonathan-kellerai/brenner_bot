@@ -48,72 +48,72 @@ const ClockIcon = () => (
 const steps = [
   {
     number: 1,
-    title: "Pick a Research Question",
+    title: "What Is This?",
     duration: "~3 min",
-    description: "Choose a question you genuinely care about — something you'd love to have a clearer answer to.",
+    description: "Understand BrennerBot, the Two Axioms, and what you'll produce by the end of this tutorial.",
     whatYouLearn: [
-      "How to identify questions amenable to the Brenner approach",
-      "Distinguishing testable questions from open-ended curiosity",
+      "Sydney Brenner's methodology in 60 seconds",
+      "The Two Axioms that underpin scientific inquiry",
     ],
   },
   {
     number: 2,
-    title: "Form Your Initial Hypothesis",
-    duration: "~5 min",
-    description: "Write down your best guess. Don't worry about being right — the goal is to have something concrete to test.",
+    title: "Prerequisites",
+    duration: "~2 min",
+    description: "Verify you have Git, terminal access, and Bun installed. Quick checks for all platforms.",
     whatYouLearn: [
-      "Why hypothesis-first research is more efficient",
-      "The importance of being wrong quickly",
+      "Confirming your development environment is ready",
+      "Platform-specific setup tips (Mac, Windows, Linux)",
     ],
   },
   {
     number: 3,
-    title: "Identify Discriminative Predictions",
+    title: "Clone & Install",
     duration: "~5 min",
-    description: "What would you observe if your hypothesis is TRUE vs FALSE? Be specific.",
+    description: "Get the BrennerBot repository and install dependencies. Verify with the doctor command.",
     whatYouLearn: [
-      "The key insight: good hypotheses make different predictions than alternatives",
-      "How to turn vague ideas into testable claims",
+      "Setting up the local BrennerBot environment",
+      "Using the doctor command to verify installation",
     ],
   },
   {
     number: 4,
-    title: "Surface Your Assumptions",
+    title: "Search the Corpus",
     duration: "~5 min",
-    description: "Every hypothesis rests on hidden assumptions. Surface them and assess which are most fragile.",
+    description: "Learn to search Brenner's wisdom using the CLI. Find relevant quotes with §n anchors.",
     whatYouLearn: [
-      "Common assumption categories (scale, mechanism, boundary)",
-      "How assumptions become vulnerability points",
+      "How corpus search returns transcript segments",
+      "Using §n references for stable citations",
     ],
   },
   {
     number: 5,
-    title: "Design Your First Test",
+    title: "Build an Excerpt",
     duration: "~5 min",
-    description: "Design a test that could actually distinguish between your hypothesis and alternatives.",
+    description: "Compose relevant transcript sections into a curated excerpt for your research question.",
     whatYouLearn: [
-      "What makes a test 'discriminative' vs merely 'supportive'",
-      "The Brenner preference for elimination over confirmation",
+      "Why excerpts matter for grounding your research",
+      "Building a personalized Brenner reference document",
     ],
   },
   {
     number: 6,
-    title: "Run the Test (or Thought Experiment)",
-    duration: "~5 min",
-    description: "Execute your test — or if that's not feasible, work through what the results would likely be.",
+    title: "Your First Session",
+    duration: "~8 min",
+    description: "Compose a kickoff prompt using the CLI and run it through any AI chat interface.",
     whatYouLearn: [
-      "How to use existing data as a proxy for experiments",
-      "When thought experiments are valid vs lazy",
+      "Generating structured prompts with the Brenner methodology",
+      "Running sessions in 'local mode' with any AI",
     ],
   },
   {
     number: 7,
-    title: "Iterate or Celebrate",
-    duration: "~2 min",
-    description: "Update your hypothesis based on results. Rinse and repeat.",
+    title: "Understand the Output",
+    duration: "~5 min",
+    description: "Walk through each artifact section and understand why it matters for rigorous research.",
     whatYouLearn: [
-      "The Brenner Loop as a continuous process",
-      "How to build on both success and failure",
+      "The anatomy of a Brenner research artifact",
+      "Connecting outputs back to the Brenner operators",
     ],
   },
 ];
@@ -159,7 +159,7 @@ export default function QuickStartPage() {
 
           <p className="max-w-xl mx-auto text-base sm:text-lg text-muted-foreground leading-relaxed">
             Apply the Brenner method to your research question in 30 minutes.
-            No special setup required — just your browser and curiosity.
+            No complex infrastructure required — just a terminal, git, bun, and any AI chat interface.
           </p>
 
           <div className="flex items-center justify-center gap-4 text-sm text-muted-foreground">
@@ -170,7 +170,7 @@ export default function QuickStartPage() {
             <span>•</span>
             <span>7 steps</span>
             <span>•</span>
-            <span>No setup required</span>
+            <span>No Agent Mail required</span>
           </div>
         </div>
       </HeroBackground>
@@ -236,22 +236,22 @@ export default function QuickStartPage() {
         <div className="max-w-xl mx-auto text-center space-y-6 p-8 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/5 via-primary/10 to-accent/5">
           <h3 className="text-xl font-semibold">Ready to Begin?</h3>
           <p className="text-sm text-muted-foreground">
-            The full interactive tutorial with step-by-step guidance is coming soon.
-            In the meantime, explore the method documentation.
+            Start with Step 1 to learn what BrennerBot is and what you&apos;ll create.
+            The full tutorial takes about 30 minutes.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
-              href="/method"
+              href="/tutorial/quick-start/1"
               className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
             >
-              Explore the Method
+              Start Step 1
               <ArrowRightIcon />
             </Link>
             <Link
-              href="/corpus"
+              href="/method"
               className="group inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
             >
-              Read the Corpus
+              Learn the Method First
               <ArrowRightIcon />
             </Link>
           </div>
