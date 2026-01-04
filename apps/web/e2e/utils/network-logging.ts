@@ -253,7 +253,7 @@ export async function collectPerformanceTiming(page: Page, testTitle: string): P
               }
             }
           });
-          observer.observe({ type: "event", buffered: true, durationThreshold: 0 });
+          observer.observe({ type: "event", buffered: true });
           setTimeout(() => {
             observer.disconnect();
             resolve(max || undefined);
