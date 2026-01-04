@@ -551,9 +551,9 @@ export function trackTutorialStepEnter(
 
   safeSetJSON(TUTORIAL_FUNNEL_KEY, funnelData);
 
-  // Calculate time from previous step
+  // Calculate time from previous step (including step 0)
   let timeFromPreviousStep: number | undefined;
-  if (previousStep > 0 && funnelData.stepTimestamps[previousStep]?.entered) {
+  if (previousStep >= 0 && funnelData.stepTimestamps[previousStep]?.entered) {
     const prevTime = new Date(funnelData.stepTimestamps[previousStep].entered).getTime();
     timeFromPreviousStep = Math.round((Date.now() - prevTime) / 1000);
   }

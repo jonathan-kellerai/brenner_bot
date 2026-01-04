@@ -107,9 +107,6 @@ function AnalyticsTracker() {
   useEffect(() => {
     if (!gaId) return;
 
-    // Build the full URL
-    const url = pathname + (searchParams?.toString() ? `?${searchParams.toString()}` : '');
-
     // Reset engagement tracking for new page
     scrollDepthsReached.current = new Set();
     pageStartTime.current = Date.now();
@@ -118,8 +115,8 @@ function AnalyticsTracker() {
     // Send page view
     window.gtag?.('event', 'page_view', {
       page_path: pathname,
-      page_location: typeof window !== 'undefined' ? window.location.href : url,
-      page_title: typeof document !== 'undefined' ? document.title : '',
+      page_location: window.location.href,
+      page_title: document.title,
     });
   }, [pathname, searchParams, gaId]);
 
