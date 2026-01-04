@@ -20,9 +20,9 @@
  */
 
 import * as React from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, type Variants } from "framer-motion";
 import { useDrag } from "@use-gesture/react";
-import { Check, Clock, Circle, ChevronUp, ChevronDown } from "lucide-react";
+import { Check, Clock, Circle, ChevronUp, ChevronDown, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialStepMeta } from "@/lib/tutorial-types";
 
@@ -79,7 +79,7 @@ function calculateTimeRemaining(
 // Animation Variants
 // ============================================================================
 
-const stepItemVariants = {
+const stepItemVariants: Variants = {
   hidden: { opacity: 0, x: -20 },
   visible: (i: number) => ({
     opacity: 1,
@@ -93,7 +93,7 @@ const stepItemVariants = {
   }),
 };
 
-const connectionLineVariants = {
+const connectionLineVariants: Variants = {
   hidden: { scaleY: 0, originY: 0 },
   visible: (i: number) => ({
     scaleY: 1,
@@ -120,8 +120,55 @@ function SidebarProgress({
   const completedSet = new Set(completedSteps);
   const timeRemaining = calculateTimeRemaining(steps, completedSteps);
   const listRef = React.useRef<HTMLOListElement>(null);
+  const containerRef = React.useRef<HTMLElement>(null);
   // Calculate once outside the map loop for efficiency
   const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : -1;
+
+  // Cursor-following spotlight effect
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+  const spotlightOpacity = useMotionValue(0);
+
+  // Smooth spring animations for spotlight
+  const smoothX = useSpring(mouseX, { stiffness: 300, damping: 30 });
+  const smoothY = useSpring(mouseY, { stiffness: 300, damping: 30 });
+  const smoothOpacity = useSpring(spotlightOpacity, { stiffness: 300, damping: 30 });
+
+  // Transform to gradient position
+  const spotlightBackground = useTransform(
+    [smoothX, smoothY],
+    ([x, y]) => `radial-gradient(300px circle at ${x}px ${y}px, oklch(0.58 0.19 195 / 0.08), transparent 60%)`
+  );
+
+  const handleMouseMove = React.useCallback((e: React.MouseEvent) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    mouseX.set(e.clientX - rect.left);
+    mouseY.set(e.clientY - rect.top);
+  }, [mouseX, mouseY]);
+
+  const handleMouseEnter = React.useCallback(() => {
+    spotlightOpacity.set(1);
+  }, [spotlightOpacity]);
+
+  const handleMouseLeave = React.useCallback(() => {
+    spotlightOpacity.set(0);
+  }, [spotlightOpacity]);
+
+  // Track recently completed steps for celebration animation
+  const [celebratingStep, setCelebratingStep] = React.useState<number | null>(null);
+  const prevCompletedRef = React.useRef(completedSteps);
+
+  React.useEffect(() => {
+    const newlyCompleted = completedSteps.filter(s => !prevCompletedRef.current.includes(s));
+    if (newlyCompleted.length > 0) {
+      setCelebratingStep(newlyCompleted[newlyCompleted.length - 1]);
+      const timer = setTimeout(() => setCelebratingStep(null), 1500);
+      prevCompletedRef.current = completedSteps;
+      return () => clearTimeout(timer);
+    }
+    prevCompletedRef.current = completedSteps;
+  }, [completedSteps]);
 
   // Keyboard navigation
   const handleKeyDown = React.useCallback(
@@ -151,10 +198,31 @@ function SidebarProgress({
   );
 
   return (
-    <nav
-      className={cn("flex flex-col gap-2", className)}
+    <motion.nav
+      ref={containerRef}
+      className={cn(
+        "relative flex flex-col gap-2 rounded-2xl p-2",
+        "bg-card/50 backdrop-blur-sm border border-border/50",
+        "shadow-lg shadow-black/5",
+        className
+      )}
       aria-label="Tutorial progress"
+      onMouseMove={handleMouseMove}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
+      {/* Cursor-following spotlight effect */}
+      <motion.div
+        className="pointer-events-none absolute inset-0 rounded-2xl"
+        style={{
+          background: spotlightBackground,
+          opacity: smoothOpacity,
+        }}
+      />
+
+      {/* Subtle ambient glow at top */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
+
       {/* Time remaining with icon animation */}
       <motion.div
         initial={{ opacity: 0, y: -10 }}
@@ -162,7 +230,12 @@ function SidebarProgress({
         transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 25 }}
         className="flex items-center gap-2 text-xs text-muted-foreground px-3 py-2"
       >
-        <Clock className="size-4 animate-[icon-pulse_3s_ease-in-out_infinite]" />
+        <motion.div
+          animate={{ rotate: [0, 10, -10, 0] }}
+          transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+        >
+          <Clock className="size-4" />
+        </motion.div>
         <span>{timeRemaining}</span>
       </motion.div>
 
@@ -222,13 +295,53 @@ function SidebarProgress({
                 <motion.div
                   className={cn(
                     "relative z-10 flex items-center justify-center size-8 rounded-full shrink-0 text-sm font-medium transition-all duration-300",
-                    isCurrent && "bg-primary text-primary-foreground shadow-md shadow-primary/30 animate-glow-pulse",
+                    isCurrent && "bg-primary text-primary-foreground shadow-md shadow-primary/30",
                     isCompleted && !isCurrent && "bg-[oklch(0.72_0.19_145)] text-[oklch(0.15_0.02_145)] shadow-sm shadow-[oklch(0.72_0.19_145/0.3)]",
                     !isCompleted && !isCurrent && "bg-muted text-muted-foreground group-hover:bg-muted/80"
                   )}
                   whileHover={canClick && !isCurrent ? { scale: 1.1 } : undefined}
                   whileTap={canClick ? { scale: 0.95 } : undefined}
                 >
+                  {/* Glow ring for current step */}
+                  {isCurrent && (
+                    <motion.div
+                      className="absolute inset-0 rounded-full"
+                      animate={{
+                        boxShadow: [
+                          "0 0 0 0 oklch(0.58 0.19 195 / 0.4)",
+                          "0 0 0 8px oklch(0.58 0.19 195 / 0)",
+                          "0 0 0 0 oklch(0.58 0.19 195 / 0.4)",
+                        ],
+                      }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    />
+                  )}
+
+                  {/* Celebration sparkles when step completes */}
+                  <AnimatePresence>
+                    {celebratingStep === index && (
+                      <>
+                        {[0, 1, 2, 3].map((i) => (
+                          <motion.div
+                            key={i}
+                            className="absolute"
+                            initial={{ opacity: 1, scale: 0 }}
+                            animate={{
+                              opacity: [1, 1, 0],
+                              scale: [0, 1, 0.5],
+                              x: [0, (i % 2 === 0 ? 1 : -1) * (15 + i * 5)],
+                              y: [0, (i < 2 ? -1 : 1) * (15 + i * 3)],
+                            }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.6, delay: i * 0.05 }}
+                          >
+                            <Sparkles className="size-3 text-[oklch(0.72_0.19_145)]" />
+                          </motion.div>
+                        ))}
+                      </>
+                    )}
+                  </AnimatePresence>
+
                   {isCompleted ? (
                     <motion.div
                       initial={{ scale: 0, rotate: -45 }}
@@ -295,29 +408,50 @@ function SidebarProgress({
         })}
       </ol>
 
-      {/* Enhanced progress bar with gradient */}
+      {/* Enhanced progress bar with gradient and shimmer */}
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: steps.length * 0.08 + 0.2 }}
-        className="px-3 pt-4"
+        className="px-3 pt-4 pb-2"
       >
-        <div className="h-2 bg-muted rounded-full overflow-hidden shadow-inner">
+        <div className="relative h-2.5 bg-muted rounded-full overflow-hidden shadow-inner">
           <motion.div
-            className="h-full bg-gradient-to-r from-primary via-primary to-accent rounded-full"
+            className="h-full bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_100%] rounded-full"
             initial={{ width: 0 }}
             animate={{
               width: `${((completedSteps.length) / steps.length) * 100}%`,
+              backgroundPosition: ["0% 0%", "100% 0%", "0% 0%"],
             }}
-            transition={{ type: "spring", stiffness: 100, damping: 20 }}
+            transition={{
+              width: { type: "spring", stiffness: 100, damping: 20 },
+              backgroundPosition: { duration: 4, repeat: Infinity, ease: "linear" },
+            }}
           />
+          {/* Shimmer overlay on progress */}
+          {completedSteps.length > 0 && (
+            <motion.div
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-transparent via-white/25 to-transparent"
+              style={{ width: `${((completedSteps.length) / steps.length) * 100}%` }}
+              animate={{ x: ["-100%", "200%"] }}
+              transition={{ duration: 2.5, repeat: Infinity, ease: "linear", repeatDelay: 1 }}
+            />
+          )}
         </div>
         <div className="flex items-center justify-between text-xs text-muted-foreground mt-2">
           <span>{completedSteps.length} of {steps.length} complete</span>
-          <span className="font-mono">{Math.round((completedSteps.length / steps.length) * 100)}%</span>
+          <motion.span
+            className="font-mono font-semibold"
+            key={completedSteps.length}
+            initial={{ scale: 1.2, color: "oklch(0.72 0.19 145)" }}
+            animate={{ scale: 1, color: "oklch(0.556 0 0)" }}
+            transition={{ duration: 0.3 }}
+          >
+            {Math.round((completedSteps.length / steps.length) * 100)}%
+          </motion.span>
         </div>
       </motion.div>
-    </nav>
+    </motion.nav>
   );
 }
 
@@ -338,6 +472,14 @@ function HeaderProgress({
   const progress = ((currentStep + 1) / steps.length) * 100;
   const [swipeOffset, setSwipeOffset] = React.useState(0);
   const [isAnimating, setIsAnimating] = React.useState(false);
+  const [showGestureHint, setShowGestureHint] = React.useState(true);
+
+  // Hide gesture hint after first swipe
+  React.useEffect(() => {
+    if (currentStep > 0) {
+      setShowGestureHint(false);
+    }
+  }, [currentStep]);
 
   // Swipe gesture handler with rubber-band feedback
   const bind = useDrag(
@@ -377,17 +519,28 @@ function HeaderProgress({
   );
 
   return (
-    <nav
-      {...bind()}
-      className={cn(
-        "relative flex flex-col gap-3 px-4 py-3 bg-card/95 backdrop-blur-sm border-b border-border touch-pan-x select-none",
-        className
-      )}
-      aria-label="Tutorial progress"
-      style={{ transform: `translateX(${swipeOffset}px)` }}
-    >
-      {/* Subtle gradient background */}
-      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 to-transparent pointer-events-none" />
+    <div {...bind()} className="touch-pan-x select-none">
+      <motion.nav
+        className={cn(
+          "relative flex flex-col gap-3 px-4 py-4 bg-card/95 backdrop-blur-md border-b border-border/50",
+          "shadow-lg shadow-black/5",
+          className
+        )}
+        aria-label="Tutorial progress"
+        style={{ x: swipeOffset }}
+        animate={{ x: swipeOffset }}
+        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+      >
+      {/* Premium gradient background */}
+      <div className="absolute inset-0 bg-gradient-to-b from-primary/5 via-transparent to-accent/5 pointer-events-none" />
+
+      {/* Top highlight line */}
+      <motion.div
+        className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent"
+        initial={{ scaleX: 0 }}
+        animate={{ scaleX: 1 }}
+        transition={{ delay: 0.2, duration: 0.6 }}
+      />
 
       {/* Progress bar with shimmer effect */}
       <div className="relative h-2 w-full overflow-hidden rounded-full bg-muted shadow-inner">
@@ -523,19 +676,42 @@ function HeaderProgress({
             {steps[currentStep]?.title}
           </motion.span>
         </AnimatePresence>
-        <div className="flex items-center justify-center gap-2 mt-1 text-xs text-muted-foreground">
-          <span className="font-mono">
+        <div className="flex items-center justify-center gap-2 mt-1.5 text-xs text-muted-foreground">
+          <motion.span
+            className="font-mono font-medium px-2 py-0.5 rounded-full bg-muted/50"
+            key={currentStep}
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+          >
             {currentStep + 1}/{steps.length}
-          </span>
-          <span className="size-1 rounded-full bg-muted-foreground/30" />
-          <span className="flex items-center gap-1 opacity-70">
-            <ChevronUp className="size-3 rotate-[-90deg]" />
-            <span>Swipe</span>
-            <ChevronDown className="size-3 rotate-[-90deg]" />
-          </span>
+          </motion.span>
+          {/* Animated gesture hint that fades out after first use */}
+          <AnimatePresence>
+            {showGestureHint && (
+              <motion.span
+                className="flex items-center gap-1"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 0.6 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <span className="size-1 rounded-full bg-muted-foreground/30" />
+                <motion.span
+                  className="flex items-center gap-0.5"
+                  animate={{ x: [-2, 2, -2] }}
+                  transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  <ChevronUp className="size-3 rotate-[-90deg]" />
+                  <span>Swipe</span>
+                  <ChevronDown className="size-3 rotate-[-90deg]" />
+                </motion.span>
+              </motion.span>
+            )}
+          </AnimatePresence>
         </div>
       </div>
-    </nav>
+      </motion.nav>
+    </div>
   );
 }
 

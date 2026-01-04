@@ -15,7 +15,7 @@
 
 import * as React from "react";
 import Link from "next/link";
-import { motion, useMotionValue, useTransform, useSpring } from "framer-motion";
+import { motion, useMotionValue, useTransform, useSpring, type Variants } from "framer-motion";
 import { Lock, Play, Clock, ChevronRight, Rocket, Cpu, Users, Sparkles, Zap, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialPath, DifficultyLevel } from "@/lib/tutorial-types";
@@ -419,7 +419,7 @@ export interface TutorialPathGridProps {
   className?: string;
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
@@ -430,7 +430,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 30, scale: 0.95 },
   visible: {
     opacity: 1,
