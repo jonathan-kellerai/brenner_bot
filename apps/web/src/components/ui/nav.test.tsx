@@ -14,6 +14,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from "vitest";
 import {
   HeaderNav,
   BottomNav,
+  NAV_ITEMS,
   ReadingProgress,
   BackToTop,
   TableOfContents,
@@ -186,11 +187,11 @@ describe("BottomNav", () => {
       expect(screen.getByRole("link", { name: /sessions/i })).toBeInTheDocument();
     });
 
-    it("renders 8 navigation items total", () => {
+    it("renders all navigation items total", () => {
       render(<BottomNav />);
 
       const links = screen.getAllByRole("link");
-      expect(links).toHaveLength(8);
+      expect(links).toHaveLength(NAV_ITEMS.length);
     });
 
     it("accepts className prop", () => {

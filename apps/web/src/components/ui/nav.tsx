@@ -65,7 +65,7 @@ interface NavItem {
   icon: React.ReactNode
 }
 
-const navItems: NavItem[] = [
+export const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: <HomeIcon /> },
   { href: "/corpus/transcript", label: "Transcript", icon: <TranscriptIcon /> },
   { href: "/corpus", label: "Corpus", icon: <BookIcon /> },
@@ -81,7 +81,7 @@ function isNavItemActive(pathname: string, itemHref: string): boolean {
   if (pathname === itemHref) return true
   if (pathname.startsWith(`${itemHref}/`)) {
     // Check if another nav item is a more specific match
-    const moreSpecificMatch = navItems.some(
+    const moreSpecificMatch = NAV_ITEMS.some(
       (other) => other.href !== itemHref &&
                  other.href.startsWith(`${itemHref}/`) &&
                  (pathname === other.href || pathname.startsWith(`${other.href}/`))
@@ -97,7 +97,7 @@ export function HeaderNav({ className }: { className?: string }) {
 
   return (
     <nav className={cn("hidden lg:flex items-center gap-1", className)}>
-      {navItems.slice(1).map((item) => {
+      {NAV_ITEMS.slice(1).map((item) => {
         const isActive = isNavItemActive(pathname, item.href)
         return (
           <Link
@@ -181,7 +181,7 @@ export function BottomNav({ className }: { className?: string }) {
 
   // Calculate active index
   const activeIndex = React.useMemo(() => {
-    return navItems.findIndex((item) => isNavItemActive(pathname, item.href))
+    return NAV_ITEMS.findIndex((item) => isNavItemActive(pathname, item.href))
   }, [pathname])
 
   // Update indicator position when active index changes
@@ -229,7 +229,7 @@ export function BottomNav({ className }: { className?: string }) {
           />
         )}
 
-        {navItems.map((item) => {
+        {NAV_ITEMS.map((item) => {
           const isActive = isNavItemActive(pathname, item.href)
           return (
             <Link
