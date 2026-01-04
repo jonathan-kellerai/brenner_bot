@@ -239,17 +239,18 @@ function ThreadCard({ thread, index }: { thread: ThreadSummary; index: number })
 // ============================================================================
 
 export default async function SessionsListPage() {
-  // Check lab mode
-  if (!isLabModeEnabled()) {
-    return <LockedState reason="Lab mode is disabled. Set BRENNER_LAB_MODE=1 to enable orchestration." />;
-  }
+  const labModeEnabled = isLabModeEnabled();
 
-  // Check auth
+  // Check auth (only relevant if lab mode is enabled)
   const reqHeaders = await headers();
   const reqCookies = await cookies();
-  const pageAuth = checkOrchestrationAuth(reqHeaders, reqCookies);
-  if (!pageAuth.authorized) {
-    return <LockedState reason={pageAuth.reason} />;
+  const pageAuth = labModeEnabled ? checkOrchestrationAuth(reqHeaders, reqCookies) : null;
+
+  let labLockedReason: string | null = null;
+  if (!labModeEnabled) {
+    labLockedReason = "Lab mode is disabled. Set BRENNER_LAB_MODE=1 to enable orchestration.";
+  } else if (pageAuth && !pageAuth.authorized) {
+    labLockedReason = pageAuth.reason;
   }
 
   const repoRoot = repoRootFromWebCwd();
@@ -260,43 +261,45 @@ export default async function SessionsListPage() {
   const threads: ThreadSummary[] = [];
   let loadError: string | null = null;
 
-  try {
-    const client = new AgentMailClient();
-    const inbox = await client.readInbox({ projectKey, agentName, includeBodies: false });
+  if (!labLockedReason) {
+    try {
+      const client = new AgentMailClient();
+      const inbox = await client.readInbox({ projectKey, agentName, includeBodies: false });
 
-    // Group messages by thread_id
-    const messagesByThread = new Map<string, AgentMailMessage[]>();
-    for (const msg of inbox.messages) {
-      if (!msg.thread_id) continue;
-      const existing = messagesByThread.get(msg.thread_id) ?? [];
-      existing.push(msg);
-      messagesByThread.set(msg.thread_id, existing);
+      // Group messages by thread_id
+      const messagesByThread = new Map<string, AgentMailMessage[]>();
+      for (const msg of inbox.messages) {
+        if (!msg.thread_id) continue;
+        const existing = messagesByThread.get(msg.thread_id) ?? [];
+        existing.push(msg);
+        messagesByThread.set(msg.thread_id, existing);
+      }
+
+      // Compute status for each thread
+      for (const [threadId, messages] of messagesByThread) {
+        const sorted = [...messages].sort(
+          (a, b) => new Date(a.created_ts).getTime() - new Date(b.created_ts).getTime()
+        );
+
+        const status = computeThreadStatus(sorted);
+
+        threads.push({
+          threadId,
+          messageCount: messages.length,
+          firstMessageTs: sorted[0]?.created_ts ?? "",
+          lastMessageTs: sorted[sorted.length - 1]?.created_ts ?? "",
+          phase: status.phase,
+          hasArtifact: status.latestArtifact !== null,
+          pendingAcks: status.acks.pendingCount,
+          participants: status.stats.participants,
+        });
+      }
+
+      // Sort by last message (most recent first)
+      threads.sort((a, b) => new Date(b.lastMessageTs).getTime() - new Date(a.lastMessageTs).getTime());
+    } catch (err) {
+      loadError = err instanceof Error ? err.message : String(err);
     }
-
-    // Compute status for each thread
-    for (const [threadId, messages] of messagesByThread) {
-      const sorted = [...messages].sort(
-        (a, b) => new Date(a.created_ts).getTime() - new Date(b.created_ts).getTime()
-      );
-
-      const status = computeThreadStatus(sorted);
-
-      threads.push({
-        threadId,
-        messageCount: messages.length,
-        firstMessageTs: sorted[0]?.created_ts ?? "",
-        lastMessageTs: sorted[sorted.length - 1]?.created_ts ?? "",
-        phase: status.phase,
-        hasArtifact: status.latestArtifact !== null,
-        pendingAcks: status.acks.pendingCount,
-        participants: status.stats.participants,
-      });
-    }
-
-    // Sort by last message (most recent first)
-    threads.sort((a, b) => new Date(b.lastMessageTs).getTime() - new Date(a.lastMessageTs).getTime());
-  } catch (err) {
-    loadError = err instanceof Error ? err.message : String(err);
   }
 
   return (
@@ -330,7 +333,9 @@ export default async function SessionsListPage() {
       )}
 
       {/* Content */}
-      {!loadError && threads.length === 0 ? (
+      {labLockedReason ? (
+        <LockedState reason={labLockedReason} />
+      ) : !loadError && threads.length === 0 ? (
         <EmptyState />
       ) : (
         <div className="space-y-3">
