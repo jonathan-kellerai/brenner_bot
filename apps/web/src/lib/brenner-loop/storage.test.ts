@@ -13,7 +13,6 @@ import {
   recoverSessions,
   estimateRemainingStorage,
   cleanupOldSessions,
-  type SessionSummary,
 } from "./storage";
 import type { Session, SessionPhase } from "./types";
 
@@ -338,8 +337,6 @@ describe("Recovery utilities", () => {
 
   describe("cleanupOldSessions", () => {
     test("should remove sessions older than specified days", async () => {
-      const storage = new LocalStorageSessionStorage();
-
       // Create an old session
       const oldDate = new Date();
       oldDate.setDate(oldDate.getDate() - 60);
@@ -399,7 +396,7 @@ describe("SessionSummary", () => {
     await storage.save(session);
     const summaries = await storage.list();
 
-    expect(summaries[0].hypothesis.length).toBeLessThanOrEqual(103); // 100 + "..."
+    expect(summaries[0].hypothesis.length).toBeLessThanOrEqual(100);
     expect(summaries[0].hypothesis.endsWith("...")).toBe(true);
   });
 });
