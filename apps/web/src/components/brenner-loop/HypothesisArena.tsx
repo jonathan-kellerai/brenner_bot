@@ -287,7 +287,13 @@ function CompetitorCard({
       {/* Body */}
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <div className="p-4">
-          <p className="text-sm line-clamp-2" onClick={onClick}>
+          <p
+            className={cn("text-sm line-clamp-2", onClick && "cursor-pointer hover:text-primary transition-colors")}
+            onClick={onClick}
+            onKeyDown={onClick ? (e) => e.key === "Enter" && onClick() : undefined}
+            role={onClick ? "button" : undefined}
+            tabIndex={onClick ? 0 : undefined}
+          >
             {competitor.hypothesis.statement}
           </p>
 
@@ -525,7 +531,9 @@ export function HypothesisArena({
           <div className="ml-auto">
             <div className="text-xs text-muted-foreground mb-1">Current Leader</div>
             <div className="font-medium text-sm truncate max-w-[200px]">
-              {leader.hypothesis.statement.slice(0, 50)}...
+              {leader.hypothesis.statement.length > 50
+                ? `${leader.hypothesis.statement.slice(0, 50)}...`
+                : leader.hypothesis.statement}
             </div>
           </div>
         )}

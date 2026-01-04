@@ -277,6 +277,27 @@ export type ValidationWarningCode =
   | "GENERIC_MECHANISM";
 
 // ============================================================================
+// Validation Helpers
+// ============================================================================
+
+/**
+ * Regex pattern for HypothesisCard IDs.
+ * Format: HC-{session_id}-{sequence}-v{version}
+ * Example: HC-RS20260104-001-v1
+ *
+ * The session_id can contain alphanumeric characters and hyphens,
+ * but we use a non-greedy match to avoid capturing version suffixes.
+ */
+const HYPOTHESIS_CARD_ID_PATTERN = /^HC-[A-Za-z0-9][A-Za-z0-9-]*-\d{3}-v\d+$/;
+
+/**
+ * Check if an array contains only non-empty strings.
+ */
+function hasOnlyNonEmptyStrings(arr: string[]): boolean {
+  return arr.every((s) => typeof s === "string" && s.trim().length > 0);
+}
+
+// ============================================================================
 // Validation Functions
 // ============================================================================
 
@@ -284,10 +305,11 @@ export type ValidationWarningCode =
  * Validate a HypothesisCard for completeness and correctness.
  *
  * Validation rules:
+ * - id: required, must match format HC-{session}-{seq}-v{version}
  * - statement: required, 10-1000 chars
  * - mechanism: required, 10-500 chars
- * - predictionsIfTrue: at least 1 entry
- * - impossibleIfTrue: at least 1 entry (enforces falsifiability)
+ * - predictionsIfTrue: at least 1 non-empty entry
+ * - impossibleIfTrue: at least 1 non-empty entry (enforces falsifiability)
  * - confidence: 0-100
  * - confounds: each must have valid structure
  *
@@ -297,6 +319,22 @@ export type ValidationWarningCode =
 export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
   const errors: ValidationError[] = [];
   const warnings: ValidationWarning[] = [];
+
+  // === ID Format ===
+
+  if (!card.id || card.id.trim().length === 0) {
+    errors.push({
+      field: "id",
+      message: "ID is required",
+      code: "MISSING_REQUIRED",
+    });
+  } else if (!HYPOTHESIS_CARD_ID_PATTERN.test(card.id)) {
+    errors.push({
+      field: "id",
+      message: `ID must match format HC-{session}-{seq}-v{version} (got "${card.id}")`,
+      code: "INVALID_FORMAT",
+    });
+  }
 
   // === Required Fields ===
 
@@ -348,6 +386,12 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
       message: "At least one prediction if true is required",
       code: "EMPTY_ARRAY",
     });
+  } else if (!hasOnlyNonEmptyStrings(card.predictionsIfTrue)) {
+    errors.push({
+      field: "predictionsIfTrue",
+      message: "All predictions must be non-empty strings",
+      code: "INVALID_FORMAT",
+    });
   }
 
   if (!card.impossibleIfTrue || card.impossibleIfTrue.length === 0) {
@@ -356,6 +400,12 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
       message:
         "At least one falsification condition is required. If you can't specify what would prove you wrong, your hypothesis isn't testable yet.",
       code: "EMPTY_ARRAY",
+    });
+  } else if (!hasOnlyNonEmptyStrings(card.impossibleIfTrue)) {
+    errors.push({
+      field: "impossibleIfTrue",
+      message: "All falsification conditions must be non-empty strings",
+      code: "INVALID_FORMAT",
     });
   }
 
@@ -391,6 +441,24 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
       field: "version",
       message: "Version must be a positive integer",
       code: "INVALID_RANGE",
+    });
+  }
+
+  // === Date Fields ===
+
+  if (!isValidDateOrString(card.createdAt)) {
+    errors.push({
+      field: "createdAt",
+      message: "createdAt must be a valid Date or ISO date string",
+      code: "INVALID_TYPE",
+    });
+  }
+
+  if (!isValidDateOrString(card.updatedAt)) {
+    errors.push({
+      field: "updatedAt",
+      message: "updatedAt must be a valid Date or ISO date string",
+      code: "INVALID_TYPE",
     });
   }
 
@@ -564,7 +632,25 @@ export function validateConfound(confound: IdentifiedConfound): ValidationResult
 // ============================================================================
 
 /**
+ * Check if a value is a valid Date or ISO date string.
+ * Handles both Date objects and serialized date strings (from JSON).
+ */
+function isValidDateOrString(value: unknown): boolean {
+  if (value instanceof Date) {
+    return !isNaN(value.getTime());
+  }
+  if (typeof value === "string") {
+    const parsed = Date.parse(value);
+    return !isNaN(parsed);
+  }
+  return false;
+}
+
+/**
  * Type guard to check if an unknown value is a valid HypothesisCard.
+ *
+ * Handles both fresh objects (with Date instances) and deserialized
+ * objects (with ISO date strings, e.g., from JSON/localStorage).
  *
  * @param obj - The value to check
  * @returns True if obj is a HypothesisCard
@@ -588,8 +674,10 @@ export function isHypothesisCard(obj: unknown): obj is HypothesisCard {
   if (!Array.isArray(card.confounds)) return false;
   if (!Array.isArray(card.assumptions)) return false;
   if (typeof card.confidence !== "number") return false;
-  if (!(card.createdAt instanceof Date)) return false;
-  if (!(card.updatedAt instanceof Date)) return false;
+
+  // Handle both Date objects and ISO date strings (from JSON serialization)
+  if (!isValidDateOrString(card.createdAt)) return false;
+  if (!isValidDateOrString(card.updatedAt)) return false;
 
   // Validate ranges
   if (card.confidence < 0 || card.confidence > 100) return false;

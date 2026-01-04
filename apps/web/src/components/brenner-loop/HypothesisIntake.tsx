@@ -21,8 +21,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import type { HypothesisCard, IdentifiedConfound } from "@/lib/brenner-loop/hypothesis";
-import { createHypothesisCard, validateHypothesisCard, generateHypothesisCardId } from "@/lib/brenner-loop/hypothesis";
+import type { HypothesisCard } from "@/lib/brenner-loop/hypothesis";
+import { createHypothesisCard, generateHypothesisCardId } from "@/lib/brenner-loop/hypothesis";
 
 // ============================================================================
 // Types
@@ -55,7 +55,6 @@ interface IntakeFormData {
   statement: string;
   mechanism: string;
   selectedMechanismType: string | null;
-  customMechanism: string;
   domain: string[];
   predictionsIfTrue: string[];
   predictionsIfFalse: string[];
@@ -660,7 +659,6 @@ const INITIAL_FORM_DATA: IntakeFormData = {
   statement: "",
   mechanism: "",
   selectedMechanismType: null,
-  customMechanism: "",
   domain: [],
   predictionsIfTrue: [],
   predictionsIfFalse: [],
