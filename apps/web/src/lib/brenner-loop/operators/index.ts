@@ -56,3 +56,36 @@ export {
   serializeSession,
   deserializeSession,
 } from "./framework";
+
+// ============================================================================
+// Level Split Operator (bead vw6p.2)
+// ============================================================================
+
+export type {
+  Level,
+  LevelCategory,
+  LevelCombination,
+  SubHypothesis,
+  LevelSplitResult,
+} from "./level-split";
+
+export {
+  // Step configurations
+  LEVEL_SPLIT_STEP_IDS,
+  LEVEL_SPLIT_STEPS,
+
+  // Level templates
+  X_LEVEL_TEMPLATES,
+  Y_LEVEL_TEMPLATES,
+
+  // Generation functions
+  generateXLevels,
+  generateYLevels,
+  generateCombinationMatrix,
+  generateSubHypothesis,
+  buildLevelSplitResult,
+
+  // Quote references
+  LEVEL_SPLIT_QUOTE_ANCHORS,
+  LEVEL_SPLIT_FALLBACK_QUOTES,
+} from "./level-split";

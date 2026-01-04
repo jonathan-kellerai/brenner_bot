@@ -28,3 +28,13 @@ export {
   type OperatorNavigationProps,
   type CompactNavigationProps,
 } from "./OperatorNavigation";
+
+// ============================================================================
+// Operator Sessions (bead vw6p.2+)
+// ============================================================================
+
+// Level Split (Σ) - bead vw6p.2
+export {
+  LevelSplitSession,
+  type LevelSplitSessionProps,
+} from "./LevelSplitSession";
