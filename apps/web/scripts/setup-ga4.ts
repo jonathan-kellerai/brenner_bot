@@ -19,7 +19,9 @@
 
 import { AnalyticsAdminServiceClient } from '@google-analytics/admin';
 
-// Configuration
+// Configuration - Property already created in JeffCo Industries
+const PROPERTY_ID = '518309558';
+const PROPERTY_NAME = `properties/${PROPERTY_ID}`;
 const BRENNERBOT_DISPLAY_NAME = 'BrennerBot';
 const BRENNERBOT_TIMEZONE = 'America/New_York';
 const BRENNERBOT_CURRENCY = 'USD';

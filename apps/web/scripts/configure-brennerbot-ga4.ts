@@ -1,0 +1,161 @@
+#!/usr/bin/env bun
+/**
+ * Configure BrennerBot GA4 Property
+ * 
+ * Creates API secret and custom dimensions for the BrennerBot property.
+ */
+
+import { AnalyticsAdminServiceClient } from "@google-analytics/admin";
+
+const PROPERTY_ID = '518309558';
+const PROPERTY_NAME = `properties/${PROPERTY_ID}`;
+const DATA_STREAM = `properties/${PROPERTY_ID}/dataStreams/13238961558`;
+
+// Custom dimensions for BrennerBot research engagement tracking
+const CUSTOM_DIMENSIONS = [
+  // Corpus engagement
+  { name: 'document_type', scope: 'EVENT', description: 'Type of document (transcript, distillation, quote_bank)' },
+  { name: 'document_id', scope: 'EVENT', description: 'Document identifier or section anchor' },
+  { name: 'document_title', scope: 'EVENT', description: 'Document title' },
+
+  // Reading engagement
+  { name: 'reading_depth_percent', scope: 'EVENT', description: 'How far user scrolled (0-100)' },
+  { name: 'time_on_document_bucket', scope: 'EVENT', description: 'Time bucket: quick/engaged/deep' },
+
+  // Search behavior
+  { name: 'search_query', scope: 'EVENT', description: 'Search query entered' },
+  { name: 'search_category', scope: 'EVENT', description: 'Search category filter' },
+  { name: 'search_results_count', scope: 'EVENT', description: 'Number of results returned' },
+
+  // Tutorial/Wizard funnel
+  { name: 'tutorial_step', scope: 'EVENT', description: 'Current tutorial step ID' },
+  { name: 'tutorial_step_name', scope: 'EVENT', description: 'Tutorial step name' },
+  { name: 'tutorial_progress_percent', scope: 'EVENT', description: 'Progress through tutorial (0-100)' },
+  { name: 'tutorial_total_steps', scope: 'EVENT', description: 'Total steps in tutorial' },
+  { name: 'tutorial_completed_steps', scope: 'EVENT', description: 'Number of completed steps' },
+  { name: 'tutorial_path', scope: 'EVENT', description: 'Tutorial path ID' },
+  { name: 'tutorial_path_name', scope: 'EVENT', description: 'Tutorial path name' },
+  { name: 'time_from_previous_step', scope: 'EVENT', description: 'Seconds since previous step' },
+
+  // Funnel tracking
+  { name: 'funnel_id', scope: 'EVENT', description: 'Unique funnel session ID' },
+  { name: 'funnel_source', scope: 'USER', description: 'Traffic source when funnel started' },
+  { name: 'funnel_medium', scope: 'USER', description: 'Traffic medium when funnel started' },
+  { name: 'milestone', scope: 'EVENT', description: 'Funnel milestone name' },
+
+  // Engagement context
+  { name: 'is_returning', scope: 'EVENT', description: 'Whether user is returning' },
+  { name: 'dropoff_reason', scope: 'EVENT', description: 'Reason for funnel abandonment' },
+  { name: 'excerpt_count', scope: 'EVENT', description: 'Number of excerpts saved' },
+  { name: 'session_document_count', scope: 'EVENT', description: 'Documents viewed in session' },
+];
+
+// Conversion events
+const CONVERSION_EVENTS = [
+  'tutorial_start',
+  'tutorial_complete',
+  'document_deep_read',
+  'search_conversion',
+  'excerpt_saved',
+  'session_deep_engagement',
+  'return_visitor_engaged',
+  'corpus_explorer',
+  'conversion',
+];
+
+async function configureProperty() {
+  const client = new AnalyticsAdminServiceClient();
+  
+  console.log("Configuring BrennerBot GA4 property...\n");
+  
+  // 1. Create Measurement Protocol API secret
+  console.log("Creating Measurement Protocol API secret...");
+  try {
+    const [secret] = await client.createMeasurementProtocolSecret({
+      parent: DATA_STREAM,
+      measurementProtocolSecret: {
+        displayName: "BrennerBot Server",
+      },
+    });
+    
+    console.log(`✓ API Secret created: ${secret.secretValue}`);
+    console.log(`\nAdd to .env.local:\nGA_API_SECRET=${secret.secretValue}\n`);
+  } catch (error: any) {
+    if (error.message?.includes('already exists')) {
+      console.log("API secret already exists, skipping...");
+    } else {
+      console.error("Error creating API secret:", error.message);
+    }
+  }
+  
+  // 2. Get existing custom dimensions
+  console.log("\nChecking existing custom dimensions...");
+  const existingDimensions = new Set<string>();
+  
+  try {
+    const [dimensions] = await client.listCustomDimensions({ parent: PROPERTY_NAME });
+    for (const dim of dimensions || []) {
+      const name = dim.parameterName || '';
+      existingDimensions.add(name);
+    }
+    console.log(`Found ${existingDimensions.size} existing dimensions`);
+  } catch (error: any) {
+    console.error("Error listing dimensions:", error.message);
+  }
+  
+  // 3. Create missing custom dimensions
+  console.log("\nCreating custom dimensions...");
+  let created = 0;
+  let skipped = 0;
+  
+  for (const dim of CUSTOM_DIMENSIONS) {
+    if (existingDimensions.has(dim.name)) {
+      skipped++;
+      continue;
+    }
+    
+    try {
+      await client.createCustomDimension({
+        parent: PROPERTY_NAME,
+        customDimension: {
+          parameterName: dim.name,
+          displayName: dim.name.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          description: dim.description,
+          scope: dim.scope as 'EVENT' | 'USER',
+        },
+      });
+      created++;
+      console.log(`  ✓ ${dim.name}`);
+    } catch (error: any) {
+      console.error(`  ✗ ${dim.name}: ${error.message}`);
+    }
+  }
+  
+  console.log(`\nDimensions: ${created} created, ${skipped} already existed`);
+  
+  // 4. Mark conversion events
+  console.log("\nConfiguring conversion events...");
+  for (const eventName of CONVERSION_EVENTS) {
+    try {
+      await client.createConversionEvent({
+        parent: PROPERTY_NAME,
+        conversionEvent: {
+          eventName,
+        },
+      });
+      console.log(`  ✓ ${eventName}`);
+    } catch (error: any) {
+      if (error.message?.includes('already exists')) {
+        console.log(`  • ${eventName} (exists)`);
+      } else {
+        console.error(`  ✗ ${eventName}: ${error.message}`);
+      }
+    }
+  }
+  
+  console.log("\n" + "=".repeat(60));
+  console.log("Configuration complete!");
+  console.log("=".repeat(60));
+}
+
+configureProperty().catch(console.error);
