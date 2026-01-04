@@ -421,6 +421,13 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
       message: "Consider adding predictions for when the hypothesis is wrong",
       code: "NO_PREDICTIONS_IF_FALSE",
     });
+  } else if (!hasOnlyNonEmptyStrings(card.predictionsIfFalse)) {
+    // Warn if array exists but contains empty strings
+    warnings.push({
+      field: "predictionsIfFalse",
+      message: "Some predictions are empty - consider removing or filling them in",
+      code: "NO_PREDICTIONS_IF_FALSE",
+    });
   }
 
   // === Confidence ===
@@ -706,6 +713,14 @@ export function isHypothesisCard(obj: unknown): obj is HypothesisCard {
   if (!Number.isFinite(card.confidence) || card.confidence < 0 || card.confidence > 100) return false;
   if (!Number.isInteger(card.version) || card.version < 1) return false;
 
+  // Validate optional fields have correct types if present
+  if (card.parentVersion !== undefined && typeof card.parentVersion !== "string") return false;
+  if (card.evolutionReason !== undefined && typeof card.evolutionReason !== "string") return false;
+  if (card.createdBy !== undefined && typeof card.createdBy !== "string") return false;
+  if (card.sessionId !== undefined && typeof card.sessionId !== "string") return false;
+  if (card.notes !== undefined && typeof card.notes !== "string") return false;
+  if (card.tags !== undefined && (!Array.isArray(card.tags) || !isStringArray(card.tags))) return false;
+
   return true;
 }
 
@@ -722,6 +737,7 @@ export function isIdentifiedConfound(obj: unknown): obj is IdentifiedConfound {
 
   const confound = obj as Record<string, unknown>;
 
+  // Check required fields
   if (typeof confound.id !== "string") return false;
   if (typeof confound.name !== "string") return false;
   if (typeof confound.description !== "string") return false;
@@ -730,6 +746,11 @@ export function isIdentifiedConfound(obj: unknown): obj is IdentifiedConfound {
 
   // Validate range (use Number.isFinite to catch NaN/Infinity)
   if (!Number.isFinite(confound.likelihood) || confound.likelihood < 0 || confound.likelihood > 1) return false;
+
+  // Validate optional fields have correct types if present
+  if (confound.addressed !== undefined && typeof confound.addressed !== "boolean") return false;
+  if (confound.addressedHow !== undefined && typeof confound.addressedHow !== "string") return false;
+  if (confound.addressedAt !== undefined && !isValidDateOrString(confound.addressedAt)) return false;
 
   return true;
 }

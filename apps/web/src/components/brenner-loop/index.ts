@@ -12,3 +12,13 @@ export type { HypothesisIntakeProps } from "./HypothesisIntake";
 
 export { HypothesisArena } from "./HypothesisArena";
 export type { HypothesisArenaProps } from "./HypothesisArena";
+
+export {
+  PredictionLock,
+  PredictionLockItem,
+  UnlockedPredictionItem,
+} from "./PredictionLock";
+export type { PredictionLockProps } from "./PredictionLock";
+
+export { SessionDashboard, PhaseTimeline, BrennerQuote, PhaseContent, PHASE_CONFIG } from "./SessionDashboard";
+export type { SessionDashboardProps } from "./SessionDashboard";

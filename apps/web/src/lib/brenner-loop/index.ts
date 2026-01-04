@@ -367,3 +367,53 @@ export {
   // Statistics
   calculateLifecycleStats,
 } from "./hypothesis-lifecycle";
+
+// ============================================================================
+// Prediction Lock System (bead rffy)
+// ============================================================================
+
+export type {
+  // Core types
+  PredictionLockState,
+  PredictionType,
+  LockedPrediction,
+  PredictionAmendment,
+
+  // Result types
+  LockResult,
+  RevealResult,
+  VerificationResult,
+  PredictionLockStats,
+
+  // Display types
+  LockStateDisplay,
+} from "./prediction-lock";
+
+export {
+  // Cryptographic functions
+  generateHash,
+
+  // ID generation
+  generatePredictionLockId,
+
+  // Core lock operations
+  lockPrediction,
+  verifyPrediction,
+  revealPrediction,
+  amendPrediction,
+
+  // Statistics & scoring
+  calculatePredictionLockStats,
+  calculateRobustnessMultiplier,
+
+  // Type guards
+  isPredictionLockState,
+  isPredictionType,
+  isLockedPrediction,
+
+  // Display helpers
+  LOCK_STATE_DISPLAY,
+  getLockStateDisplay,
+  formatLockTimestamp,
+  getShortHash,
+} from "./prediction-lock";
