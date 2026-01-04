@@ -185,3 +185,43 @@ export function isTribunalAgentRole(value: unknown): value is TribunalAgentRole 
     VALID_TRIBUNAL_ROLES.includes(value as TribunalAgentRole)
   );
 }
+
+// ============================================================================
+// Agent Personas (beads njiu, oytk)
+// ============================================================================
+
+export type {
+  // Session & invocation types
+  SessionPhase,
+  InvocationTrigger,
+
+  // Behavior & interaction types
+  AgentBehavior,
+  InteractionPattern,
+  ToneCalibration,
+  ModelConfig,
+
+  // Main persona type
+  AgentPersona,
+} from "./agent-personas";
+
+export {
+  // Individual personas
+  DEVILS_ADVOCATE_PERSONA,
+  EXPERIMENT_DESIGNER_PERSONA,
+  BRENNER_CHANNELER_PERSONA,
+  SYNTHESIS_PERSONA,
+
+  // Registry
+  AGENT_PERSONAS,
+
+  // Utility functions
+  getPersona,
+  getActivePersonasForPhase,
+  getPersonasForTrigger,
+  shouldInvokePersona,
+  getBehaviorsByPriority,
+  buildSystemPromptContext,
+  getInteractionExamples,
+  getModelConfig,
+} from "./agent-personas";

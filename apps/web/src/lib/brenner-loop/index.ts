@@ -482,6 +482,15 @@ export type {
   // Agent types
   TribunalAgentRole,
   TribunalAgentConfig,
+
+  // Agent persona types (beads njiu, oytk)
+  SessionPhase as AgentSessionPhase,
+  InvocationTrigger,
+  AgentBehavior,
+  InteractionPattern,
+  ToneCalibration,
+  ModelConfig as AgentModelConfig,
+  AgentPersona,
 } from "./agents";
 
 export {
@@ -497,4 +506,21 @@ export {
 
   // Type guards
   isTribunalAgentRole,
+
+  // Agent personas (beads njiu, oytk)
+  DEVILS_ADVOCATE_PERSONA,
+  EXPERIMENT_DESIGNER_PERSONA,
+  BRENNER_CHANNELER_PERSONA,
+  SYNTHESIS_PERSONA,
+  AGENT_PERSONAS,
+
+  // Persona utility functions
+  getPersona,
+  getActivePersonasForPhase,
+  getPersonasForTrigger,
+  shouldInvokePersona,
+  getBehaviorsByPriority,
+  buildSystemPromptContext,
+  getInteractionExamples,
+  getModelConfig,
 } from "./agents";
