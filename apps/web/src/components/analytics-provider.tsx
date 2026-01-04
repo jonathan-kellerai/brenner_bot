@@ -41,7 +41,7 @@ function AnalyticsTracker() {
   // Refs for tracking engagement
   const hasInitializedGa = useRef(false);
   const scrollDepthsReached = useRef<Set<25 | 50 | 75 | 90 | 100>>(new Set());
-  const pageStartTime = useRef<number>(Date.now());
+  const pageStartTime = useRef<number>(0); // Initialized in effect on mount
   const lastTimeCheckpoint = useRef<number>(0);
   const timeIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 

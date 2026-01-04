@@ -356,7 +356,7 @@ export async function POST(request: NextRequest) {
         { status: 502 }
       );
     }
-  } catch (parseError) {
+  } catch {
     return NextResponse.json(
       { error: 'Invalid JSON payload' },
       { status: 400 }

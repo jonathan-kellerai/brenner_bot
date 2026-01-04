@@ -533,7 +533,7 @@ export default async function EvidencePackPage({
               <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
                 No evidence records yet. Add evidence using the CLI:
                 <pre className="mt-2 p-2 rounded bg-muted font-mono text-xs">
-                  brenner evidence add --thread-id {threadId} --type paper --title "..." --source "..."
+                  brenner evidence add --thread-id {threadId} --type paper --title &quot;...&quot; --source &quot;...&quot;
                 </pre>
               </div>
             ) : (

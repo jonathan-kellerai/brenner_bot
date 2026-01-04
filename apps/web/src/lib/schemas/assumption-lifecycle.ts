@@ -391,8 +391,8 @@ export function transitionAssumption(
   }
 
   // Validate requirements (soft validation - returns warnings)
-  const reqCheck = validateAssumptionTransitionRequirements(trigger, options);
-  // Note: We don't fail on warnings, but they could be logged
+  // Result intentionally unused; could be logged in future if needed
+  validateAssumptionTransitionRequirements(trigger, options);
 
   // Create transition record
   const transition: AssumptionTransition = {
