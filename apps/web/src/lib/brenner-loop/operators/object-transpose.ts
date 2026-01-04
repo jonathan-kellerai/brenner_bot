@@ -551,7 +551,7 @@ export function buildObjectTransposeResult(
 
   // Find selected tests (priority > 0 or feasibility is easy/moderate)
   const selectedTestIds = tests
-    .filter(t => t.priority && t.priority > 0 || t.feasibility === "easy" || t.feasibility === "moderate")
+    .filter(t => (t.priority && t.priority > 0) || t.feasibility === "easy" || t.feasibility === "moderate")
     .map(t => t.id);
 
   return {

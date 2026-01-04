@@ -32,7 +32,6 @@ import {
   Scale,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { HypothesisCard } from "@/lib/brenner-loop/hypothesis";
 import type { Quote } from "@/lib/quotebank-parser";
@@ -143,7 +142,9 @@ function QuantifyEffect({ effectSize, onChange }: QuantifyEffectProps) {
 
   const handleDirectionChange = (direction: EffectDirection) => {
     onChange({
-      ...effectSize!,
+      type: effectSize?.type ?? "d",
+      estimate: effectSize?.estimate,
+      value: effectSize?.value,
       direction,
     });
   };
@@ -496,7 +497,13 @@ function MeasurementPrecision({
     let dEquivalent = value;
     if (effectSize.type === "r") {
       // Convert r to d: d = 2r / sqrt(1 - r^2)
-      dEquivalent = (2 * value) / Math.sqrt(1 - value * value);
+      // Guard against division by zero when |r| >= 1
+      const absValue = Math.abs(value);
+      if (absValue >= 1) {
+        dEquivalent = Infinity;
+      } else {
+        dEquivalent = (2 * value) / Math.sqrt(1 - value * value);
+      }
     }
 
     return approximateSampleSize(Math.abs(dEquivalent));
@@ -504,16 +511,19 @@ function MeasurementPrecision({
 
   const handleDetectableChange = (isDetectable: boolean | null) => {
     onChange({
-      ...assessment!,
       isDetectable,
+      powerNotes: assessment?.powerNotes ?? "",
+      requiredSampleSize: assessment?.requiredSampleSize,
+      warnings: assessment?.warnings ?? [],
     });
   };
 
   const handleNotesChange = (powerNotes: string) => {
     onChange({
-      ...assessment!,
+      isDetectable: assessment?.isDetectable ?? null,
       powerNotes,
       requiredSampleSize: suggestedN,
+      warnings: assessment?.warnings ?? [],
     });
   };
 
@@ -625,14 +635,16 @@ function PracticalSignificanceInput({
 }: PracticalSignificanceInputProps) {
   const handleMeaningfulChange = (isPracticallyMeaningful: boolean | null) => {
     onChange({
-      ...significance!,
       isPracticallyMeaningful,
+      stakeholders: significance?.stakeholders ?? [],
+      reasoning: significance?.reasoning ?? "",
     });
   };
 
   const handleReasoningChange = (reasoning: string) => {
     onChange({
-      ...significance!,
+      isPracticallyMeaningful: significance?.isPracticallyMeaningful ?? null,
+      stakeholders: significance?.stakeholders ?? [],
       reasoning,
     });
   };
@@ -643,8 +655,9 @@ function PracticalSignificanceInput({
       ? current.filter(s => s !== stakeholder)
       : [...current, stakeholder];
     onChange({
-      ...significance!,
+      isPracticallyMeaningful: significance?.isPracticallyMeaningful ?? null,
       stakeholders: updated,
+      reasoning: significance?.reasoning ?? "",
     });
   };
 

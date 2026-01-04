@@ -255,7 +255,7 @@ function ResultButton({
     inconclusive: {
       icon: HelpCircle,
       label: "Inconclusive",
-      description: "Doesn&apos;t clearly match either",
+      description: "Doesn't clearly match either",
       color: "text-amber-500",
       bgColor: "bg-amber-500/10",
       borderColor: "border-amber-500",
@@ -883,11 +883,15 @@ export function EvidenceRecorder({
               <div className="grid grid-cols-2 gap-3 text-xs">
                 <div>
                   <span className="text-muted-foreground">Test:</span>
-                  <p className="font-medium">{state.test?.description.slice(0, 50)}...</p>
+                  <p className="font-medium">
+                    {state.test ? `${state.test.description.slice(0, 50)}...` : "No test selected"}
+                  </p>
                 </div>
                 <div>
                   <span className="text-muted-foreground">Power:</span>
-                  <p className="font-medium">{state.test && getStarRating(state.test.discriminativePower)}</p>
+                  <p className="font-medium">
+                    {state.test ? getStarRating(state.test.discriminativePower) : "N/A"}
+                  </p>
                 </div>
               </div>
 
