@@ -38,3 +38,9 @@ export {
   LevelSplitSession,
   type LevelSplitSessionProps,
 } from "./LevelSplitSession";
+
+// Object Transpose (⟳) - bead vw6p.4
+export {
+  ObjectTransposeSession,
+  type ObjectTransposeSessionProps,
+} from "./ObjectTransposeSession";
