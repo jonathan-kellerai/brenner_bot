@@ -471,7 +471,6 @@ function HeaderProgress({
   const highestCompleted = completedSteps.length > 0 ? Math.max(...completedSteps) : -1;
   const progress = ((currentStep + 1) / steps.length) * 100;
   const [swipeOffset, setSwipeOffset] = React.useState(0);
-  const [isAnimating, setIsAnimating] = React.useState(false);
   const [showGestureHint, setShowGestureHint] = React.useState(true);
 
   // Hide gesture hint after first swipe
@@ -499,17 +498,13 @@ function HeaderProgress({
             // Swipe right = go back
             const prevStep = currentStep - 1;
             if (completedSet.has(prevStep) || prevStep <= highestCompleted + 1 || allowJumpAhead) {
-              setIsAnimating(true);
               onStepClick(prevStep);
-              setTimeout(() => setIsAnimating(false), 300);
             }
           } else if (dx < 0 && currentStep < steps.length - 1) {
             // Swipe left = go forward
             const nextStep = currentStep + 1;
             if (completedSet.has(nextStep) || nextStep <= highestCompleted + 1 || allowJumpAhead) {
-              setIsAnimating(true);
               onStepClick(nextStep);
-              setTimeout(() => setIsAnimating(false), 300);
             }
           }
         }

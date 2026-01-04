@@ -15,7 +15,7 @@
  */
 
 import * as React from "react";
-import { motion, AnimatePresence, useMotionValue, useTransform, useSpring, type Variants } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { Sparkles, Clock, BookOpen, Wrench, ChevronLeft, ChevronRight, Target, Zap, Check, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { TutorialStep as TutorialStepType, TroubleshootingItem } from "@/lib/tutorial-types";
