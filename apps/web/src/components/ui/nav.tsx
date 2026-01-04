@@ -37,6 +37,12 @@ const GlossaryIcon = () => (
   </svg>
 )
 
+const SessionsIcon = () => (
+  <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23.693L5 14.5m14.8.8l1.402 5.07a1.125 1.125 0 01-1.135 1.416H3.933a1.125 1.125 0 01-1.135-1.416L5 14.5" />
+  </svg>
+)
+
 const TranscriptIcon = () => (
   <svg className="size-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9zm-3 9.75h6m-6 3h3" />
@@ -67,6 +73,7 @@ const navItems: NavItem[] = [
   { href: "/distillations", label: "Distillations", icon: <SparklesIcon /> },
   { href: "/glossary", label: "Glossary", icon: <GlossaryIcon /> },
   { href: "/method", label: "Method", icon: <BeakerIcon /> },
+  { href: "/sessions", label: "Sessions", icon: <SessionsIcon /> },
 ]
 
 // Helper to check if nav item is active (handles nested routes like /corpus vs /corpus/transcript)
