@@ -638,6 +638,31 @@ export function validateConfound(confound: IdentifiedConfound): ValidationResult
     });
   }
 
+  // Validate optional fields have correct types if present
+  if (confound.addressed !== undefined && typeof confound.addressed !== "boolean") {
+    errors.push({
+      field: "addressed",
+      message: "addressed must be a boolean if provided",
+      code: "INVALID_TYPE",
+    });
+  }
+
+  if (confound.addressedHow !== undefined && typeof confound.addressedHow !== "string") {
+    errors.push({
+      field: "addressedHow",
+      message: "addressedHow must be a string if provided",
+      code: "INVALID_TYPE",
+    });
+  }
+
+  if (confound.addressedAt !== undefined && !isValidDateOrString(confound.addressedAt)) {
+    errors.push({
+      field: "addressedAt",
+      message: "addressedAt must be a valid Date or ISO date string if provided",
+      code: "INVALID_TYPE",
+    });
+  }
+
   return {
     valid: errors.length === 0,
     errors,
@@ -1047,11 +1072,22 @@ export function calculateSpecificityScore(card: HypothesisCard): number {
  *
  * @param confidence - The confidence value (0-100)
  * @returns A string interpretation
+ * @throws Error if confidence is not a finite number
  */
 export function interpretConfidence(confidence: number): string {
-  if (confidence < 20) return "Very speculative";
-  if (confidence < 40) return "Interesting but untested";
-  if (confidence < 60) return "Reasonable, some support";
-  if (confidence < 80) return "Strong support";
+  // Guard against NaN, Infinity, and non-numbers
+  if (!Number.isFinite(confidence)) {
+    throw new Error(
+      `Invalid confidence value: must be a finite number (got ${confidence})`
+    );
+  }
+
+  // Clamp to valid range for interpretation
+  const clamped = Math.max(0, Math.min(100, confidence));
+
+  if (clamped < 20) return "Very speculative";
+  if (clamped < 40) return "Interesting but untested";
+  if (clamped < 60) return "Reasonable, some support";
+  if (clamped < 80) return "Strong support";
   return "Near-certain";
 }
