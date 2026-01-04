@@ -216,3 +216,100 @@ export {
   getPhaseStatusClass,
   getSessionProgress,
 } from "./use-session-machine";
+
+// ============================================================================
+// Hypothesis History (bead an1n.2)
+// ============================================================================
+
+export type {
+  EvolutionTrigger,
+  HypothesisVersion,
+  HypothesisHistoryStore,
+  HypothesisChange,
+  HypothesisDiff,
+  EvolutionStatus,
+  EvolutionGraphNode,
+  EvolutionGraphEdge,
+  EvolutionGraph,
+} from "./hypothesis-history";
+
+export {
+  EVOLUTION_TRIGGER_LABELS,
+  createHistoryStore,
+  addRootHypothesis,
+  evolveHypothesis,
+  abandonHypothesis,
+  getAncestors,
+  getDescendants,
+  getRoot,
+  getLeaves,
+  findCommonAncestor,
+  diffHypotheses,
+  generateEvolutionGraph,
+  generateLineageGraph,
+  getEvolutionStats,
+  findByTrigger,
+  findByTimeRange,
+  isAncestor,
+} from "./hypothesis-history";
+
+// ============================================================================
+// Hypothesis Arena (bead an1n.6)
+// ============================================================================
+
+export type {
+  // Core types
+  TestResultType,
+  PredictionBoldness,
+  ArenaHypothesisStatus,
+  HypothesisSource,
+  ArenaHypothesis,
+  ScoredPrediction,
+  HypothesisTestResult,
+  ArenaTest,
+  HypothesisArena,
+  ComparisonMatrixRow,
+  ComparisonMatrix,
+} from "./hypothesis-arena";
+
+export {
+  // Constants
+  BOLDNESS_MULTIPLIERS,
+  BASE_SCORE_DELTAS,
+  SOURCE_LABELS,
+  STATUS_CONFIG,
+
+  // Factory functions
+  generateArenaId,
+  generateTestResultId,
+  generateArenaTestId,
+  createArena,
+  createArenaHypothesis,
+
+  // Arena operations
+  addCompetitor,
+  calculateScoreDelta,
+  recordTestResult,
+  createArenaTest,
+  eliminateHypothesis,
+  resolveArena,
+
+  // Query functions
+  getActiveHypotheses,
+  getEliminatedHypotheses,
+  getLeader,
+  getRankedHypotheses,
+  calculateDiscriminativePower,
+
+  // Comparison matrix
+  buildComparisonMatrix,
+
+  // Type guards
+  isHypothesisArena,
+  isArenaHypothesis,
+
+  // Boldness assessment
+  assessPredictionBoldness,
+  scorePredictions,
+  getAverageBoldness,
+} from "./hypothesis-arena";
