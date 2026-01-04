@@ -20,6 +20,7 @@ import { HypothesisCard } from "./HypothesisCard";
 import {
   useSession,
   useSessionMachine,
+  usePhaseNavigation,
   getPhaseStatusClass,
   getSessionProgress,
   type SessionPhase,
@@ -367,11 +368,11 @@ export function SessionDashboard({
 }: SessionDashboardProps) {
   const { session, primaryHypothesis, isLoading, error } = useSession();
 
-  const machine = useSessionMachine(session, {
-    onSessionUpdate: () => {
-      // Session context auto-saves
-    },
-  });
+  // useSessionMachine provides computed values (reachablePhases, isComplete, etc.)
+  const machine = useSessionMachine(session);
+
+  // usePhaseNavigation provides navigation actions that persist to storage
+  const { prev, next, canPrev, canNext, goTo } = usePhaseNavigation();
 
   // Loading state
   if (isLoading) {
@@ -414,7 +415,8 @@ export function SessionDashboard({
   }
 
   const handlePhaseClick = (phase: SessionPhase) => {
-    machine.goToPhase(phase);
+    // Use navigation's goTo which handles persistence
+    goTo(phase);
   };
 
   return (
@@ -482,19 +484,19 @@ export function SessionDashboard({
       <div className="flex items-center justify-between pt-4 border-t">
         <Button
           variant="outline"
-          onClick={machine.goBack}
-          disabled={!machine.canGoBack}
+          onClick={prev}
+          disabled={!canPrev}
         >
           <ChevronLeftIcon className="size-4 mr-2" />
           Previous
         </Button>
 
         <Button
-          onClick={() => machine.advance()}
-          disabled={machine.isComplete || !machine.nextPhase}
+          onClick={next}
+          disabled={!canNext || machine?.isComplete}
         >
-          {machine.isComplete ? "Complete" : "Next"}
-          {!machine.isComplete && <ChevronRightIcon className="size-4 ml-2" />}
+          {machine?.isComplete ? "Complete" : "Next"}
+          {!machine?.isComplete && <ChevronRightIcon className="size-4 ml-2" />}
         </Button>
       </div>
     </div>

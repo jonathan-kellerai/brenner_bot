@@ -234,7 +234,7 @@ export const HYPOTHESIS_STATE_CONFIG: Record<HypothesisState, HypothesisStateCon
     },
     editable: false,
     deletable: true,
-    transitions: ["RESUME", "ABANDON"],
+    transitions: ["RESUME", "REACTIVATE", "ABANDON"],
   },
 };
 
@@ -403,14 +403,14 @@ const TRANSITIONS: Record<HypothesisLifecycleEvent["type"], TransitionDef> = {
     from: ["dormant"],
     to: "draft",
     guards: [],
-    action: (hypothesis) => ({
+    action: () => ({
+      // Unlock all predictions to allow editing again
       lockedPredictions: [],
       lastActivityAt: new Date(),
       // Reset state-specific fields
       successorId: undefined,
       falsificationReason: undefined,
-      // Keep evolution chain intact
-      parentVersion: hypothesis.id,
+      falsificationLearning: undefined,
     }),
   },
 

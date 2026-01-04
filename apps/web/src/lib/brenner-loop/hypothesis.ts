@@ -337,43 +337,46 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
   }
 
   // === Required Fields ===
+  // Use trimmed length consistently for all checks
 
-  if (!card.statement || card.statement.trim().length === 0) {
+  const statementTrimmed = card.statement?.trim() ?? "";
+  if (statementTrimmed.length === 0) {
     errors.push({
       field: "statement",
       message: "Statement is required",
       code: "MISSING_REQUIRED",
     });
-  } else if (card.statement.length < 10) {
+  } else if (statementTrimmed.length < 10) {
     errors.push({
       field: "statement",
-      message: `Statement must be at least 10 characters (got ${card.statement.length})`,
+      message: `Statement must be at least 10 characters (got ${statementTrimmed.length})`,
       code: "TOO_SHORT",
     });
-  } else if (card.statement.length > 1000) {
+  } else if (statementTrimmed.length > 1000) {
     errors.push({
       field: "statement",
-      message: `Statement must be at most 1000 characters (got ${card.statement.length})`,
+      message: `Statement must be at most 1000 characters (got ${statementTrimmed.length})`,
       code: "TOO_LONG",
     });
   }
 
-  if (!card.mechanism || card.mechanism.trim().length === 0) {
+  const mechanismTrimmed = card.mechanism?.trim() ?? "";
+  if (mechanismTrimmed.length === 0) {
     errors.push({
       field: "mechanism",
       message: "Mechanism is required",
       code: "MISSING_REQUIRED",
     });
-  } else if (card.mechanism.length < 10) {
+  } else if (mechanismTrimmed.length < 10) {
     errors.push({
       field: "mechanism",
-      message: `Mechanism must be at least 10 characters (got ${card.mechanism.length})`,
+      message: `Mechanism must be at least 10 characters (got ${mechanismTrimmed.length})`,
       code: "TOO_SHORT",
     });
-  } else if (card.mechanism.length > 500) {
+  } else if (mechanismTrimmed.length > 500) {
     errors.push({
       field: "mechanism",
-      message: `Mechanism must be at most 500 characters (got ${card.mechanism.length})`,
+      message: `Mechanism must be at most 500 characters (got ${mechanismTrimmed.length})`,
       code: "TOO_LONG",
     });
   }
@@ -539,15 +542,15 @@ export function validateHypothesisCard(card: HypothesisCard): ValidationResult {
     });
   }
 
-  // Check for generic mechanism patterns
+  // Check for generic mechanism patterns (use trimmed to match ^ correctly)
   const genericMechanismPatterns = [
     /^causes?\s/i,
     /^leads?\sto\s/i,
     /^results?\sin\s/i,
   ];
   if (
-    card.mechanism &&
-    genericMechanismPatterns.some((p) => p.test(card.mechanism))
+    mechanismTrimmed.length > 0 &&
+    genericMechanismPatterns.some((p) => p.test(mechanismTrimmed))
   ) {
     warnings.push({
       field: "mechanism",
@@ -647,6 +650,13 @@ function isValidDateOrString(value: unknown): boolean {
 }
 
 /**
+ * Check if an array contains only strings.
+ */
+function isStringArray(arr: unknown[]): arr is string[] {
+  return arr.every((item) => typeof item === "string");
+}
+
+/**
  * Type guard to check if an unknown value is a valid HypothesisCard.
  *
  * Handles both fresh objects (with Date instances) and deserialized
@@ -667,13 +677,18 @@ export function isHypothesisCard(obj: unknown): obj is HypothesisCard {
   if (typeof card.version !== "number") return false;
   if (typeof card.statement !== "string") return false;
   if (typeof card.mechanism !== "string") return false;
-  if (!Array.isArray(card.domain)) return false;
-  if (!Array.isArray(card.predictionsIfTrue)) return false;
-  if (!Array.isArray(card.predictionsIfFalse)) return false;
-  if (!Array.isArray(card.impossibleIfTrue)) return false;
-  if (!Array.isArray(card.confounds)) return false;
-  if (!Array.isArray(card.assumptions)) return false;
   if (typeof card.confidence !== "number") return false;
+
+  // Check arrays exist and contain correct element types
+  if (!Array.isArray(card.domain) || !isStringArray(card.domain)) return false;
+  if (!Array.isArray(card.predictionsIfTrue) || !isStringArray(card.predictionsIfTrue)) return false;
+  if (!Array.isArray(card.predictionsIfFalse) || !isStringArray(card.predictionsIfFalse)) return false;
+  if (!Array.isArray(card.impossibleIfTrue) || !isStringArray(card.impossibleIfTrue)) return false;
+  if (!Array.isArray(card.assumptions) || !isStringArray(card.assumptions)) return false;
+
+  // Check confounds array contains valid IdentifiedConfound objects
+  if (!Array.isArray(card.confounds)) return false;
+  if (!card.confounds.every((c) => isIdentifiedConfound(c))) return false;
 
   // Handle both Date objects and ISO date strings (from JSON serialization)
   if (!isValidDateOrString(card.createdAt)) return false;
@@ -828,13 +843,15 @@ export function evolveHypothesisCard(
   const now = new Date();
 
   // Parse the current ID to get base and increment version
+  // Use the version from the ID (not the version field) to ensure ID consistency
   const idParts = current.id.match(/^(HC-.*-\d{3})-v(\d+)$/);
   if (!idParts) {
     throw new Error(`Invalid hypothesis ID format: ${current.id}`);
   }
 
   const baseId = idParts[1];
-  const newVersion = current.version + 1;
+  const idVersion = parseInt(idParts[2], 10);
+  const newVersion = idVersion + 1;
   const newId = `${baseId}-v${newVersion}`;
 
   const evolved: HypothesisCard = {
@@ -874,7 +891,12 @@ export function evolveHypothesisCard(
  * @returns A score from 0-100
  */
 export function calculateFalsifiabilityScore(card: HypothesisCard): number {
-  if (!card.impossibleIfTrue || card.impossibleIfTrue.length === 0) {
+  // Filter out empty/whitespace-only strings for accurate scoring
+  const validConditions = (card.impossibleIfTrue || []).filter(
+    (s) => s.trim().length > 0
+  );
+
+  if (validConditions.length === 0) {
     return 0;
   }
 
@@ -884,22 +906,25 @@ export function calculateFalsifiabilityScore(card: HypothesisCard): number {
   score += 20;
 
   // Bonus for multiple conditions
-  score += Math.min(card.impossibleIfTrue.length * 10, 30);
+  score += Math.min(validConditions.length * 10, 30);
 
   // Bonus for specificity (longer = more specific, up to a point)
   const avgLength =
-    card.impossibleIfTrue.reduce((sum, c) => sum + c.length, 0) /
-    card.impossibleIfTrue.length;
+    validConditions.reduce((sum, c) => sum + c.trim().length, 0) /
+    validConditions.length;
   if (avgLength > 50) score += 20;
   else if (avgLength > 25) score += 10;
 
   // Bonus for having predictionsIfFalse as well
-  if (card.predictionsIfFalse && card.predictionsIfFalse.length > 0) {
+  const validPredictionsFalse = (card.predictionsIfFalse || []).filter(
+    (s) => s.trim().length > 0
+  );
+  if (validPredictionsFalse.length > 0) {
     score += 20;
   }
 
   // Penalty for very high confidence without many falsification conditions
-  if (card.confidence > 80 && card.impossibleIfTrue.length < 2) {
+  if (card.confidence > 80 && validConditions.length < 2) {
     score -= 10;
   }
 
@@ -915,19 +940,26 @@ export function calculateFalsifiabilityScore(card: HypothesisCard): number {
 export function calculateSpecificityScore(card: HypothesisCard): number {
   let score = 0;
 
+  // Filter out empty/whitespace-only strings for accurate scoring
+  const validPredictions = card.predictionsIfTrue.filter(
+    (s) => s.trim().length > 0
+  );
+  const validDomains = card.domain.filter((s) => s.trim().length > 0);
+
   // Score based on predictions if true
-  if (card.predictionsIfTrue.length > 0) {
+  if (validPredictions.length > 0) {
     score += 20;
-    score += Math.min(card.predictionsIfTrue.length * 5, 20);
+    score += Math.min(validPredictions.length * 5, 20);
   }
 
-  // Score based on mechanism detail
-  if (card.mechanism.length > 100) score += 20;
-  else if (card.mechanism.length > 50) score += 10;
+  // Score based on mechanism detail (use trimmed length)
+  const mechanismLength = card.mechanism.trim().length;
+  if (mechanismLength > 100) score += 20;
+  else if (mechanismLength > 50) score += 10;
 
   // Score based on domain specificity
-  if (card.domain.length > 0) score += 10;
-  if (card.domain.length > 1) score += 10;
+  if (validDomains.length > 0) score += 10;
+  if (validDomains.length > 1) score += 10;
 
   // Score based on confound identification
   if (card.confounds.length > 0) {

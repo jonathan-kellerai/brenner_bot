@@ -689,25 +689,29 @@ export function HypothesisIntake({
     const newErrors: Record<string, string> = {};
 
     switch (step) {
-      case 1:
-        if (!formData.statement.trim()) {
+      case 1: {
+        const trimmedStatement = formData.statement.trim();
+        if (!trimmedStatement) {
           newErrors.statement = "Statement is required";
-        } else if (formData.statement.length < 10) {
+        } else if (trimmedStatement.length < 10) {
           newErrors.statement = "Statement must be at least 10 characters";
-        } else if (formData.statement.length > 1000) {
+        } else if (trimmedStatement.length > 1000) {
           newErrors.statement = "Statement must be at most 1000 characters";
         }
         break;
+      }
 
-      case 2:
-        if (!formData.mechanism.trim()) {
+      case 2: {
+        const trimmedMechanism = formData.mechanism.trim();
+        if (!trimmedMechanism) {
           newErrors.mechanism = "Mechanism is required";
-        } else if (formData.mechanism.length < 10) {
+        } else if (trimmedMechanism.length < 10) {
           newErrors.mechanism = "Mechanism must be at least 10 characters";
-        } else if (formData.mechanism.length > 500) {
+        } else if (trimmedMechanism.length > 500) {
           newErrors.mechanism = "Mechanism must be at most 500 characters";
         }
         break;
+      }
 
       case 3:
         if (formData.predictionsIfTrue.length === 0) {
@@ -803,9 +807,10 @@ export function HypothesisIntake({
   };
 
   const isLastStep = currentStep === 6;
+  // Note: canProceed must match validation logic (use trim() for text fields)
   const canProceed = currentStep === 4 || // Step 4 is optional
-    (currentStep === 1 && formData.statement.length >= 10) ||
-    (currentStep === 2 && formData.mechanism.length >= 10) ||
+    (currentStep === 1 && formData.statement.trim().length >= 10) ||
+    (currentStep === 2 && formData.mechanism.trim().length >= 10) ||
     (currentStep === 3 && formData.predictionsIfTrue.length > 0) ||
     (currentStep === 5 && formData.impossibleIfTrue.length > 0) ||
     currentStep === 6;
