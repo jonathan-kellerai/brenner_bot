@@ -497,6 +497,21 @@ export {
 } from "./artifacts/research-brief-template";
 
 // ============================================================================
+// Embeddings (bead ukd1.1)
+// ============================================================================
+
+export type { EmbeddingSource, EmbeddingEntry, EmbeddingIndex, EmbeddingMatch } from "./search/embeddings";
+
+export {
+  EMBEDDING_DIMENSION,
+  EMBEDDING_INDEX_VERSION,
+  embedText,
+  cosineSimilarity,
+  findSimilar,
+  loadEmbeddings,
+} from "./search/embeddings";
+
+// ============================================================================
 // Multi-Agent Tribunal System (bead xlk2.1)
 // ============================================================================
 
