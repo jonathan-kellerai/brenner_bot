@@ -180,6 +180,14 @@ export type { SessionExport, SessionExportFormat, SessionImportResult } from "./
 export { exportSession, importSession } from "./export";
 
 // ============================================================================
+// Personal Analytics (bead 1v26.5)
+// ============================================================================
+
+export type { PersonalAnalytics, TrendData, TrendPoint, Achievement } from "./analytics";
+
+export { computePersonalAnalytics } from "./analytics";
+
+// ============================================================================
 // Session Context Provider & Hooks (bead 1v26.3)
 // ============================================================================
 
