@@ -70,27 +70,22 @@ function getConfidenceColor(confidence: number): string {
   return "text-destructive";
 }
 
+const PHASE_COLOR_BY_PHASE: Partial<Record<string, string>> = {
+  complete: "bg-success/15 text-success border-success/20",
+  intake: "bg-muted text-muted-foreground border-border",
+  sharpening: "bg-info/15 text-info border-info/20",
+  level_split: "bg-info/15 text-info border-info/20",
+  exclusion_test: "bg-info/15 text-info border-info/20",
+  object_transpose: "bg-info/15 text-info border-info/20",
+  scale_check: "bg-info/15 text-info border-info/20",
+  agent_dispatch: "bg-primary/15 text-primary border-primary/20",
+  synthesis: "bg-primary/15 text-primary border-primary/20",
+  evidence_gathering: "bg-warning/15 text-warning border-warning/20",
+  revision: "bg-warning/15 text-warning border-warning/20",
+};
+
 function getPhaseColor(phase: string): string {
-  switch (phase) {
-    case "complete":
-      return "bg-success/15 text-success border-success/20";
-    case "intake":
-      return "bg-muted text-muted-foreground border-border";
-    case "sharpening":
-    case "level_split":
-    case "exclusion_test":
-    case "object_transpose":
-    case "scale_check":
-      return "bg-info/15 text-info border-info/20";
-    case "agent_dispatch":
-    case "synthesis":
-      return "bg-primary/15 text-primary border-primary/20";
-    case "evidence_gathering":
-    case "revision":
-      return "bg-warning/15 text-warning border-warning/20";
-    default:
-      return "bg-muted text-muted-foreground border-border";
-  }
+  return PHASE_COLOR_BY_PHASE[phase] ?? "bg-muted text-muted-foreground border-border";
 }
 
 type SessionMatchLocation = "overview" | "hypothesis" | "evidence" | "operators" | "test-queue" | "agents" | "brief";
@@ -317,6 +312,7 @@ export function SessionCard({
   const [isExporting, setIsExporting] = React.useState(false);
 
   const isComplete = session.phase === "complete";
+  const phaseSymbol = getPhaseSymbol(session.phase);
 
   const stalenessLabel = React.useMemo(() => {
     if (isComplete || isArchived) return null;
@@ -448,7 +444,7 @@ export function SessionCard({
                 getPhaseColor(session.phase)
               )}
             >
-              <span className="opacity-70">{getPhaseSymbol(session.phase)}</span>
+              {phaseSymbol && <span className="opacity-70">{phaseSymbol}</span>}
               {getPhaseName(session.phase)}
             </span>
 

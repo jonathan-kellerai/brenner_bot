@@ -4,8 +4,8 @@
  * Operators Workspace Page
  *
  * Interactive workspace for applying Brenner methodology operators
- * to refine hypotheses: Level Split (Σ), Exclusion Test (⊘),
- * Object Transpose (⟳), Scale Check (⊙).
+ * to refine hypotheses: Level Split (⊘), Exclusion Test (✂),
+ * Object Transpose (⟂), Scale Check (⊞).
  *
  * @see brenner_bot-pts6 (routes bead)
  */
@@ -140,7 +140,7 @@ interface OperatorConfig {
 const OPERATORS: OperatorConfig[] = [
   {
     id: "level_split",
-    symbol: "\u03A3",
+    symbol: "⊘",
     name: "Level Split",
     shortName: "Levels",
     description: "Identify different levels of explanation that might be conflated in your hypothesis.",
@@ -160,7 +160,7 @@ const OPERATORS: OperatorConfig[] = [
   },
   {
     id: "exclusion_test",
-    symbol: "\u2298",
+    symbol: "✂",
     name: "Exclusion Test",
     shortName: "Exclude",
     description: "Design tests that could definitively rule out your hypothesis.",
@@ -180,7 +180,7 @@ const OPERATORS: OperatorConfig[] = [
   },
   {
     id: "object_transpose",
-    symbol: "\u27F3",
+    symbol: "⟂",
     name: "Object Transpose",
     shortName: "Transpose",
     description: "Consider alternative experimental systems or reference frames where the problem is cleaner.",
@@ -200,7 +200,7 @@ const OPERATORS: OperatorConfig[] = [
   },
   {
     id: "scale_check",
-    symbol: "\u2299",
+    symbol: "⊞",
     name: "Scale Check",
     shortName: "Scale",
     description: "Verify physical and mathematical plausibility before investing in experiments.",
@@ -400,15 +400,18 @@ export default function OperatorsPage() {
   React.useEffect(() => {
     let cancelled = false;
 
-    loadEmbeddings()
-      .then((index) => {
+    const run = async () => {
+      try {
+        const index = await loadEmbeddings();
         if (cancelled) return;
         setQuoteEntries(index.entries.filter((entry) => entry.source === "quote"));
-      })
-      .catch((e) => {
+      } catch (e) {
         if (cancelled) return;
         setQuoteError(e instanceof Error ? e.message : "Failed to load embeddings.");
-      });
+      }
+    };
+
+    void run();
 
     return () => {
       cancelled = true;

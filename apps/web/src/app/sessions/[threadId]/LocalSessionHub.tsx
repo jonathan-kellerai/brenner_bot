@@ -6,6 +6,14 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { nowMs, trackSystemLatency } from "@/lib/analytics";
 import {
   sessionStorage,
@@ -72,25 +80,21 @@ async function downloadExport(session: Session, format: "json" | "markdown"): Pr
   URL.revokeObjectURL(url);
 }
 
+const SUGGESTED_LOCATION_BY_PHASE: Partial<Record<Session["phase"], SessionResumeLocation>> = {
+  intake: "hypothesis",
+  sharpening: "hypothesis",
+  revision: "hypothesis",
+  exclusion_test: "test-queue",
+  agent_dispatch: "agents",
+  synthesis: "agents",
+  complete: "brief",
+  level_split: "operators",
+  object_transpose: "operators",
+  scale_check: "operators",
+};
+
 function suggestedLocationFromPhase(phase: Session["phase"]): SessionResumeLocation {
-  switch (phase) {
-    case "intake":
-    case "sharpening":
-    case "revision":
-      return "hypothesis";
-    case "exclusion_test":
-      return "test-queue";
-    case "agent_dispatch":
-    case "synthesis":
-      return "agents";
-    case "complete":
-      return "brief";
-    case "level_split":
-    case "object_transpose":
-    case "scale_check":
-    default:
-      return "operators";
-  }
+  return SUGGESTED_LOCATION_BY_PHASE[phase] ?? "operators";
 }
 
 export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) {
@@ -101,6 +105,7 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
   const [error, setError] = React.useState<string | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = React.useState(false);
   const loadStartRef = React.useRef<number | null>(null);
 
   React.useEffect(() => {
@@ -149,6 +154,7 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
   }, [sessionId]);
 
   const primaryHypothesis = session ? getPrimaryHypothesisPreview(session) : null;
+  const phaseSymbol = session ? getPhaseSymbol(session.phase) : null;
 
   const suggestedLocation = React.useMemo(() => {
     if (resumeEntry?.location && resumeEntry.location !== "overview") return resumeEntry.location;
@@ -162,10 +168,11 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
   }, [session?.id, sessionId, suggestedLocation]);
 
   const handleExport = async (format: "json" | "markdown") => {
-    if (!session) return;
+    const currentSession = session;
+    if (!currentSession) return;
     setIsExporting(true);
     try {
-      await downloadExport(session, format);
+      await downloadExport(currentSession, format);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to export session.");
     } finally {
@@ -173,9 +180,8 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
     }
   };
 
-  const handleDelete = async () => {
-    if (!window.confirm("Delete this local session from your browser storage?")) return;
-
+  const confirmDelete = async () => {
+    setIsDeleteConfirmOpen(false);
     setIsDeleting(true);
     try {
       await sessionStorage.delete(sessionId);
@@ -220,6 +226,35 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
 
   return (
     <div className={cn("max-w-5xl mx-auto space-y-8", className)}>
+      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <DialogContent size="sm" closeButtonLabel="Close delete confirmation">
+          <DialogHeader separated>
+            <DialogTitle>Delete local session?</DialogTitle>
+            <DialogDescription>
+              This removes <span className="font-mono">{session.id}</span> from your browser storage. This action can’t be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter separated className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsDeleteConfirmOpen(false)}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <header className="space-y-2">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -249,7 +284,7 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
             <Button
               variant="destructive"
               size="sm"
-              onClick={() => void handleDelete()}
+              onClick={() => setIsDeleteConfirmOpen(true)}
               disabled={isDeleting}
             >
               {isDeleting ? "Deleting..." : "Delete"}
@@ -260,7 +295,7 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
         <div className="text-sm text-muted-foreground">
           <span className="font-medium text-foreground/80">Phase:</span>{" "}
           <span className="inline-flex items-center gap-1 font-medium text-foreground">
-            <span className="opacity-70">{getPhaseSymbol(session.phase)}</span>
+            {phaseSymbol && <span className="opacity-70">{phaseSymbol}</span>}
             {getPhaseName(session.phase)}
           </span>
           <span className="mx-2">·</span>
@@ -321,7 +356,7 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
           >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Operators</CardTitle>
-              <CardDescription>Apply Σ ⊘ ⟳ ⊙</CardDescription>
+              <CardDescription>Apply ⊘ ✂ ⟂ ⊞</CardDescription>
             </CardHeader>
           </Card>
         </Link>
