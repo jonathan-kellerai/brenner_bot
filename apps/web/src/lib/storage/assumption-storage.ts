@@ -117,6 +117,44 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
+// In-process Locking
+// ============================================================================
+
+const ASSUMPTION_STORAGE_LOCKS = new Map<string, Promise<void>>();
+
+async function withAssumptionStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = ASSUMPTION_STORAGE_LOCKS.get(key) ?? Promise.resolve();
+  const safePrev = prev.catch(() => {});
+
+  let result: T | undefined;
+  let didThrow = false;
+  let error: unknown;
+
+  const next = safePrev.then(async () => {
+    try {
+      result = await fn();
+    } catch (err) {
+      didThrow = true;
+      error = err;
+    }
+  });
+
+  ASSUMPTION_STORAGE_LOCKS.set(key, next);
+
+  await next;
+
+  if (ASSUMPTION_STORAGE_LOCKS.get(key) === next) {
+    ASSUMPTION_STORAGE_LOCKS.delete(key);
+  }
+
+  if (didThrow) {
+    throw error;
+  }
+
+  return result as T;
+}
+
+// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -131,6 +169,10 @@ export class AssumptionStorage {
   constructor(config: AssumptionStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
+  }
+
+  private lockKey(): string {
+    return `assumption-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -161,6 +203,12 @@ export class AssumptionStorage {
    * Save assumptions for a specific session.
    */
   async saveSessionAssumptions(sessionId: string, assumptions: Assumption[]): Promise<void> {
+    await withAssumptionStorageLock(this.lockKey(), async () => {
+      await this.saveSessionAssumptionsUnlocked(sessionId, assumptions);
+    });
+  }
+
+  private async saveSessionAssumptionsUnlocked(sessionId: string, assumptions: Assumption[]): Promise<void> {
     await ensureStorageStructure(this.baseDir);
 
     const filePath = getSessionFilePath(this.baseDir, sessionId);
@@ -186,7 +234,7 @@ export class AssumptionStorage {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2));
 
     if (this.autoRebuildIndex) {
-      await this.rebuildIndex();
+      await this.rebuildIndexUnlocked();
     }
   }
 
@@ -226,36 +274,40 @@ export class AssumptionStorage {
    * Create or update an assumption.
    */
   async saveAssumption(assumption: Assumption): Promise<void> {
-    const assumptions = await this.loadSessionAssumptions(assumption.sessionId);
-    const existingIndex = assumptions.findIndex((a) => a.id === assumption.id);
+    await withAssumptionStorageLock(this.lockKey(), async () => {
+      const assumptions = await this.loadSessionAssumptions(assumption.sessionId);
+      const existingIndex = assumptions.findIndex((a) => a.id === assumption.id);
 
-    if (existingIndex >= 0) {
-      assumptions[existingIndex] = assumption;
-    } else {
-      assumptions.push(assumption);
-    }
+      if (existingIndex >= 0) {
+        assumptions[existingIndex] = assumption;
+      } else {
+        assumptions.push(assumption);
+      }
 
-    await this.saveSessionAssumptions(assumption.sessionId, assumptions);
+      await this.saveSessionAssumptionsUnlocked(assumption.sessionId, assumptions);
+    });
   }
 
   /**
    * Delete an assumption by ID.
    */
   async deleteAssumption(id: string): Promise<boolean> {
-    const assumption = await this.getAssumptionById(id);
-    if (!assumption) {
-      return false;
-    }
+    return await withAssumptionStorageLock(this.lockKey(), async () => {
+      const assumption = await this.getAssumptionById(id);
+      if (!assumption) {
+        return false;
+      }
 
-    const assumptions = await this.loadSessionAssumptions(assumption.sessionId);
-    const newAssumptions = assumptions.filter((a) => a.id !== id);
+      const assumptions = await this.loadSessionAssumptions(assumption.sessionId);
+      const newAssumptions = assumptions.filter((a) => a.id !== id);
 
-    if (newAssumptions.length === assumptions.length) {
-      return false;
-    }
+      if (newAssumptions.length === assumptions.length) {
+        return false;
+      }
 
-    await this.saveSessionAssumptions(assumption.sessionId, newAssumptions);
-    return true;
+      await this.saveSessionAssumptionsUnlocked(assumption.sessionId, newAssumptions);
+      return true;
+    });
   }
 
   // ============================================================================
@@ -266,6 +318,12 @@ export class AssumptionStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<AssumptionIndex> {
+    return await withAssumptionStorageLock(this.lockKey(), async () => {
+      return await this.rebuildIndexUnlocked();
+    });
+  }
+
+  private async rebuildIndexUnlocked(): Promise<AssumptionIndex> {
     const entries: AssumptionIndexEntry[] = [];
     const assumptionsDir = getAssumptionsDir(this.baseDir);
 

@@ -769,4 +769,25 @@ describe("TestStorage", () => {
       expect(next?.id).toBe(readyEarlier.id);
     });
   });
+
+  // ============================================================================
+  // Concurrency Tests
+  // ============================================================================
+
+  describe("Concurrency", () => {
+    it("concurrent saveTest calls do not drop writes", async () => {
+      const sessionId = "CONCURRENT";
+      const tests = Array.from({ length: 10 }, (_, i) => createTestTestRecord(sessionId, i + 1));
+
+      const concurrencyStorage = new TestStorage({ baseDir: tempDir, autoRebuildIndex: false });
+      await Promise.all(tests.map((t) => concurrencyStorage.saveTest(t)));
+
+      const loaded = await concurrencyStorage.loadSessionTests(sessionId);
+      expect(loaded).toHaveLength(tests.length);
+
+      const loadedIds = loaded.map((t) => t.id).sort();
+      const expectedIds = tests.map((t) => t.id).sort();
+      expect(loadedIds).toEqual(expectedIds);
+    });
+  });
 });

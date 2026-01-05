@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -10,7 +11,7 @@ import { createAnomaly, type Anomaly } from "../schemas/anomaly";
 // ============================================================================
 
 async function createTempDir(): Promise<string> {
-  const dir = join(tmpdir(), `anomaly-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`);
+  const dir = join(tmpdir(), `anomaly-storage-test-${randomUUID()}`);
   await fs.mkdir(dir, { recursive: true });
   return dir;
 }
@@ -395,6 +396,29 @@ describe("AnomalyStorage", () => {
       expect(sessions).toContain("RS20251230");
       expect(sessions).toContain("RS20251231");
       expect(sessions).toContain("CELL-FATE-001");
+    });
+  });
+
+  // ============================================================================
+  // Concurrency Tests
+  // ============================================================================
+
+  describe("Concurrency", () => {
+    it("concurrent saveAnomaly calls do not drop writes", async () => {
+      const sessionId = "CONCURRENT";
+      const anomalies = Array.from({ length: 10 }, (_, i) =>
+        createTestAnomaly(sessionId, i + 1)
+      );
+
+      const concurrencyStorage = new AnomalyStorage({ baseDir: tempDir, autoRebuildIndex: false });
+      await Promise.all(anomalies.map((a) => concurrencyStorage.saveAnomaly(a)));
+
+      const loaded = await concurrencyStorage.loadSessionAnomalies(sessionId);
+      expect(loaded).toHaveLength(anomalies.length);
+
+      const loadedIds = loaded.map((a) => a.id).sort();
+      const expectedIds = anomalies.map((a) => a.id).sort();
+      expect(loadedIds).toEqual(expectedIds);
     });
   });
 });

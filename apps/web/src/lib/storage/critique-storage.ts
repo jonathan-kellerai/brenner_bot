@@ -119,6 +119,44 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
+// In-process Locking
+// ============================================================================
+
+const CRITIQUE_STORAGE_LOCKS = new Map<string, Promise<void>>();
+
+async function withCritiqueStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
+  const prev = CRITIQUE_STORAGE_LOCKS.get(key) ?? Promise.resolve();
+  const safePrev = prev.catch(() => {});
+
+  let result: T | undefined;
+  let didThrow = false;
+  let error: unknown;
+
+  const next = safePrev.then(async () => {
+    try {
+      result = await fn();
+    } catch (err) {
+      didThrow = true;
+      error = err;
+    }
+  });
+
+  CRITIQUE_STORAGE_LOCKS.set(key, next);
+
+  await next;
+
+  if (CRITIQUE_STORAGE_LOCKS.get(key) === next) {
+    CRITIQUE_STORAGE_LOCKS.delete(key);
+  }
+
+  if (didThrow) {
+    throw error;
+  }
+
+  return result as T;
+}
+
+// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -133,6 +171,10 @@ export class CritiqueStorage {
   constructor(config: CritiqueStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
+  }
+
+  private lockKey(): string {
+    return `critique-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -163,6 +205,12 @@ export class CritiqueStorage {
    * Save critiques for a specific session.
    */
   async saveSessionCritiques(sessionId: string, critiques: Critique[]): Promise<void> {
+    await withCritiqueStorageLock(this.lockKey(), async () => {
+      await this.saveSessionCritiquesUnlocked(sessionId, critiques);
+    });
+  }
+
+  private async saveSessionCritiquesUnlocked(sessionId: string, critiques: Critique[]): Promise<void> {
     await ensureStorageStructure(this.baseDir);
 
     const filePath = getSessionFilePath(this.baseDir, sessionId);
@@ -188,7 +236,7 @@ export class CritiqueStorage {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2));
 
     if (this.autoRebuildIndex) {
-      await this.rebuildIndex();
+      await this.rebuildIndexUnlocked();
     }
   }
 
@@ -215,36 +263,40 @@ export class CritiqueStorage {
    * Create or update a critique.
    */
   async saveCritique(critique: Critique): Promise<void> {
-    const critiques = await this.loadSessionCritiques(critique.sessionId);
-    const existingIndex = critiques.findIndex((c) => c.id === critique.id);
+    await withCritiqueStorageLock(this.lockKey(), async () => {
+      const critiques = await this.loadSessionCritiques(critique.sessionId);
+      const existingIndex = critiques.findIndex((c) => c.id === critique.id);
 
-    if (existingIndex >= 0) {
-      critiques[existingIndex] = critique;
-    } else {
-      critiques.push(critique);
-    }
+      if (existingIndex >= 0) {
+        critiques[existingIndex] = critique;
+      } else {
+        critiques.push(critique);
+      }
 
-    await this.saveSessionCritiques(critique.sessionId, critiques);
+      await this.saveSessionCritiquesUnlocked(critique.sessionId, critiques);
+    });
   }
 
   /**
    * Delete a critique by ID.
    */
   async deleteCritique(id: string): Promise<boolean> {
-    const critique = await this.getCritiqueById(id);
-    if (!critique) {
-      return false;
-    }
+    return await withCritiqueStorageLock(this.lockKey(), async () => {
+      const critique = await this.getCritiqueById(id);
+      if (!critique) {
+        return false;
+      }
 
-    const critiques = await this.loadSessionCritiques(critique.sessionId);
-    const newCritiques = critiques.filter((c) => c.id !== id);
+      const critiques = await this.loadSessionCritiques(critique.sessionId);
+      const newCritiques = critiques.filter((c) => c.id !== id);
 
-    if (newCritiques.length === critiques.length) {
-      return false;
-    }
+      if (newCritiques.length === critiques.length) {
+        return false;
+      }
 
-    await this.saveSessionCritiques(critique.sessionId, newCritiques);
-    return true;
+      await this.saveSessionCritiquesUnlocked(critique.sessionId, newCritiques);
+      return true;
+    });
   }
 
   // ============================================================================
@@ -255,6 +307,12 @@ export class CritiqueStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<CritiqueIndex> {
+    return await withCritiqueStorageLock(this.lockKey(), async () => {
+      return await this.rebuildIndexUnlocked();
+    });
+  }
+
+  private async rebuildIndexUnlocked(): Promise<CritiqueIndex> {
     const entries: CritiqueIndexEntry[] = [];
     const critiquesDir = getCritiquesDir(this.baseDir);
 

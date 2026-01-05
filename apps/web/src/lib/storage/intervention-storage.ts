@@ -121,6 +121,47 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
+// In-process Locking
+// ============================================================================
+
+const INTERVENTION_STORAGE_LOCKS = new Map<string, Promise<void>>();
+
+async function withInterventionStorageLock<T>(
+  key: string,
+  fn: () => Promise<T>
+): Promise<T> {
+  const prev = INTERVENTION_STORAGE_LOCKS.get(key) ?? Promise.resolve();
+  const safePrev = prev.catch(() => {});
+
+  let result: T | undefined;
+  let didThrow = false;
+  let error: unknown;
+
+  const next = safePrev.then(async () => {
+    try {
+      result = await fn();
+    } catch (err) {
+      didThrow = true;
+      error = err;
+    }
+  });
+
+  INTERVENTION_STORAGE_LOCKS.set(key, next);
+
+  await next;
+
+  if (INTERVENTION_STORAGE_LOCKS.get(key) === next) {
+    INTERVENTION_STORAGE_LOCKS.delete(key);
+  }
+
+  if (didThrow) {
+    throw error;
+  }
+
+  return result as T;
+}
+
+// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -135,6 +176,10 @@ export class InterventionStorage {
   constructor(config: InterventionStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
+  }
+
+  private lockKey(): string {
+    return `intervention-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -168,6 +213,15 @@ export class InterventionStorage {
     sessionId: string,
     interventions: OperatorIntervention[]
   ): Promise<void> {
+    await withInterventionStorageLock(this.lockKey(), async () => {
+      await this.saveSessionInterventionsUnlocked(sessionId, interventions);
+    });
+  }
+
+  private async saveSessionInterventionsUnlocked(
+    sessionId: string,
+    interventions: OperatorIntervention[]
+  ): Promise<void> {
     await ensureStorageStructure(this.baseDir);
 
     const filePath = getSessionFilePath(this.baseDir, sessionId);
@@ -193,7 +247,7 @@ export class InterventionStorage {
     await fs.writeFile(filePath, JSON.stringify(data, null, 2));
 
     if (this.autoRebuildIndex) {
-      await this.rebuildIndex();
+      await this.rebuildIndexUnlocked();
     }
   }
 
@@ -218,36 +272,40 @@ export class InterventionStorage {
    * Create or update an intervention.
    */
   async saveIntervention(intervention: OperatorIntervention): Promise<void> {
-    const interventions = await this.loadSessionInterventions(intervention.session_id);
-    const existingIndex = interventions.findIndex((i) => i.id === intervention.id);
+    await withInterventionStorageLock(this.lockKey(), async () => {
+      const interventions = await this.loadSessionInterventions(intervention.session_id);
+      const existingIndex = interventions.findIndex((i) => i.id === intervention.id);
 
-    if (existingIndex >= 0) {
-      interventions[existingIndex] = intervention;
-    } else {
-      interventions.push(intervention);
-    }
+      if (existingIndex >= 0) {
+        interventions[existingIndex] = intervention;
+      } else {
+        interventions.push(intervention);
+      }
 
-    await this.saveSessionInterventions(intervention.session_id, interventions);
+      await this.saveSessionInterventionsUnlocked(intervention.session_id, interventions);
+    });
   }
 
   /**
    * Delete an intervention by ID.
    */
   async deleteIntervention(id: string): Promise<boolean> {
-    const intervention = await this.getInterventionById(id);
-    if (!intervention) {
-      return false;
-    }
+    return await withInterventionStorageLock(this.lockKey(), async () => {
+      const intervention = await this.getInterventionById(id);
+      if (!intervention) {
+        return false;
+      }
 
-    const interventions = await this.loadSessionInterventions(intervention.session_id);
-    const newInterventions = interventions.filter((i) => i.id !== id);
+      const interventions = await this.loadSessionInterventions(intervention.session_id);
+      const newInterventions = interventions.filter((i) => i.id !== id);
 
-    if (newInterventions.length === interventions.length) {
-      return false;
-    }
+      if (newInterventions.length === interventions.length) {
+        return false;
+      }
 
-    await this.saveSessionInterventions(intervention.session_id, newInterventions);
-    return true;
+      await this.saveSessionInterventionsUnlocked(intervention.session_id, newInterventions);
+      return true;
+    });
   }
 
   /**
@@ -266,6 +324,12 @@ export class InterventionStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<InterventionIndex> {
+    return await withInterventionStorageLock(this.lockKey(), async () => {
+      return await this.rebuildIndexUnlocked();
+    });
+  }
+
+  private async rebuildIndexUnlocked(): Promise<InterventionIndex> {
     const entries: InterventionIndexEntry[] = [];
     const interventionsDir = getInterventionsDir(this.baseDir);
 

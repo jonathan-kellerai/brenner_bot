@@ -5,7 +5,8 @@
  * @see brenner_bot-mqg7 (bead)
  */
 
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach } from "vitest";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -35,17 +36,9 @@ function makeIntervention(
 }
 
 async function createTempDir(): Promise<string> {
-  const tempDir = join(tmpdir(), `intervention-test-${Date.now()}`);
+  const tempDir = join(tmpdir(), `intervention-test-${randomUUID()}`);
   await fs.mkdir(tempDir, { recursive: true });
   return tempDir;
-}
-
-async function cleanupTempDir(dir: string): Promise<void> {
-  try {
-    await fs.rm(dir, { recursive: true, force: true });
-  } catch {
-    // Ignore cleanup errors
-  }
 }
 
 // ============================================================================
@@ -59,10 +52,6 @@ describe("InterventionStorage", () => {
   beforeEach(async () => {
     tempDir = await createTempDir();
     storage = new InterventionStorage({ baseDir: tempDir });
-  });
-
-  afterEach(async () => {
-    await cleanupTempDir(tempDir);
   });
 
   describe("Session File Operations", () => {
@@ -269,8 +258,6 @@ describe("InterventionStorage", () => {
 
       const all = await freshStorage.getAllInterventions();
       expect(all).toEqual([]);
-
-      await cleanupTempDir(freshDir);
     });
 
     it("ignores unrelated files when reading all interventions", async () => {
@@ -298,6 +285,33 @@ describe("InterventionStorage", () => {
 
       const sessions = await storage.listSessions();
       expect(sessions).toEqual([]);
+    });
+  });
+
+  // ============================================================================
+  // Concurrency Tests
+  // ============================================================================
+
+  describe("Concurrency", () => {
+    it("concurrent saveIntervention calls do not drop writes", async () => {
+      const sessionId = "CONCURRENT";
+      const interventions = Array.from({ length: 10 }, (_, i) =>
+        makeIntervention({
+          session_id: sessionId,
+          id: `INT-${sessionId}-${String(i + 1).padStart(3, "0")}`,
+          rationale: `Concurrent intervention ${i + 1}`,
+        })
+      );
+
+      const concurrencyStorage = new InterventionStorage({ baseDir: tempDir, autoRebuildIndex: false });
+      await Promise.all(interventions.map((iv) => concurrencyStorage.saveIntervention(iv)));
+
+      const loaded = await concurrencyStorage.loadSessionInterventions(sessionId);
+      expect(loaded).toHaveLength(interventions.length);
+
+      const loadedIds = loaded.map((iv) => iv.id).sort();
+      const expectedIds = interventions.map((iv) => iv.id).sort();
+      expect(loadedIds).toEqual(expectedIds);
     });
   });
 

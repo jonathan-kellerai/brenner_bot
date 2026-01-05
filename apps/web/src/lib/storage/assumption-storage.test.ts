@@ -1,4 +1,5 @@
 import { describe, test, expect, beforeEach } from "vitest";
+import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -27,10 +28,7 @@ import {
 let testDir: string;
 
 async function createTestDir(): Promise<string> {
-  const dir = join(
-    tmpdir(),
-    `assumption-storage-test-${Date.now()}-${Math.random().toString(36).slice(2)}`
-  );
+  const dir = join(tmpdir(), `assumption-storage-test-${randomUUID()}`);
   await fs.mkdir(dir, { recursive: true });
   return dir;
 }
@@ -745,6 +743,33 @@ describe("AssumptionStorage", () => {
 
       expect(index.entries).toHaveLength(1);
       expect(index.entries[0].id).toBe("A-TEST-002");
+    });
+  });
+
+  // ============================================================================
+  // Concurrency Tests
+  // ============================================================================
+
+  describe("Concurrency", () => {
+    test("concurrent saveAssumption calls do not drop writes", async () => {
+      const sessionId = "CONCURRENT";
+      const assumptions = Array.from({ length: 10 }, (_, i) =>
+        createTestAssumption({
+          sessionId,
+          id: `A-${sessionId}-${String(i + 1).padStart(3, "0")}`,
+          statement: `Assumption ${i + 1}`,
+        })
+      );
+
+      const storage = new AssumptionStorage({ baseDir: testDir, autoRebuildIndex: false });
+      await Promise.all(assumptions.map((a) => storage.saveAssumption(a)));
+
+      const loaded = await storage.loadSessionAssumptions(sessionId);
+      expect(loaded).toHaveLength(assumptions.length);
+
+      const loadedIds = loaded.map((a) => a.id).sort();
+      const expectedIds = assumptions.map((a) => a.id).sort();
+      expect(loadedIds).toEqual(expectedIds);
     });
   });
 });

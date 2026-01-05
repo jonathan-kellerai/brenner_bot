@@ -142,4 +142,24 @@ describe.sequential("ProgramStorage", () => {
     expect(stats.totalSessions).toBe(3);
     expect(stats.avgSessionsPerProgram).toBe(1.5);
   });
+
+  it("concurrent saveProgram calls do not drop writes", async () => {
+    const storage = new ProgramStorage({ baseDir, autoRebuildIndex: false });
+
+    const programs = Array.from({ length: 10 }, (_, i) =>
+      makeProgram({
+        id: `RP-CONCURRENT-${String(i + 1).padStart(3, "0")}`,
+        name: `Program ${i + 1}`,
+      })
+    );
+
+    await Promise.all(programs.map((p) => storage.saveProgram(p)));
+
+    const loaded = await storage.loadPrograms();
+    expect(loaded).toHaveLength(programs.length);
+
+    const loadedIds = loaded.map((p) => p.id).sort();
+    const expectedIds = programs.map((p) => p.id).sort();
+    expect(loadedIds).toEqual(expectedIds);
+  });
 });

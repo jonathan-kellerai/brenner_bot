@@ -678,6 +678,33 @@ describe("Critiques With Alternatives", () => {
 });
 
 // ============================================================================
+// Concurrency Tests
+// ============================================================================
+
+describe("Concurrency", () => {
+  test("concurrent saveCritique calls do not drop writes", async () => {
+    const sessionId = "CONCURRENT";
+    const critiques = await Promise.all(
+      Array.from({ length: 10 }, (_, i) =>
+        createTestCritiqueData({
+          sessionId,
+          id: `C-${sessionId}-${String(i + 1).padStart(3, "0")}`,
+        })
+      )
+    );
+
+    await Promise.all(critiques.map((c) => storage.saveCritique(c)));
+
+    const loaded = await storage.loadSessionCritiques(sessionId);
+    expect(loaded).toHaveLength(critiques.length);
+
+    const loadedIds = loaded.map((c) => c.id).sort();
+    const expectedIds = critiques.map((c) => c.id).sort();
+    expect(loadedIds).toEqual(expectedIds);
+  });
+});
+
+// ============================================================================
 // Critiques By Agent Tests
 // ============================================================================
 
