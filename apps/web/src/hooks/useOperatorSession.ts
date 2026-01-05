@@ -316,6 +316,14 @@ export function useOperatorSession<TResult = unknown>(
   const abandon = useCallback((): void => {
     dispatch({ type: "ABANDON" });
 
+    // Build the abandoned session manually since React state updates are async
+    // and we need to pass the abandoned state to the callback immediately
+    const abandonedSession: OperatorSession<TResult> = {
+      ...session,
+      status: "abandoned",
+      completedAt: new Date().toISOString(),
+    };
+
     // Clear localStorage
     if (persistKey && typeof window !== "undefined") {
       try {
@@ -330,7 +338,7 @@ export function useOperatorSession<TResult = unknown>(
       steps_total: session.steps.length,
       step_index: session.currentStepIndex,
     });
-    onAbandon?.(session);
+    onAbandon?.(abandonedSession);
   }, [session, persistKey, onAbandon, operatorType]);
 
   const reset = useCallback((): void => {
