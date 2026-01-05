@@ -26,7 +26,6 @@ import {
   summarizeScenario,
   analyzeTestQueueItem,
   type AssumedTestResult,
-  type WhatIfScenario,
 } from "./what-if";
 
 // ============================================================================

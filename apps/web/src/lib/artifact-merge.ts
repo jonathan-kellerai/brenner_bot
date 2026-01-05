@@ -1097,7 +1097,7 @@ function renderTests(items: TestItem[]): string[] {
       lines.push(`- Run at: ${escapeInline(t.last_run.run_at)}`);
       lines.push(`- Exit code: ${t.last_run.exit_code}`);
       if (t.last_run.timed_out) lines.push(`- Timed out: yes`);
-      if (t.last_run.duration_ms != null) lines.push(`- Duration: ${(t.last_run.duration_ms / 1000).toFixed(2)}s`);
+      if (typeof t.last_run.duration_ms === "number") lines.push(`- Duration: ${(t.last_run.duration_ms / 1000).toFixed(2)}s`);
       if (t.last_run.summary) lines.push(`- Summary: ${escapeInline(t.last_run.summary)}`);
       lines.push(`- Result file: \`${escapeInline(t.last_run.result_path)}\``);
     }
@@ -1703,10 +1703,11 @@ export function lintArtifact(artifact: Artifact): LintReport {
   // Reference Integrity (Refs)
   // --------------------------------------------------------------------------
 
-  function checkReferences(item: { id: string; references?: Reference[] }): void {
-    if (!item.references) return;
+  function checkReferences(item: { id: string; references?: unknown }): void {
+    const references = item.references;
+    if (!references) return;
 
-    if (!Array.isArray(item.references)) {
+    if (!Array.isArray(references)) {
       pushViolation(violations, {
         id: "ER-REF-001",
         severity: "error",
@@ -1716,8 +1717,8 @@ export function lintArtifact(artifact: Artifact): LintReport {
       return;
     }
 
-    for (let i = 0; i < item.references.length; i++) {
-      const ref = item.references[i];
+    for (let i = 0; i < references.length; i++) {
+      const ref = references[i];
       if (!ref || typeof ref !== "object") {
         pushViolation(violations, {
           id: "ER-REF-002",
@@ -2725,7 +2726,7 @@ export function formatDiffHuman(diff: ArtifactDiff): string {
       lines.push(`  + [${item.id}] ${item.description.substring(0, 60)}`);
     }
     for (const item of x.promoted) {
-      lines.push(`  ↑ [${item.id}] PROMOTED to ${item.promoted_to}`);
+      lines.push(`  ↑ [${item.id}] PROMOTED TO ${item.promoted_to}`);
     }
     for (const item of x.dismissed) {
       lines.push(`  ○ [${item.id}] dismissed: ${item.reason}`);

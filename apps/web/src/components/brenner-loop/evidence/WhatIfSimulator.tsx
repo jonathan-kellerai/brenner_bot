@@ -30,10 +30,6 @@ import {
   X,
   Info,
   Sparkles,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  HelpCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -61,7 +57,6 @@ import {
   summarizeScenario,
   RECOMMENDATION_LABELS,
   type WhatIfScenario,
-  type TestComparison,
   type AssumedTestResult,
 } from "@/lib/brenner-loop/what-if";
 
@@ -410,7 +405,6 @@ function ScenarioBuilderView({
           <label className="text-sm font-medium">Tests in Scenario</label>
           <div className="space-y-2">
             {scenario.assumedTests.map((test) => {
-              const config = RESULT_CONFIG[test.assumedResult];
               return (
                 <div
                   key={test.testId}
@@ -490,7 +484,6 @@ function ScenarioBuilderView({
                   {(["supports", "challenges", "inconclusive"] as EvidenceResult[]).map(
                     (result) => {
                       const rc = RESULT_CONFIG[result];
-                      const ResultIcon = rc.icon;
                       return (
                         <TooltipProvider key={result}>
                           <Tooltip>

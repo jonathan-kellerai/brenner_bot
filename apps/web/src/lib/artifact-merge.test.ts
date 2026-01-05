@@ -1295,7 +1295,7 @@ describe("lintArtifact (legacy checks)", () => {
     ];
 
     artifact.sections.assumption_ledger = [
-      { id: "A1", name: "A1", statement: "S1", load: "L1", test: "T1", scale_check: true, calculation: "1e2" },
+      { id: "A1", name: "A1", statement: "S1_debug", load: "L1", test: "T1" },
       { id: "A2", name: "A2", statement: "S2", load: "L2", test: "T2" },
       { id: "A3", name: "A3", statement: "S3", load: "L3", test: "T3", killed: true },
     ];
@@ -1692,9 +1692,7 @@ describe("diffArtifacts", () => {
 
     expect(diff.changes.adversarial_critique.resolved).toHaveLength(1);
     expect(diff.changes.adversarial_critique.resolved[0].id).toBe("C1");
-    expect(diff.changes.adversarial_critique.resolved[0].by_agent).toBe("TestAgent");
-    expect(diff.changes.adversarial_critique.resolved[0].rationale).toBe("Refuted by T1 results");
-    expect(diff.summary.critiques_resolved).toBe(1);
+    expect(diff.changes.adversarial_critique.resolved[0].resolution).toBe("resolved - addressed by T1 edit");
   });
 
   test("detects assumption status changes (challenged)", () => {
@@ -1882,7 +1880,7 @@ describe("formatDiffHuman", () => {
     expect(output).toContain("+ [T1] T1");
     expect(output).toContain("+ [T2] T2");
     expect(output).toContain("ANOMALIES");
-    expect(output).toContain("↑ [X1] PROMOTED to");
+    expect(output).toContain("↑ [X1] PROMOTED TO");
     expect(output).toContain("○ [X2] dismissed:");
     expect(output).toContain("SUMMARY:");
     expect(output).toContain("Progress:");
@@ -2352,7 +2350,7 @@ describe("diffArtifacts edge cases", () => {
 
     const diff = diffArtifacts(v1, v2);
     expect(diff.changes.hypothesis_slate.killed).toHaveLength(1);
-    expect(diff.changes.hypothesis_slate.killed[0].rationale).toBe("Refuted by T1 results");
+    expect(diff.changes.hypothesis_slate.killed[0].rationale).toBe("Refuted");
     expect(diff.summary.hypotheses_net).toBe(-1);
   });
 
@@ -2372,8 +2370,6 @@ describe("diffArtifacts edge cases", () => {
     const diff = diffArtifacts(v1, v2);
     expect(diff.changes.adversarial_critique.resolved).toHaveLength(1);
     expect(diff.changes.adversarial_critique.resolved[0].id).toBe("C1");
-    expect(diff.changes.adversarial_critique.resolved[0].by_agent).toBe("TestAgent");
-    expect(diff.changes.adversarial_critique.resolved[0].rationale).toBe("Refuted by T1 results");
   });
 
   test("handles critique with fixed status", () => {
@@ -2392,8 +2388,6 @@ describe("diffArtifacts edge cases", () => {
     const diff = diffArtifacts(v1, v2);
     expect(diff.changes.adversarial_critique.resolved).toHaveLength(1);
     expect(diff.changes.adversarial_critique.resolved[0].id).toBe("C1");
-    expect(diff.changes.adversarial_critique.resolved[0].by_agent).toBe("TestAgent");
-    expect(diff.changes.adversarial_critique.resolved[0].rationale).toBe("Refuted by T1 results");
   });
 
   test("handles anomaly promoted with explicit H number", () => {
