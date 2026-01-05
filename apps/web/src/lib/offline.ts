@@ -13,15 +13,29 @@ export interface OfflineQueueItem {
 
 const OFFLINE_QUEUE_KEY = "brenner-offline-queue";
 const OFFLINE_QUEUE_EVENT = "brenner-offline-queue-change";
+const FORBIDDEN_RECORD_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function hasOwn(obj: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(obj, key);
+}
 
 function isQueueItem(value: unknown): value is OfflineQueueItem {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  if (typeof record.id !== "string") return false;
-  if (record.kind !== "session-kickoff" && record.kind !== "session-action") return false;
-  if (typeof record.createdAt !== "string") return false;
-  if (typeof record.attemptCount !== "number") return false;
-  if (typeof record.payload !== "object" || record.payload === null) return false;
+  if (!isRecord(value)) return false;
+  const record = value;
+
+  for (const key of FORBIDDEN_RECORD_KEYS) {
+    if (hasOwn(record, key)) return false;
+  }
+
+  if (!hasOwn(record, "id") || typeof record.id !== "string") return false;
+  if (!hasOwn(record, "kind") || (record.kind !== "session-kickoff" && record.kind !== "session-action")) return false;
+  if (!hasOwn(record, "createdAt") || typeof record.createdAt !== "string") return false;
+  if (!hasOwn(record, "attemptCount") || typeof record.attemptCount !== "number") return false;
+  if (!hasOwn(record, "payload") || !isRecord(record.payload)) return false;
   return true;
 }
 
