@@ -46,6 +46,20 @@ export type PersonaPhaseGroup =
  */
 export type SessionPhase = PersonaPhaseGroup;
 
+const PERSONA_PHASE_GROUP_BY_DETAILED_PHASE: Record<string, PersonaPhaseGroup> = {
+  intake: "intake",
+  sharpening: "hypothesis",
+  level_split: "operators",
+  exclusion_test: "operators",
+  object_transpose: "operators",
+  scale_check: "operators",
+  agent_dispatch: "agents",
+  evidence_gathering: "evidence",
+  synthesis: "synthesis",
+  revision: "synthesis",
+  complete: "complete",
+};
+
 /**
  * Map a detailed SessionPhase (from types.ts) to a PersonaPhaseGroup.
  * This allows querying which personas are active for a given detailed phase.
@@ -53,28 +67,7 @@ export type SessionPhase = PersonaPhaseGroup;
 export function mapSessionPhaseToPersonaGroup(
   detailedPhase: string
 ): PersonaPhaseGroup | null {
-  switch (detailedPhase) {
-    case "intake":
-      return "intake";
-    case "sharpening":
-      return "hypothesis";
-    case "level_split":
-    case "exclusion_test":
-    case "object_transpose":
-    case "scale_check":
-      return "operators";
-    case "agent_dispatch":
-      return "agents";
-    case "evidence_gathering":
-      return "evidence";
-    case "synthesis":
-    case "revision":
-      return "synthesis";
-    case "complete":
-      return "complete";
-    default:
-      return null;
-  }
+  return PERSONA_PHASE_GROUP_BY_DETAILED_PHASE[detailedPhase] ?? null;
 }
 
 /**
@@ -677,6 +670,15 @@ export const BRENNER_CHANNELER_PERSONA: AgentPersona = {
       priority: 1,
     },
     {
+      id: "apply-operators",
+      name: "Apply Brenner Operators",
+      description: "Use operators to sharpen hypotheses into discriminative tests",
+      example:
+        "Let's do a level split and an exclusion test. What observation would be " +
+        "impossible under hypothesis A but expected under the best alternative?",
+      priority: 1,
+    },
+    {
       id: "expose-correlation-causation",
       name: "Expose Correlation vs Causation Confusion",
       description: "Ruthlessly distinguish correlation from mechanism",
@@ -722,6 +724,7 @@ export const BRENNER_CHANNELER_PERSONA: AgentPersona = {
     notes: [
       "Blunt and direct",
       "Witty and provocative",
+      "Analogy-heavy when it clarifies the core mistake",
       "Impatient with nonsense",
       "Self-deprecating at times",
       "Always pushes toward 'how would you find out?'",
@@ -770,11 +773,14 @@ export const BRENNER_CHANNELER_PERSONA: AgentPersona = {
   synergizesWith: ["devils_advocate", "experiment_designer", "statistician", "synthesis"],
 
   systemPromptFragments: [
-    "You are channeling Sydney Brenner's voice and thinking style.",
-    "You've got to really find out.",
-    "Exclusion is always a tremendously good thing in science.",
-    "The choice of the experimental object remains one of the most important things.",
-    "Both could be wrong, you know.",
+    "You are channeling Sydney Brenner's voice and thinking style: blunt, witty, provocative, no fluff.",
+    "Always push from description/correlation → mechanism → discriminative test ('how would you actually find out?').",
+    "Prefer exclusion and strong predictions: identify what would be impossible if the hypothesis were wrong.",
+    "Apply Brenner operators when relevant (level split, exclusion test, object transpose, scale check). If operator results are provided, reference them and propose the next operator to run.",
+    "Always surface the third alternative (both could be wrong) and name at least one serious alternative explanation.",
+    "Stay imprisoned within the physical context: do quick order-of-magnitude / scale checks when claims imply quantities.",
+    "Use Brenner-isms sparingly but consistently (e.g., 'What's the experiment?').",
+    "When you make a strong Brenner-style claim, cite transcript anchors in `§NN` form. Prefer citations provided in the prompt's quote bank; do not invent section numbers.",
   ],
 };
 

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { AgentMailMessage, AgentMailThread } from "../../agentMail";
 import type { AgentDispatch } from "./dispatch";
-import { createDispatch, pollForResponses } from "./dispatch";
+import { buildAgentPrompt, createDispatch, FALLBACK_BRENNER_QUOTES, pollForResponses } from "./dispatch";
 import { createHypothesisCard } from "../hypothesis";
 
 function buildDispatch(args: {
@@ -215,3 +215,34 @@ describe("pollForResponses", () => {
   });
 });
 
+describe("buildAgentPrompt", () => {
+  const hypothesis = createHypothesisCard({
+    id: "HC-RS20260105-001-v1",
+    statement: "Spaced repetition improves long-term retention.",
+    mechanism: "Distributed practice increases memory consolidation.",
+    predictionsIfTrue: ["Spaced group recalls more at 30 days."],
+    impossibleIfTrue: ["No difference after controlling study time."],
+  });
+
+  it("includes Brenner quote bank + citation requirement for brenner_channeler", () => {
+    const prompt = buildAgentPrompt("brenner_channeler", hypothesis, {});
+    expect(prompt).toContain("Brenner Quote Bank");
+    expect(prompt).toContain("Citation Requirement");
+    expect(prompt).toContain("§42");
+    expect(prompt).toContain("do not fabricate");
+  });
+
+  it("does not include Brenner quote bank for other roles", () => {
+    const prompt = buildAgentPrompt("devils_advocate", hypothesis, {});
+    expect(prompt).not.toContain("Brenner Quote Bank");
+    expect(prompt).not.toContain("Citation Requirement");
+  });
+
+  it("uses citable transcript anchors for fallback quotes", () => {
+    expect(FALLBACK_BRENNER_QUOTES.map((q) => q.section)).toContain("§42");
+    expect(FALLBACK_BRENNER_QUOTES.map((q) => q.section)).toContain("§66");
+    expect(FALLBACK_BRENNER_QUOTES.map((q) => q.section)).toContain("§91");
+    expect(FALLBACK_BRENNER_QUOTES.map((q) => q.section)).toContain("§103");
+    expect(FALLBACK_BRENNER_QUOTES.map((q) => q.section)).toContain("§147");
+  });
+});

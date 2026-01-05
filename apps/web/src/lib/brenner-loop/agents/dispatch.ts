@@ -178,11 +178,19 @@ export const DISPATCH_SUBJECT_PREFIX = "TRIBUNAL[";
  * Curated Brenner quotes for fallback when agents unavailable
  */
 export const FALLBACK_BRENNER_QUOTES = [
-  { quote: "You've got to really find out.", section: "§12" },
-  { quote: "Exclusion is always a tremendously good thing in science.", section: "§58" },
-  { quote: "The choice of the experimental object remains one of the most important things.", section: "§78" },
-  { quote: "Both could be wrong, you know.", section: "§102" },
-  { quote: "Before you fall in love with your hypothesis, try to kill it.", section: "§45" },
+  { quote: "You've got to really find out.", section: "§42" },
+  {
+    quote:
+      "I've always tried to materialise the question in the form of: well, if it is like this, how would you go about doing anything about it?",
+    section: "§66",
+  },
+  { quote: "Get the scale of everything right.", section: "§66" },
+  { quote: "You've forgotten there's a third alternative. Both could be wrong.", section: "§103" },
+  {
+    quote: "The choice of the experimental object remains one of the most important things to do in biology.",
+    section: "§91",
+  },
+  { quote: "Exclusion is always a tremendously good thing in science.", section: "§147" },
 ];
 
 // ============================================================================
@@ -358,6 +366,22 @@ export function buildAgentPrompt(
 
   if (operatorContext.trim()) {
     parts.push("---", "", operatorContext);
+  }
+
+  if (role === "brenner_channeler") {
+    parts.push(
+      "---",
+      "",
+      "## Brenner Quote Bank (citable transcript anchors)",
+      "",
+      ...FALLBACK_BRENNER_QUOTES.map((q) => `- ${q.quote} (${q.section})`),
+      "",
+      "## Citation Requirement",
+      "",
+      "- Include 2–4 transcript citations using the `§NN` anchor format.",
+      "- Prefer citing from the quote bank above; if you cite beyond it, do not fabricate anchors.",
+      ""
+    );
   }
 
   parts.push(
