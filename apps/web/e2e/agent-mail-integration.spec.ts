@@ -552,6 +552,74 @@ test.describe("Agent Mail Integration: Session Actions", () => {
 });
 
 // ============================================================================
+// Agent Mail Integration Tests: Real-Time Updates (SSE)
+// ============================================================================
+
+test.describe("Agent Mail Integration: Real-Time Updates (SSE)", () => {
+  test("shows toast + refreshes when new thread messages arrive", async ({
+    page,
+    logger,
+    context,
+    testSession,
+  }) => {
+    if (!(await preflightAgentMailTestServer({ page, logger, context, testSession }))) {
+      return;
+    }
+
+    const threadId = `E2E-REALTIME-${Date.now()}`;
+    await testSession.seed(createKickoffSession(threadId));
+
+    await setupLabAuth(context);
+    await navigateTo(page, logger, `/sessions/${threadId}`);
+    await waitForNetworkIdle(page, logger);
+
+    if (await shouldSkipTest(page, logger, "realtime updates")) {
+      return;
+    }
+
+    const refreshedLabel = page.locator("span").filter({ hasText: /^refreshed\s+/ }).first();
+    const refreshedBefore = (await refreshedLabel.textContent())?.trim() ?? "";
+
+    await withStep(logger, page, "Wait for /api/realtime SSE to connect", async () => {
+      await page.waitForResponse(
+        (res) => res.url().includes("/api/realtime") && res.status() === 200,
+        { timeout: 15000 }
+      );
+    });
+
+    const serverUrl = testSession.getServerUrl();
+    const subject = "DELTA[Codex]: E2E realtime update";
+
+    await withStep(logger, page, "Send new DELTA message to thread", async () => {
+      await callTestServer({
+        serverUrl,
+        tool: "send_message",
+        args: {
+          project_key: "/data/projects/brenner_bot",
+          sender_name: "HypothesisAgent",
+          to: ["TestOperator"],
+          subject,
+          body_md: "```delta\n{\"operation\":\"EDIT\",\"section\":\"hypothesis_slate\",\"target_id\":\"H-TEST\",\"payload\":{\"statement\":\"realtime\"}}\n```",
+          thread_id: threadId,
+        },
+      });
+    });
+
+    await withStep(logger, page, "Verify toast appears for new message", async () => {
+      await expect(page.locator(".toast-title").filter({ hasText: /New\s+DELTA/i })).toBeVisible({ timeout: 20000 });
+      await expect(page.locator(".toast-title").filter({ hasText: /HypothesisAgent/i })).toBeVisible();
+    });
+
+    await withStep(logger, page, "Verify session refreshed and message is visible", async () => {
+      await expect(refreshedLabel).not.toHaveText(refreshedBefore, { timeout: 20000 });
+      await expect(page.getByText(subject)).toBeVisible({ timeout: 20000 });
+    });
+
+    await takeScreenshot(page, logger, "agent-mail-realtime-update");
+  });
+});
+
+// ============================================================================
 // Agent Mail Integration Tests: Full Session Lifecycle (UI submission)
 // ============================================================================
 
