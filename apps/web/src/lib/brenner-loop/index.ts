@@ -788,3 +788,48 @@ export {
   updateQueueItem,
   lockQueueItemPredictions,
 } from "./test-queue";
+
+// ============================================================================
+// What-If Scenario Explorer (bead njjo.6)
+// ============================================================================
+
+export type {
+  AssumedTestResult,
+  WhatIfScenario,
+  TestComparison,
+  TestComparisonResult,
+  ScenarioAnalysis,
+} from "./what-if";
+
+export {
+  // Single test analysis
+  analyzeTestQueueItem,
+  calculateRecommendationRating,
+
+  // Scenario creation and manipulation
+  createScenario,
+  addTestToScenario,
+  removeTestFromScenario,
+  updateTestInScenario,
+  calculateScenarioOutcome,
+
+  // Scenario analysis
+  analyzeScenario,
+
+  // Test comparison
+  compareTests,
+
+  // Preset scenarios
+  createBestCaseScenario,
+  createWorstCaseScenario,
+  createMixedScenario,
+
+  // Utility functions
+  formatInformationValue,
+  getRecommendationStars,
+  getRecommendationColor,
+  summarizeScenario,
+
+  // Constants
+  RECOMMENDATION_LABELS,
+} from "./what-if";

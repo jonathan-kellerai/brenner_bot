@@ -22,3 +22,8 @@ export {
   ConfidenceChart,
   type ConfidenceChartProps,
 } from "./ConfidenceChart";
+
+export {
+  WhatIfSimulator,
+  type WhatIfSimulatorProps,
+} from "./WhatIfSimulator";
