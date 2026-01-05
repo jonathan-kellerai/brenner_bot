@@ -19,6 +19,7 @@ import { computeThreadStatusFromThread, parseSubjectType } from "@/lib/threadSta
 import { parseDeltaMessage, type ValidDelta } from "@/lib/delta-parser";
 import type { Metadata } from "next";
 import { LocalSessionHub } from "./LocalSessionHub";
+import { AgentTribunalPanel } from "@/components/brenner-loop/agents/AgentTribunalPanel";
 
 export const metadata: Metadata = {
   title: "Session",
@@ -363,6 +364,51 @@ export default async function SessionDetailPage({
   const messagesSorted = [...threadMessages].sort(
     (a, b) => new Date(a.created_ts).getTime() - new Date(b.created_ts).getTime()
   );
+
+  const isTribunalThread =
+    threadId.startsWith("TRIBUNAL-") ||
+    messagesSorted.some((m) => /^TRIBUNAL\[[^\]]+\]:/i.test(m.subject));
+
+  if (isTribunalThread) {
+    return (
+      <div className="max-w-5xl mx-auto space-y-10">
+        <header className="space-y-3 animate-fade-in-up">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold tracking-tight">Tribunal</h1>
+              <div className="text-sm text-muted-foreground font-mono">{threadId}</div>
+            </div>
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <RefreshControls threadId={threadId} defaultAuto />
+              <span className="text-xs text-muted-foreground font-mono">refreshed {now}</span>
+              <Link href="/sessions/new" className="text-sm text-primary hover:underline">
+                New Session
+              </Link>
+            </div>
+          </div>
+        </header>
+
+        <section className="animate-fade-in-up stagger-1">
+          <AgentTribunalPanel messages={messagesSorted} />
+        </section>
+
+        <section className="space-y-4 animate-fade-in-up stagger-2">
+          <h2 className="text-lg font-semibold text-foreground">Thread Messages</h2>
+          <div className="space-y-3">
+            {messagesSorted.length === 0 ? (
+              <div className="rounded-xl border border-border bg-card p-6 text-sm text-muted-foreground">
+                No messages yet.
+              </div>
+            ) : (
+              messagesSorted.map((message) => (
+                <MessageCard key={message.id} message={message} />
+              ))
+            )}
+          </div>
+        </section>
+      </div>
+    );
+  }
 
   const status = computeThreadStatusFromThread({
     project: projectKey,

@@ -1,0 +1,56 @@
+import * as React from "react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { describe, expect, it } from "vitest";
+import type { AgentMailMessage } from "@/lib/agentMail";
+import { AgentTribunalPanel } from "./AgentTribunalPanel";
+
+function msg(partial: Partial<AgentMailMessage> & Pick<AgentMailMessage, "id" | "subject" | "created_ts">): AgentMailMessage {
+  return {
+    thread_id: "TRIBUNAL-SESSION-abc",
+    ...partial,
+  };
+}
+
+describe("AgentTribunalPanel", () => {
+  it("renders default tribunal agent cards", () => {
+    render(<AgentTribunalPanel messages={[]} />);
+
+    expect(screen.getByText(/agent tribunal/i)).toBeInTheDocument();
+    expect(screen.getByText(/devil's advocate/i)).toBeInTheDocument();
+    expect(screen.getByText(/experiment designer/i)).toBeInTheDocument();
+    expect(screen.getByText(/statistician/i)).toBeInTheDocument();
+    expect(screen.getByText(/brenner channeler/i)).toBeInTheDocument();
+  });
+
+  it("shows response preview and opens modal for a completed role", async () => {
+    const user = userEvent.setup();
+    const dispatch = msg({
+      id: 10,
+      subject: "TRIBUNAL[devils_advocate]: HC-123",
+      created_ts: "2026-01-05T00:00:00.000Z",
+      body_md: "request",
+      from: "Operator",
+      to: ["AgentA"],
+    });
+    const reply = msg({
+      id: 11,
+      reply_to: 10,
+      subject: "Re: TRIBUNAL[devils_advocate]: HC-123",
+      created_ts: "2026-01-05T00:10:00.000Z",
+      body_md: "Here is the **analysis**.\n\nSecond paragraph.",
+      from: "AgentA",
+      to: ["Operator"],
+    });
+
+    render(<AgentTribunalPanel messages={[dispatch, reply]} roles={["devils_advocate"]} />);
+
+    expect(screen.getByText(/here is the/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /expand full response/i }));
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent(/here is the\s+analysis/i);
+    expect(dialog).toHaveTextContent(/second paragraph/i);
+  });
+});
