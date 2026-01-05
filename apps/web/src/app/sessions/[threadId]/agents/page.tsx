@@ -477,11 +477,59 @@ export default function AgentsPage() {
     },
   ]);
 
+  const [agentProgress, setAgentProgress] = React.useState<Record<string, number>>({
+    devils_advocate: 0,
+    experiment_designer: 0,
+    brenner_channeler: 0,
+  });
+
+  const progressTimersRef = React.useRef<Record<string, ReturnType<typeof setTimeout>[]>>({});
+  const responseTimersRef = React.useRef<Record<string, ReturnType<typeof setTimeout>>>({});
+
+  const clearAgentTimers = React.useCallback((agentId: string) => {
+    const progressTimers = progressTimersRef.current[agentId];
+    if (progressTimers) {
+      progressTimers.forEach((timer) => clearTimeout(timer));
+      delete progressTimersRef.current[agentId];
+    }
+
+    const responseTimer = responseTimersRef.current[agentId];
+    if (responseTimer) {
+      clearTimeout(responseTimer);
+      delete responseTimersRef.current[agentId];
+    }
+  }, []);
+
+  React.useEffect(() => {
+    return () => {
+      Object.keys(progressTimersRef.current).forEach((agentId) => {
+        progressTimersRef.current[agentId].forEach((timer) => clearTimeout(timer));
+      });
+      Object.values(responseTimersRef.current).forEach((timer) => clearTimeout(timer));
+      progressTimersRef.current = {};
+      responseTimersRef.current = {};
+    };
+  }, []);
+
   const handleInvokeAgent = (agentId: string) => {
+    clearAgentTimers(agentId);
     setAgentStatuses((prev) => ({ ...prev, [agentId]: "thinking" }));
+    setAgentProgress((prev) => ({ ...prev, [agentId]: 0 }));
+
+    const progressTimers = AGENT_PROGRESS_STEPS.map((_, index) =>
+      setTimeout(() => {
+        setAgentProgress((prev) => ({
+          ...prev,
+          [agentId]: Math.min(index + 1, AGENT_PROGRESS_STEPS.length - 1),
+        }));
+      }, (index + 1) * 700)
+    );
+
+    progressTimersRef.current[agentId] = progressTimers;
 
     // Simulate agent response
-    setTimeout(() => {
+    const responseTimer = setTimeout(() => {
+      clearAgentTimers(agentId);
       setAgentStatuses((prev) => ({ ...prev, [agentId]: "responded" }));
 
       const mockResponses: Record<string, Omit<AgentResponse, "agentId">> = {
@@ -512,6 +560,14 @@ export default function AgentsPage() {
         ]);
       }
     }, 3000);
+
+    responseTimersRef.current[agentId] = responseTimer;
+  };
+
+  const handleCancelAgent = (agentId: string) => {
+    clearAgentTimers(agentId);
+    setAgentStatuses((prev) => ({ ...prev, [agentId]: "idle" }));
+    setAgentProgress((prev) => ({ ...prev, [agentId]: 0 }));
   };
 
   const invokeAllAgents = () => {
@@ -585,8 +641,10 @@ export default function AgentsPage() {
                 <AgentCard
                   agent={agent}
                   status={agentStatuses[agent.id]}
+                  progressStep={agentProgress[agent.id] ?? 0}
                   response={responses.find((r) => r.agentId === agent.id)}
                   onInvoke={() => handleInvokeAgent(agent.id)}
+                  onCancel={() => handleCancelAgent(agent.id)}
                 />
               </motion.div>
             ))}
