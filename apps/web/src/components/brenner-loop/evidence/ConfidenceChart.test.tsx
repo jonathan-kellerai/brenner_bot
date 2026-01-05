@@ -15,6 +15,7 @@ vi.mock("framer-motion", () => ({
       <g {...props}>{children}</g>
     ),
   },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
 // Mock ResizeObserver as a class

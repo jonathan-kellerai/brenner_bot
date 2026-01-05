@@ -18,7 +18,7 @@
  */
 
 import * as React from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   TrendingDown,
@@ -270,6 +270,11 @@ function PointTooltip({
   const isAbove = point.y > chartHeight / 2;
   const tooltipY = isAbove ? point.y - 50 : point.y + 15;
 
+  // Determine label text - "Initial" for the first point, otherwise capitalize result
+  const labelText = point.result === "initial"
+    ? "Initial"
+    : point.result.charAt(0).toUpperCase() + point.result.slice(1);
+
   return (
     <motion.g
       initial={{ opacity: 0, y: isAbove ? 10 : -10 }}
@@ -293,18 +298,14 @@ function PointTooltip({
       >
         {formatConfidence(point.confidence)}
       </text>
-      {point.entry && (
-        <text
-          x={point.x}
-          y={tooltipY + 30}
-          textAnchor="middle"
-          className="fill-muted-foreground text-xs"
-        >
-          {point.result === "initial"
-            ? "Initial"
-            : point.result.charAt(0).toUpperCase() + point.result.slice(1)}
-        </text>
-      )}
+      <text
+        x={point.x}
+        y={tooltipY + 30}
+        textAnchor="middle"
+        className="fill-muted-foreground text-xs"
+      >
+        {labelText}
+      </text>
     </motion.g>
   );
 }
@@ -416,8 +417,8 @@ export function ConfidenceChart({
     const container = containerRef.current;
     if (!container) return;
 
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
+    const observer = new ResizeObserver((observerEntries) => {
+      const entry = observerEntries[0];
       if (entry) {
         setWidth(entry.contentRect.width);
       }
@@ -529,9 +530,15 @@ export function ConfidenceChart({
           ))}
 
           {/* Tooltip for hovered point */}
-          {hoveredIndex !== null && (
-            <PointTooltip point={points[hoveredIndex]} chartHeight={height} />
-          )}
+          <AnimatePresence>
+            {hoveredIndex !== null && points[hoveredIndex] && (
+              <PointTooltip
+                key="tooltip"
+                point={points[hoveredIndex]}
+                chartHeight={height}
+              />
+            )}
+          </AnimatePresence>
 
           {/* X-axis label */}
           <text

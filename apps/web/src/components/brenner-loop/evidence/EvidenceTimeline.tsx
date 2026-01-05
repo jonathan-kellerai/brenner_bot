@@ -47,10 +47,12 @@ import {
 export interface EvidenceTimelineProps {
   /** Evidence entries to display */
   entries: EvidenceEntry[];
-  /** Optional: currently selected entry ID */
+  /** Optional: currently selected entry ID (controlled mode) */
   selectedId?: string;
   /** Callback when an entry is selected */
   onSelectEntry?: (entry: EvidenceEntry) => void;
+  /** Callback when detail panel is closed (required in controlled mode for X button to work) */
+  onCloseDetail?: () => void;
   /** Whether to show the timeline in compact mode */
   compact?: boolean;
   /** Additional CSS classes */
@@ -462,10 +464,14 @@ export function EvidenceTimeline({
   entries,
   selectedId,
   onSelectEntry,
+  onCloseDetail,
   compact = false,
   className,
 }: EvidenceTimelineProps) {
   const [internalSelectedId, setInternalSelectedId] = React.useState<string | null>(null);
+
+  // Determine if we're in controlled mode (parent manages selection)
+  const isControlled = selectedId !== undefined || onSelectEntry !== undefined;
 
   // Use controlled or uncontrolled selection
   const effectiveSelectedId = selectedId ?? internalSelectedId;
@@ -483,7 +489,11 @@ export function EvidenceTimeline({
   };
 
   const handleCloseDetail = () => {
-    if (!onSelectEntry) {
+    if (isControlled) {
+      // In controlled mode, call the parent's close handler if provided
+      onCloseDetail?.();
+    } else {
+      // In uncontrolled mode, clear internal state
       setInternalSelectedId(null);
     }
   };
