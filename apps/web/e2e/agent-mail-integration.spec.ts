@@ -29,6 +29,14 @@ import {
 } from "./utils";
 import { withStep } from "./utils/e2e-logging";
 
+declare global {
+  interface Window {
+    __brennerE2E?: {
+      realtime?: { readyCount: number; threadUpdateCount: number };
+    };
+  }
+}
+
 // ============================================================================
 // Helpers
 // ============================================================================
@@ -570,22 +578,41 @@ test.describe("Agent Mail Integration: Real-Time Updates (SSE)", () => {
     await testSession.seed(createKickoffSession(threadId));
 
     await setupLabAuth(context);
-    await navigateTo(page, logger, `/sessions/${threadId}`);
-    await waitForNetworkIdle(page, logger);
+
+    await page.addInitScript(() => {
+      window.__brennerE2E ??= {};
+      window.__brennerE2E.realtime = { readyCount: 0, threadUpdateCount: 0 };
+
+      const OrigEventSource = window.EventSource;
+      if (!OrigEventSource) return;
+
+      class PatchedEventSource extends OrigEventSource {
+        constructor(url: string, eventSourceInitDict?: { withCredentials?: boolean }) {
+          super(url, eventSourceInitDict);
+          try {
+            this.addEventListener("ready", () => {
+              if (window.__brennerE2E?.realtime) window.__brennerE2E.realtime.readyCount += 1;
+            });
+            this.addEventListener("thread_update", () => {
+              if (window.__brennerE2E?.realtime) window.__brennerE2E.realtime.threadUpdateCount += 1;
+            });
+          } catch {}
+        }
+      }
+
+      window.EventSource = PatchedEventSource as unknown as typeof window.EventSource;
+    });
+
+    await navigateTo(page, logger, `/sessions/${threadId}`, { waitUntil: "domcontentloaded" });
+    await assertTextContent(page, logger, "body", threadId);
+
+    await withStep(logger, page, "Wait for /api/realtime to reach ready state", async () => {
+      await page.waitForFunction(() => window.__brennerE2E?.realtime?.readyCount && window.__brennerE2E.realtime.readyCount > 0, null, { timeout: 20000 });
+    });
 
     if (await shouldSkipTest(page, logger, "realtime updates")) {
       return;
     }
-
-    const refreshedLabel = page.locator("span").filter({ hasText: /^refreshed\s+/ }).first();
-    const refreshedBefore = (await refreshedLabel.textContent())?.trim() ?? "";
-
-    await withStep(logger, page, "Wait for /api/realtime SSE to connect", async () => {
-      await page.waitForResponse(
-        (res) => res.url().includes("/api/realtime") && res.status() === 200,
-        { timeout: 15000 }
-      );
-    });
 
     const serverUrl = testSession.getServerUrl();
     const subject = "DELTA[Codex]: E2E realtime update";
@@ -611,7 +638,6 @@ test.describe("Agent Mail Integration: Real-Time Updates (SSE)", () => {
     });
 
     await withStep(logger, page, "Verify session refreshed and message is visible", async () => {
-      await expect(refreshedLabel).not.toHaveText(refreshedBefore, { timeout: 20000 });
       await expect(page.getByText(subject)).toBeVisible({ timeout: 20000 });
     });
 

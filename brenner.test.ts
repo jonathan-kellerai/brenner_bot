@@ -103,6 +103,7 @@ async function runCli(
     let stderr = "";
     let settled = false;
     let timedOut = false;
+    let killHandle: NodeJS.Timeout | null = null;
 
     proc.stdout.on("data", (data) => {
       stdout += data.toString();
@@ -116,13 +117,23 @@ async function runCli(
       timeoutMs > 0
         ? setTimeout(() => {
             timedOut = true;
-            proc.kill("SIGTERM");
-            setTimeout(() => proc.kill("SIGKILL"), 250);
+            try {
+              proc.kill("SIGTERM");
+            } catch {}
+            killHandle = setTimeout(() => {
+              try {
+                proc.kill("SIGKILL");
+              } catch {}
+            }, 250);
+            killHandle.unref?.();
           }, timeoutMs)
         : null;
 
+    timeoutHandle?.unref?.();
+
     proc.on("close", (code, signal) => {
       if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (killHandle) clearTimeout(killHandle);
       if (settled) return;
       settled = true;
 
@@ -153,6 +164,7 @@ async function runCli(
 
     proc.on("error", (err) => {
       if (timeoutHandle) clearTimeout(timeoutHandle);
+      if (killHandle) clearTimeout(killHandle);
       if (settled) return;
       settled = true;
 
