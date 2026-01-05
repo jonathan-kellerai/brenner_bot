@@ -285,37 +285,25 @@ export function useOperatorSession<TResult = unknown>(
     (result?: TResult): void => {
       dispatch({ type: "COMPLETE" });
 
-      // Set result after completion
-      if (result !== undefined) {
-        // We need to update session with result before callback
-        const completedSession: OperatorSession<TResult> = {
-          ...session,
-          result,
-          status: "completed",
-          completedAt: new Date().toISOString(),
-        };
+      // Build the completed session manually since React state updates are async
+      // and we need to pass the completed state to the callback immediately
+      const completedSession: OperatorSession<TResult> = {
+        ...session,
+        result: result ?? session.result,
+        status: "completed",
+        completedAt: new Date().toISOString(),
+      };
 
-        // Clear localStorage
-        if (persistKey && typeof window !== "undefined") {
-          try {
-            localStorage.removeItem(persistKey);
-          } catch {
-            // Ignore
-          }
+      // Clear localStorage
+      if (persistKey && typeof window !== "undefined") {
+        try {
+          localStorage.removeItem(persistKey);
+        } catch {
+          // Ignore
         }
-
-        onComplete?.(completedSession);
-      } else {
-        if (persistKey && typeof window !== "undefined") {
-          try {
-            localStorage.removeItem(persistKey);
-          } catch {
-            // Ignore
-          }
-        }
-
-        onComplete?.(session);
       }
+
+      onComplete?.(completedSession);
     },
     [session, persistKey, onComplete]
   );
