@@ -115,6 +115,21 @@ describe("AnomalyStorage", () => {
       expect(anomalies).toEqual([]);
     });
 
+    it("returns empty array for malformed session file JSON", async () => {
+      const good = createTestAnomaly("GOOD", 1);
+      await storage.saveAnomaly(good);
+
+      await fs.mkdir(join(tempDir, ".research", "anomalies"), { recursive: true });
+      await fs.writeFile(join(tempDir, ".research", "anomalies", "BAD-anomalies.json"), "not-json");
+
+      const loaded = await storage.loadSessionAnomalies("BAD");
+      expect(loaded).toEqual([]);
+
+      const index = await storage.rebuildIndex();
+      expect(index.entries.map((e) => e.id)).toContain(good.id);
+      expect(index.warnings?.some((w) => w.file.includes("BAD-anomalies.json"))).toBe(true);
+    });
+
     it("saves and loads multiple anomalies for a session", async () => {
       const anomaly1 = createTestAnomaly("RS20251230", 1);
       const anomaly2 = createTestAnomaly("RS20251230", 2);
@@ -175,6 +190,17 @@ describe("AnomalyStorage", () => {
       await storageNoAuto.saveAnomaly(anomaly);
 
       // Should rebuild on load
+      const index = await storageNoAuto.loadIndex();
+      expect(index.entries).toHaveLength(1);
+    });
+
+    it("rebuilds index when index file is corrupted", async () => {
+      const storageNoAuto = new AnomalyStorage({ baseDir: tempDir, autoRebuildIndex: false });
+      await storageNoAuto.saveAnomaly(createTestAnomaly("RS20251230", 1));
+
+      const indexPath = join(tempDir, ".research", "anomaly-index.json");
+      await fs.writeFile(indexPath, "not-json");
+
       const index = await storageNoAuto.loadIndex();
       expect(index.entries).toHaveLength(1);
     });

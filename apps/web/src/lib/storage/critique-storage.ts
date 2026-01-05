@@ -60,6 +60,11 @@ export interface CritiqueIndexEntry {
   raisedBy: string | undefined;
 }
 
+export interface StorageWarning {
+  file: string;
+  message: string;
+}
+
 /**
  * Full index file format.
  */
@@ -67,6 +72,7 @@ export interface CritiqueIndex {
   version: string;
   updatedAt: string;
   entries: CritiqueIndexEntry[];
+  warnings?: StorageWarning[];
 }
 
 /**
@@ -189,10 +195,29 @@ export class CritiqueStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionCritiqueFile;
+      let data: SessionCritiqueFile;
+      try {
+        data = JSON.parse(content) as SessionCritiqueFile;
+      } catch {
+        console.warn(`[CritiqueStorage] Corrupted JSON in ${filePath}; returning empty critiques.`);
+        return [];
+      }
 
-      // Validate each critique
-      return data.critiques.map((c) => CritiqueSchema.parse(c));
+      if (!Array.isArray(data.critiques)) {
+        console.warn(`[CritiqueStorage] Malformed session file ${filePath}; returning empty critiques.`);
+        return [];
+      }
+
+      const parsed: Critique[] = [];
+      for (const raw of data.critiques) {
+        try {
+          parsed.push(CritiqueSchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -314,6 +339,7 @@ export class CritiqueStorage {
 
   private async rebuildIndexUnlocked(): Promise<CritiqueIndex> {
     const entries: CritiqueIndexEntry[] = [];
+    const warnings: StorageWarning[] = [];
     const critiquesDir = getCritiquesDir(this.baseDir);
 
     try {
@@ -322,20 +348,43 @@ export class CritiqueStorage {
       for (const file of files) {
         if (!file.endsWith("-critiques.json")) continue;
 
-        const content = await fs.readFile(join(critiquesDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionCritiqueFile;
+        const filePath = join(critiquesDir, file);
+        const content = await fs.readFile(filePath, "utf-8");
 
+        let data: SessionCritiqueFile;
+        try {
+          data = JSON.parse(content) as SessionCritiqueFile;
+        } catch {
+          warnings.push({ file: filePath, message: "Skipping malformed JSON session file." });
+          continue;
+        }
+
+        if (!Array.isArray(data.critiques)) {
+          warnings.push({ file: filePath, message: "Skipping malformed session file (missing critiques[])." });
+          continue;
+        }
+
+        let invalidCount = 0;
         for (const critique of data.critiques) {
-          entries.push({
-            id: critique.id,
-            sessionId: critique.sessionId,
-            targetType: critique.targetType,
-            targetId: critique.targetId,
-            status: critique.status,
-            severity: critique.severity,
-            hasProposedAlternative: !!critique.proposedAlternative,
-            raisedBy: critique.raisedBy,
-          });
+          try {
+            const parsed = CritiqueSchema.parse(critique);
+            entries.push({
+              id: parsed.id,
+              sessionId: parsed.sessionId,
+              targetType: parsed.targetType,
+              targetId: parsed.targetId,
+              status: parsed.status,
+              severity: parsed.severity,
+              hasProposedAlternative: !!parsed.proposedAlternative,
+              raisedBy: parsed.raisedBy,
+            });
+          } catch {
+            invalidCount += 1;
+          }
+        }
+
+        if (invalidCount > 0) {
+          warnings.push({ file: filePath, message: `Skipped ${invalidCount} invalid critiques.` });
         }
       }
     } catch (error) {
@@ -348,6 +397,7 @@ export class CritiqueStorage {
       version: "1.0.0",
       updatedAt: new Date().toISOString(),
       entries,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     await ensureStorageStructure(this.baseDir);
@@ -364,7 +414,11 @@ export class CritiqueStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as CritiqueIndex;
+      const parsed = JSON.parse(content) as CritiqueIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed critique index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }
@@ -695,10 +749,8 @@ export class CritiqueStorage {
 
       for (const file of files) {
         if (!file.endsWith("-critiques.json")) continue;
-
-        const content = await fs.readFile(join(critiquesDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionCritiqueFile;
-        results.push(...data.critiques.map((c) => CritiqueSchema.parse(c)));
+        const sessionId = file.replace(/-critiques\.json$/, "");
+        results.push(...(await this.loadSessionCritiques(sessionId)));
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

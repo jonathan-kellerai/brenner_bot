@@ -61,6 +61,11 @@ export interface TestIndexEntry {
   priority: number | undefined;
 }
 
+export interface StorageWarning {
+  file: string;
+  message: string;
+}
+
 /**
  * Full index file format.
  */
@@ -68,6 +73,7 @@ export interface TestIndex {
   version: string;
   updatedAt: string;
   entries: TestIndexEntry[];
+  warnings?: StorageWarning[];
 }
 
 /**
@@ -190,10 +196,29 @@ export class TestStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionTestFile;
+      let data: SessionTestFile;
+      try {
+        data = JSON.parse(content) as SessionTestFile;
+      } catch {
+        console.warn(`[TestStorage] Corrupted JSON in ${filePath}; returning empty tests.`);
+        return [];
+      }
 
-      // Validate each test
-      return data.tests.map((t) => TestRecordSchema.parse(t));
+      if (!Array.isArray(data.tests)) {
+        console.warn(`[TestStorage] Malformed session file ${filePath}; returning empty tests.`);
+        return [];
+      }
+
+      const parsed: TestRecord[] = [];
+      for (const raw of data.tests) {
+        try {
+          parsed.push(TestRecordSchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -315,6 +340,7 @@ export class TestStorage {
 
   private async rebuildIndexUnlocked(): Promise<TestIndex> {
     const entries: TestIndexEntry[] = [];
+    const warnings: StorageWarning[] = [];
     const testsDir = getTestsDir(this.baseDir);
 
     try {
@@ -323,29 +349,52 @@ export class TestStorage {
       for (const file of files) {
         if (!file.endsWith("-tests.json")) continue;
 
-        const content = await fs.readFile(join(testsDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionTestFile;
+        const filePath = join(testsDir, file);
+        const content = await fs.readFile(filePath, "utf-8");
 
+        let data: SessionTestFile;
+        try {
+          data = JSON.parse(content) as SessionTestFile;
+        } catch {
+          warnings.push({ file: filePath, message: "Skipping malformed JSON session file." });
+          continue;
+        }
+
+        if (!Array.isArray(data.tests)) {
+          warnings.push({ file: filePath, message: "Skipping malformed session file (missing tests[])." });
+          continue;
+        }
+
+        let invalidCount = 0;
         for (const test of data.tests) {
-          const total =
-            test.evidencePerWeekScore.likelihoodRatio +
-            test.evidencePerWeekScore.cost +
-            test.evidencePerWeekScore.speed +
-            test.evidencePerWeekScore.ambiguity;
+          try {
+            const parsed = TestRecordSchema.parse(test);
+            const total =
+              parsed.evidencePerWeekScore.likelihoodRatio +
+              parsed.evidencePerWeekScore.cost +
+              parsed.evidencePerWeekScore.speed +
+              parsed.evidencePerWeekScore.ambiguity;
 
-          entries.push({
-            id: test.id,
-            sessionId: test.designedInSession,
-            name: test.name,
-            status: test.status,
-            discriminates: test.discriminates,
-            addressesPredictions: test.addressesPredictions ?? [],
-            isExecuted: !!test.execution,
-            hasPotencyCheck: (test.potencyCheck?.positiveControl ?? "").trim().length >= 10,
-            evidencePerWeekTotal: total,
-            designedBy: test.designedBy,
-            priority: test.priority,
-          });
+            entries.push({
+              id: parsed.id,
+              sessionId: parsed.designedInSession,
+              name: parsed.name,
+              status: parsed.status,
+              discriminates: parsed.discriminates,
+              addressesPredictions: parsed.addressesPredictions ?? [],
+              isExecuted: !!parsed.execution,
+              hasPotencyCheck: (parsed.potencyCheck?.positiveControl ?? "").trim().length >= 10,
+              evidencePerWeekTotal: total,
+              designedBy: parsed.designedBy,
+              priority: parsed.priority,
+            });
+          } catch {
+            invalidCount += 1;
+          }
+        }
+
+        if (invalidCount > 0) {
+          warnings.push({ file: filePath, message: `Skipped ${invalidCount} invalid tests.` });
         }
       }
     } catch (error) {
@@ -358,6 +407,7 @@ export class TestStorage {
       version: "1.0.0",
       updatedAt: new Date().toISOString(),
       entries,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     await ensureStorageStructure(this.baseDir);
@@ -374,7 +424,11 @@ export class TestStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as TestIndex;
+      const parsed = JSON.parse(content) as TestIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed test index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }
@@ -751,10 +805,8 @@ export class TestStorage {
 
       for (const file of files) {
         if (!file.endsWith("-tests.json")) continue;
-
-        const content = await fs.readFile(join(testsDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionTestFile;
-        results.push(...data.tests.map((t) => TestRecordSchema.parse(t)));
+        const sessionId = file.replace(/-tests\.json$/, "");
+        results.push(...(await this.loadSessionTests(sessionId)));
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

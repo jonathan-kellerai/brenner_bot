@@ -56,6 +56,11 @@ export interface AnomalyIndexEntry {
   spawnedHypotheses: string[];
 }
 
+export interface StorageWarning {
+  file: string;
+  message: string;
+}
+
 /**
  * Full index file format.
  */
@@ -63,6 +68,7 @@ export interface AnomalyIndex {
   version: string;
   updatedAt: string;
   entries: AnomalyIndexEntry[];
+  warnings?: StorageWarning[];
 }
 
 /**
@@ -185,10 +191,29 @@ export class AnomalyStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionAnomalyFile;
+      let data: SessionAnomalyFile;
+      try {
+        data = JSON.parse(content) as SessionAnomalyFile;
+      } catch {
+        console.warn(`[AnomalyStorage] Corrupted JSON in ${filePath}; returning empty anomalies.`);
+        return [];
+      }
 
-      // Validate each anomaly
-      return data.anomalies.map((a) => AnomalySchema.parse(a));
+      if (!Array.isArray(data.anomalies)) {
+        console.warn(`[AnomalyStorage] Malformed session file ${filePath}; returning empty anomalies.`);
+        return [];
+      }
+
+      const parsed: Anomaly[] = [];
+      for (const raw of data.anomalies) {
+        try {
+          parsed.push(AnomalySchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -310,6 +335,7 @@ export class AnomalyStorage {
 
   private async rebuildIndexUnlocked(): Promise<AnomalyIndex> {
     const entries: AnomalyIndexEntry[] = [];
+    const warnings: StorageWarning[] = [];
     const anomaliesDir = getAnomaliesDir(this.baseDir);
 
     try {
@@ -318,18 +344,41 @@ export class AnomalyStorage {
       for (const file of files) {
         if (!file.endsWith("-anomalies.json")) continue;
 
-        const content = await fs.readFile(join(anomaliesDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionAnomalyFile;
+        const filePath = join(anomaliesDir, file);
+        const content = await fs.readFile(filePath, "utf-8");
 
+        let data: SessionAnomalyFile;
+        try {
+          data = JSON.parse(content) as SessionAnomalyFile;
+        } catch {
+          warnings.push({ file: filePath, message: "Skipping malformed JSON session file." });
+          continue;
+        }
+
+        if (!Array.isArray(data.anomalies)) {
+          warnings.push({ file: filePath, message: "Skipping malformed session file (missing anomalies[])." });
+          continue;
+        }
+
+        let invalidCount = 0;
         for (const anomaly of data.anomalies) {
-          entries.push({
-            id: anomaly.id,
-            sessionId: anomaly.sessionId,
-            quarantineStatus: anomaly.quarantineStatus,
-            conflictsWithHypotheses: anomaly.conflictsWith.hypotheses,
-            conflictsWithAssumptions: anomaly.conflictsWith.assumptions,
-            spawnedHypotheses: anomaly.spawnedHypotheses ?? [],
-          });
+          try {
+            const parsed = AnomalySchema.parse(anomaly);
+            entries.push({
+              id: parsed.id,
+              sessionId: parsed.sessionId,
+              quarantineStatus: parsed.quarantineStatus,
+              conflictsWithHypotheses: parsed.conflictsWith.hypotheses,
+              conflictsWithAssumptions: parsed.conflictsWith.assumptions,
+              spawnedHypotheses: parsed.spawnedHypotheses ?? [],
+            });
+          } catch {
+            invalidCount += 1;
+          }
+        }
+
+        if (invalidCount > 0) {
+          warnings.push({ file: filePath, message: `Skipped ${invalidCount} invalid anomalies.` });
         }
       }
     } catch (error) {
@@ -342,6 +391,7 @@ export class AnomalyStorage {
       version: "1.0.0",
       updatedAt: new Date().toISOString(),
       entries,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     await ensureStorageStructure(this.baseDir);
@@ -358,7 +408,11 @@ export class AnomalyStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as AnomalyIndex;
+      const parsed = JSON.parse(content) as AnomalyIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed anomaly index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }
@@ -550,10 +604,8 @@ export class AnomalyStorage {
 
       for (const file of files) {
         if (!file.endsWith("-anomalies.json")) continue;
-
-        const content = await fs.readFile(join(anomaliesDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionAnomalyFile;
-        results.push(...data.anomalies.map((a) => AnomalySchema.parse(a)));
+        const sessionId = file.replace(/-anomalies\.json$/, "");
+        results.push(...(await this.loadSessionAnomalies(sessionId)));
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

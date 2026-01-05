@@ -62,6 +62,11 @@ export interface InterventionIndexEntry {
   reversed: boolean;
 }
 
+export interface StorageWarning {
+  file: string;
+  message: string;
+}
+
 /**
  * Full index file format.
  */
@@ -69,6 +74,7 @@ export interface InterventionIndex {
   version: string;
   updatedAt: string;
   entries: InterventionIndexEntry[];
+  warnings?: StorageWarning[];
 }
 
 /**
@@ -194,10 +200,29 @@ export class InterventionStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionInterventionFile;
+      let data: SessionInterventionFile;
+      try {
+        data = JSON.parse(content) as SessionInterventionFile;
+      } catch {
+        console.warn(`[InterventionStorage] Corrupted JSON in ${filePath}; returning empty interventions.`);
+        return [];
+      }
 
-      // Validate each intervention
-      return data.interventions.map((i) => OperatorInterventionSchema.parse(i));
+      if (!Array.isArray(data.interventions)) {
+        console.warn(`[InterventionStorage] Malformed session file ${filePath}; returning empty interventions.`);
+        return [];
+      }
+
+      const parsed: OperatorIntervention[] = [];
+      for (const raw of data.interventions) {
+        try {
+          parsed.push(OperatorInterventionSchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -331,6 +356,7 @@ export class InterventionStorage {
 
   private async rebuildIndexUnlocked(): Promise<InterventionIndex> {
     const entries: InterventionIndexEntry[] = [];
+    const warnings: StorageWarning[] = [];
     const interventionsDir = getInterventionsDir(this.baseDir);
 
     try {
@@ -339,20 +365,43 @@ export class InterventionStorage {
       for (const file of files) {
         if (!file.endsWith("-interventions.json")) continue;
 
-        const content = await fs.readFile(join(interventionsDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionInterventionFile;
+        const filePath = join(interventionsDir, file);
+        const content = await fs.readFile(filePath, "utf-8");
 
+        let data: SessionInterventionFile;
+        try {
+          data = JSON.parse(content) as SessionInterventionFile;
+        } catch {
+          warnings.push({ file: filePath, message: "Skipping malformed JSON session file." });
+          continue;
+        }
+
+        if (!Array.isArray(data.interventions)) {
+          warnings.push({ file: filePath, message: "Skipping malformed session file (missing interventions[])." });
+          continue;
+        }
+
+        let invalidCount = 0;
         for (const intervention of data.interventions) {
-          entries.push({
-            id: intervention.id,
-            sessionId: intervention.session_id,
-            type: intervention.type,
-            severity: intervention.severity,
-            operatorId: intervention.operator_id,
-            timestamp: intervention.timestamp,
-            reversible: intervention.reversible,
-            reversed: Boolean(intervention.reversed_at),
-          });
+          try {
+            const parsed = OperatorInterventionSchema.parse(intervention);
+            entries.push({
+              id: parsed.id,
+              sessionId: parsed.session_id,
+              type: parsed.type,
+              severity: parsed.severity,
+              operatorId: parsed.operator_id,
+              timestamp: parsed.timestamp,
+              reversible: parsed.reversible,
+              reversed: Boolean(parsed.reversed_at),
+            });
+          } catch {
+            invalidCount += 1;
+          }
+        }
+
+        if (invalidCount > 0) {
+          warnings.push({ file: filePath, message: `Skipped ${invalidCount} invalid interventions.` });
         }
       }
     } catch (error) {
@@ -365,6 +414,7 @@ export class InterventionStorage {
       version: "1.0.0",
       updatedAt: new Date().toISOString(),
       entries,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     await ensureStorageStructure(this.baseDir);
@@ -381,7 +431,11 @@ export class InterventionStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as InterventionIndex;
+      const parsed = JSON.parse(content) as InterventionIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed intervention index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }
@@ -591,12 +645,8 @@ export class InterventionStorage {
 
       for (const file of files) {
         if (!file.endsWith("-interventions.json")) continue;
-
-        const content = await fs.readFile(join(interventionsDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionInterventionFile;
-        results.push(
-          ...data.interventions.map((i) => OperatorInterventionSchema.parse(i))
-        );
+        const sessionId = file.replace(/-interventions\.json$/, "");
+        results.push(...(await this.loadSessionInterventions(sessionId)));
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

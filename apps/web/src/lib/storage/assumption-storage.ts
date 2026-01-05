@@ -58,6 +58,11 @@ export interface AssumptionIndexEntry {
   hasCalculation: boolean;
 }
 
+export interface StorageWarning {
+  file: string;
+  message: string;
+}
+
 /**
  * Full index file format.
  */
@@ -65,6 +70,7 @@ export interface AssumptionIndex {
   version: string;
   updatedAt: string;
   entries: AssumptionIndexEntry[];
+  warnings?: StorageWarning[];
 }
 
 /**
@@ -187,10 +193,29 @@ export class AssumptionStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionAssumptionFile;
+      let data: SessionAssumptionFile;
+      try {
+        data = JSON.parse(content) as SessionAssumptionFile;
+      } catch {
+        console.warn(`[AssumptionStorage] Corrupted JSON in ${filePath}; returning empty assumptions.`);
+        return [];
+      }
 
-      // Validate each assumption
-      return data.assumptions.map((a) => AssumptionSchema.parse(a));
+      if (!Array.isArray(data.assumptions)) {
+        console.warn(`[AssumptionStorage] Malformed session file ${filePath}; returning empty assumptions.`);
+        return [];
+      }
+
+      const parsed: Assumption[] = [];
+      for (const raw of data.assumptions) {
+        try {
+          parsed.push(AssumptionSchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -325,6 +350,7 @@ export class AssumptionStorage {
 
   private async rebuildIndexUnlocked(): Promise<AssumptionIndex> {
     const entries: AssumptionIndexEntry[] = [];
+    const warnings: StorageWarning[] = [];
     const assumptionsDir = getAssumptionsDir(this.baseDir);
 
     try {
@@ -333,19 +359,45 @@ export class AssumptionStorage {
       for (const file of files) {
         if (!file.endsWith("-assumptions.json")) continue;
 
-        const content = await fs.readFile(join(assumptionsDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionAssumptionFile;
+        const filePath = join(assumptionsDir, file);
+        const content = await fs.readFile(filePath, "utf-8");
 
-        for (const assumption of data.assumptions) {
-          entries.push({
-            id: assumption.id,
-            sessionId: assumption.sessionId,
-            type: assumption.type,
-            status: assumption.status,
-            affectedHypotheses: assumption.load.affectedHypotheses,
-            affectedTests: assumption.load.affectedTests,
-            hasCalculation: Boolean(assumption.calculation),
+        let data: SessionAssumptionFile;
+        try {
+          data = JSON.parse(content) as SessionAssumptionFile;
+        } catch {
+          warnings.push({ file: filePath, message: "Skipping malformed JSON session file." });
+          continue;
+        }
+
+        if (!Array.isArray(data.assumptions)) {
+          warnings.push({
+            file: filePath,
+            message: "Skipping malformed session file (missing assumptions[]).",
           });
+          continue;
+        }
+
+        let invalidCount = 0;
+        for (const assumption of data.assumptions) {
+          try {
+            const parsed = AssumptionSchema.parse(assumption);
+            entries.push({
+              id: parsed.id,
+              sessionId: parsed.sessionId,
+              type: parsed.type,
+              status: parsed.status,
+              affectedHypotheses: parsed.load.affectedHypotheses,
+              affectedTests: parsed.load.affectedTests,
+              hasCalculation: Boolean(parsed.calculation),
+            });
+          } catch {
+            invalidCount += 1;
+          }
+        }
+
+        if (invalidCount > 0) {
+          warnings.push({ file: filePath, message: `Skipped ${invalidCount} invalid assumptions.` });
         }
       }
     } catch (error) {
@@ -358,6 +410,7 @@ export class AssumptionStorage {
       version: "1.0.0",
       updatedAt: new Date().toISOString(),
       entries,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     await ensureStorageStructure(this.baseDir);
@@ -374,7 +427,11 @@ export class AssumptionStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as AssumptionIndex;
+      const parsed = JSON.parse(content) as AssumptionIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed assumption index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }
@@ -644,10 +701,8 @@ export class AssumptionStorage {
 
       for (const file of files) {
         if (!file.endsWith("-assumptions.json")) continue;
-
-        const content = await fs.readFile(join(assumptionsDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionAssumptionFile;
-        results.push(...data.assumptions.map((a) => AssumptionSchema.parse(a)));
+        const sessionId = file.replace(/-assumptions\.json$/, "");
+        results.push(...(await this.loadSessionAssumptions(sessionId)));
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

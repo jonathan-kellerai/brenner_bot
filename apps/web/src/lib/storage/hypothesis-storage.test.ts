@@ -96,12 +96,20 @@ describe("Session File Operations", () => {
     expect(loaded).toHaveLength(0);
   });
 
-  test("throws on malformed session file (non-ENOENT error path)", async () => {
+  test("returns empty array for malformed session file JSON", async () => {
+    const good = createTestHypothesisData({ id: "H-GOOD-001", sessionId: "GOOD" });
+    await storage.saveSessionHypotheses("GOOD", [good]);
+
     await fs.mkdir(join(testDir, ".research", "hypotheses"), { recursive: true });
     const filePath = join(testDir, ".research", "hypotheses", "BAD-hypotheses.json");
     await fs.writeFile(filePath, "not-json");
 
-    await expect(storage.loadSessionHypotheses("BAD")).rejects.toBeDefined();
+    const loaded = await storage.loadSessionHypotheses("BAD");
+    expect(loaded).toEqual([]);
+
+    const index = await storage.rebuildIndex();
+    expect(index.entries.map((e) => e.id)).toContain(good.id);
+    expect(index.warnings?.some((w) => w.file.includes("BAD-hypotheses.json"))).toBe(true);
   });
 
   test("preserves createdAt on update", async () => {
@@ -263,6 +271,17 @@ describe("Index Operations", () => {
   test("loadIndex rebuilds if missing", async () => {
     const hypothesis = createTestHypothesisData({ id: "H-TEST-001" });
     await storage.saveSessionHypotheses("TEST", [hypothesis]);
+
+    const index = await storage.loadIndex();
+    expect(index.entries).toHaveLength(1);
+  });
+
+  test("loadIndex rebuilds if index file is malformed", async () => {
+    const hypothesis = createTestHypothesisData({ id: "H-TEST-001" });
+    await storage.saveSessionHypotheses("TEST", [hypothesis]);
+
+    const indexPath = join(testDir, ".research", "hypothesis-index.json");
+    await fs.writeFile(indexPath, "not-json");
 
     const index = await storage.loadIndex();
     expect(index.entries).toHaveLength(1);

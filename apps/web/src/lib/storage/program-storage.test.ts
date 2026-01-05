@@ -57,6 +57,18 @@ describe.sequential("ProgramStorage", () => {
     expect(firstEntry?.sessionCount).toBe(1);
   });
 
+  it("loadIndex rebuilds if program-index.json is malformed", async () => {
+    const storage = new ProgramStorage({ baseDir, autoRebuildIndex: false });
+    const program = makeProgram();
+    await storage.savePrograms([program]);
+
+    const indexPath = join(baseDir, ".research", "programs", "program-index.json");
+    await fs.writeFile(indexPath, "not-json");
+
+    const index = await storage.loadIndex();
+    expect(index.entries).toHaveLength(1);
+  });
+
   it("saveProgram upserts by id and deleteProgram returns boolean", async () => {
     const storage = new ProgramStorage({ baseDir, autoRebuildIndex: true });
 
@@ -104,12 +116,16 @@ describe.sequential("ProgramStorage", () => {
     expect(exists).toBe(false);
   });
 
-  it("loadPrograms throws on malformed JSON (non-ENOENT error path)", async () => {
+  it("loadPrograms returns empty list for malformed JSON", async () => {
     const storage = new ProgramStorage({ baseDir, autoRebuildIndex: false });
     await fs.mkdir(join(baseDir, ".research", "programs"), { recursive: true });
     await fs.writeFile(join(baseDir, ".research", "programs", "programs.json"), "not-json");
 
-    await expect(storage.loadPrograms()).rejects.toBeDefined();
+    const loaded = await storage.loadPrograms();
+    expect(loaded).toEqual([]);
+
+    const index = await storage.rebuildIndex();
+    expect(index.entries).toEqual([]);
   });
 
   it("supports query helpers and statistics", async () => {

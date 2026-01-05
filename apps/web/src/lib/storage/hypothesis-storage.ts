@@ -61,6 +61,11 @@ export interface HypothesisIndexEntry {
   spawnedFromAnomaly: string | undefined;
 }
 
+export interface StorageWarning {
+  file: string;
+  message: string;
+}
+
 /**
  * Full index file format.
  */
@@ -68,6 +73,7 @@ export interface HypothesisIndex {
   version: string;
   updatedAt: string;
   entries: HypothesisIndexEntry[];
+  warnings?: StorageWarning[];
 }
 
 /**
@@ -190,9 +196,29 @@ export class HypothesisStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as SessionHypothesisFile;
+      let data: SessionHypothesisFile;
+      try {
+        data = JSON.parse(content) as SessionHypothesisFile;
+      } catch {
+        console.warn(`[HypothesisStorage] Corrupted JSON in ${filePath}; returning empty hypotheses.`);
+        return [];
+      }
 
-      return data.hypotheses.map((h) => HypothesisSchema.parse(h));
+      if (!Array.isArray(data.hypotheses)) {
+        console.warn(`[HypothesisStorage] Malformed session file ${filePath}; returning empty hypotheses.`);
+        return [];
+      }
+
+      const parsed: Hypothesis[] = [];
+      for (const raw of data.hypotheses) {
+        try {
+          parsed.push(HypothesisSchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -314,6 +340,7 @@ export class HypothesisStorage {
 
   private async rebuildIndexUnlocked(): Promise<HypothesisIndex> {
     const entries: HypothesisIndexEntry[] = [];
+    const warnings: StorageWarning[] = [];
     const hypothesesDir = getHypothesesDir(this.baseDir);
 
     try {
@@ -322,22 +349,44 @@ export class HypothesisStorage {
       for (const file of files) {
         if (!file.endsWith("-hypotheses.json")) continue;
 
-        const content = await fs.readFile(join(hypothesesDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionHypothesisFile;
+        const filePath = join(hypothesesDir, file);
+        const content = await fs.readFile(filePath, "utf-8");
 
+        let data: SessionHypothesisFile;
+        try {
+          data = JSON.parse(content) as SessionHypothesisFile;
+        } catch {
+          warnings.push({ file: filePath, message: "Skipping malformed JSON session file." });
+          continue;
+        }
+
+        if (!Array.isArray(data.hypotheses)) {
+          warnings.push({ file: filePath, message: "Skipping malformed session file (missing hypotheses[])." });
+          continue;
+        }
+
+        let invalidCount = 0;
         for (const hypothesis of data.hypotheses) {
-          const parsed = HypothesisSchema.parse(hypothesis);
-          entries.push({
-            id: parsed.id,
-            sessionId: parsed.sessionId,
-            state: parsed.state,
-            category: parsed.category,
-            confidence: parsed.confidence,
-            hasMechanism: !!parsed.mechanism,
-            unresolvedCritiqueCount: parsed.unresolvedCritiqueCount,
-            parentId: parsed.parentId,
-            spawnedFromAnomaly: parsed.spawnedFromAnomaly,
-          });
+          try {
+            const parsed = HypothesisSchema.parse(hypothesis);
+            entries.push({
+              id: parsed.id,
+              sessionId: parsed.sessionId,
+              state: parsed.state,
+              category: parsed.category,
+              confidence: parsed.confidence,
+              hasMechanism: !!parsed.mechanism,
+              unresolvedCritiqueCount: parsed.unresolvedCritiqueCount,
+              parentId: parsed.parentId,
+              spawnedFromAnomaly: parsed.spawnedFromAnomaly,
+            });
+          } catch {
+            invalidCount += 1;
+          }
+        }
+
+        if (invalidCount > 0) {
+          warnings.push({ file: filePath, message: `Skipped ${invalidCount} invalid hypotheses.` });
         }
       }
     } catch (error) {
@@ -350,6 +399,7 @@ export class HypothesisStorage {
       version: "1.0.0",
       updatedAt: new Date().toISOString(),
       entries,
+      warnings: warnings.length > 0 ? warnings : undefined,
     };
 
     await ensureStorageStructure(this.baseDir);
@@ -366,7 +416,11 @@ export class HypothesisStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as HypothesisIndex;
+      const parsed = JSON.parse(content) as HypothesisIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed hypothesis index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }
@@ -435,10 +489,8 @@ export class HypothesisStorage {
 
       for (const file of files) {
         if (!file.endsWith("-hypotheses.json")) continue;
-
-        const content = await fs.readFile(join(hypothesesDir, file), "utf-8");
-        const data = JSON.parse(content) as SessionHypothesisFile;
-        results.push(...data.hypotheses.map((h) => HypothesisSchema.parse(h)));
+        const sessionId = file.replace(/-hypotheses\.json$/, "");
+        results.push(...(await this.loadSessionHypotheses(sessionId)));
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") {

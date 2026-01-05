@@ -184,10 +184,29 @@ export class ProgramStorage {
 
     try {
       const content = await fs.readFile(filePath, "utf-8");
-      const data = JSON.parse(content) as ProgramsFile;
+      let data: ProgramsFile;
+      try {
+        data = JSON.parse(content) as ProgramsFile;
+      } catch {
+        console.warn(`[ProgramStorage] Corrupted JSON in ${filePath}; returning empty programs.`);
+        return [];
+      }
 
-      // Validate each program
-      return data.programs.map((p) => ResearchProgramSchema.parse(p));
+      if (!Array.isArray(data.programs)) {
+        console.warn(`[ProgramStorage] Malformed programs file ${filePath}; returning empty programs.`);
+        return [];
+      }
+
+      const parsed: ResearchProgram[] = [];
+      for (const raw of data.programs) {
+        try {
+          parsed.push(ResearchProgramSchema.parse(raw));
+        } catch {
+          // Skip invalid entries
+        }
+      }
+
+      return parsed;
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code === "ENOENT") {
         return [];
@@ -328,7 +347,11 @@ export class ProgramStorage {
 
     try {
       const content = await fs.readFile(indexPath, "utf-8");
-      return JSON.parse(content) as ProgramIndex;
+      const parsed = JSON.parse(content) as ProgramIndex;
+      if (!parsed || !Array.isArray(parsed.entries)) {
+        throw new Error("Malformed program index");
+      }
+      return parsed;
     } catch {
       return await this.rebuildIndex();
     }

@@ -280,6 +280,18 @@ describe("AssumptionStorage", () => {
 
       expect(index.entries).toHaveLength(1);
     });
+
+    test("loadIndex rebuilds if index file is malformed", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir, autoRebuildIndex: false });
+      const assumption = createTestAssumption();
+      await storage.saveSessionAssumptions("TEST", [assumption]);
+
+      const indexPath = join(testDir, ".research", "assumption-index.json");
+      await fs.writeFile(indexPath, "not-json");
+
+      const index = await storage.loadIndex();
+      expect(index.entries).toHaveLength(1);
+    });
   });
 
   describe("query operations", () => {
@@ -631,8 +643,10 @@ describe("AssumptionStorage", () => {
   });
 
   describe("error handling and edge cases", () => {
-    test("loadSessionAssumptions handles malformed JSON gracefully", async () => {
-      const storage = new AssumptionStorage({ baseDir: testDir });
+    test("loadSessionAssumptions returns empty array for malformed JSON", async () => {
+      const storage = new AssumptionStorage({ baseDir: testDir, autoRebuildIndex: false });
+      const good = createTestAssumption({ sessionId: "GOOD", id: "A-GOOD-001" });
+      await storage.saveSessionAssumptions("GOOD", [good]);
 
       // Create the directory structure
       const assumptionsDir = join(testDir, ".research", "assumptions");
@@ -642,8 +656,12 @@ describe("AssumptionStorage", () => {
       const filePath = join(assumptionsDir, "MALFORMED-assumptions.json");
       await fs.writeFile(filePath, "{ invalid json }");
 
-      // Should throw on malformed JSON
-      await expect(storage.loadSessionAssumptions("MALFORMED")).rejects.toThrow();
+      const loaded = await storage.loadSessionAssumptions("MALFORMED");
+      expect(loaded).toEqual([]);
+
+      const index = await storage.rebuildIndex();
+      expect(index.entries.map((e) => e.id)).toContain(good.id);
+      expect(index.warnings?.some((w) => w.file.includes("MALFORMED-assumptions.json"))).toBe(true);
     });
 
     test("saveSessionAssumptions handles special characters in session ID", async () => {

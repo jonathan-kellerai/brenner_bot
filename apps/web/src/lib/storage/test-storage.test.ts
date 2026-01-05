@@ -188,11 +188,19 @@ describe("TestStorage", () => {
       );
     });
 
-    it("throws on malformed session file JSON (non-ENOENT error path)", async () => {
+    it("returns empty array for malformed session file JSON", async () => {
+      const good = createTestTestRecord("GOOD", 1);
+      await storage.saveTest(good);
+
       await fs.mkdir(join(tempDir, ".research", "tests"), { recursive: true });
       await fs.writeFile(join(tempDir, ".research", "tests", "BAD-tests.json"), "not-json");
 
-      await expect(storage.loadSessionTests("BAD")).rejects.toBeDefined();
+      const loaded = await storage.loadSessionTests("BAD");
+      expect(loaded).toEqual([]);
+
+      const index = await storage.rebuildIndex();
+      expect(index.entries.map((e) => e.id)).toContain(good.id);
+      expect(index.warnings?.some((w) => w.file.includes("BAD-tests.json"))).toBe(true);
     });
   });
 
@@ -220,6 +228,17 @@ describe("TestStorage", () => {
       await storageNoAuto.saveTest(test);
 
       // Should rebuild on load
+      const index = await storageNoAuto.loadIndex();
+      expect(index.entries).toHaveLength(1);
+    });
+
+    it("rebuilds index when index file is corrupted", async () => {
+      const storageNoAuto = new TestStorage({ baseDir: tempDir, autoRebuildIndex: false });
+      await storageNoAuto.saveTest(createTestTestRecord("RS20251230", 1));
+
+      const indexPath = join(tempDir, ".research", "test-index.json");
+      await fs.writeFile(indexPath, "not-json");
+
       const index = await storageNoAuto.loadIndex();
       expect(index.entries).toHaveLength(1);
     });

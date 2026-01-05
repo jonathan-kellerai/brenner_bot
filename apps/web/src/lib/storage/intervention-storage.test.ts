@@ -60,6 +60,21 @@ describe("InterventionStorage", () => {
       expect(interventions).toEqual([]);
     });
 
+    it("returns empty array for malformed session file JSON", async () => {
+      const good = makeIntervention({ session_id: "GOOD", id: "INT-GOOD-001" });
+      await storage.saveIntervention(good);
+
+      await fs.mkdir(join(tempDir, ".research", "interventions"), { recursive: true });
+      await fs.writeFile(join(tempDir, ".research", "interventions", "BAD-interventions.json"), "not-json");
+
+      const loaded = await storage.loadSessionInterventions("BAD");
+      expect(loaded).toEqual([]);
+
+      const index = await storage.rebuildIndex();
+      expect(index.entries.map((e) => e.id)).toContain(good.id);
+      expect(index.warnings?.some((w) => w.file.includes("BAD-interventions.json"))).toBe(true);
+    });
+
     it("throws for non-ENOENT errors when baseDir is not a directory", async () => {
       const baseDirFile = join(tempDir, "not-a-dir");
       await fs.writeFile(baseDirFile, "x");
@@ -220,6 +235,17 @@ describe("InterventionStorage", () => {
       expect(index.entries).toHaveLength(2);
       expect(index.entries.map((e) => e.id)).toContain("INT-TEST-001");
       expect(index.entries.map((e) => e.id)).toContain("INT-TEST-002");
+    });
+
+    it("loadIndex rebuilds if index file is malformed", async () => {
+      const storageNoAuto = new InterventionStorage({ baseDir: tempDir, autoRebuildIndex: false });
+      await storageNoAuto.saveIntervention(makeIntervention());
+
+      const indexPath = join(tempDir, ".research", "intervention-index.json");
+      await fs.writeFile(indexPath, "not-json");
+
+      const index = await storageNoAuto.loadIndex();
+      expect(index.entries).toHaveLength(1);
     });
 
     it("index includes correct metadata", async () => {

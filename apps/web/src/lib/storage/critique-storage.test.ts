@@ -101,6 +101,21 @@ describe("Session File Operations", () => {
     expect(loaded).toHaveLength(0);
   });
 
+  test("returns empty array for malformed session file JSON", async () => {
+    const good = await createTestCritiqueData({ id: "C-GOOD-001", sessionId: "GOOD" });
+    await storage.saveSessionCritiques("GOOD", [good]);
+
+    await fs.mkdir(join(testDir, ".research", "critiques"), { recursive: true });
+    await fs.writeFile(join(testDir, ".research", "critiques", "BAD-critiques.json"), "not-json");
+
+    const loaded = await storage.loadSessionCritiques("BAD");
+    expect(loaded).toEqual([]);
+
+    const index = await storage.rebuildIndex();
+    expect(index.entries.map((e) => e.id)).toContain(good.id);
+    expect(index.warnings?.some((w) => w.file.includes("BAD-critiques.json"))).toBe(true);
+  });
+
   test("preserves createdAt on update", async () => {
     const critique = await createTestCritiqueData();
     await storage.saveSessionCritiques("TEST", [critique]);
@@ -207,6 +222,17 @@ describe("Index Operations", () => {
   test("loadIndex rebuilds if missing", async () => {
     const critique = await createTestCritiqueData();
     await storage.saveSessionCritiques("TEST", [critique]);
+
+    const index = await storage.loadIndex();
+    expect(index.entries).toHaveLength(1);
+  });
+
+  test("loadIndex rebuilds if index file is malformed", async () => {
+    const critique = await createTestCritiqueData();
+    await storage.saveSessionCritiques("TEST", [critique]);
+
+    const indexPath = join(testDir, ".research", "critique-index.json");
+    await fs.writeFile(indexPath, "not-json");
 
     const index = await storage.loadIndex();
     expect(index.entries).toHaveLength(1);
