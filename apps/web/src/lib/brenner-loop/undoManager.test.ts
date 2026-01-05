@@ -306,6 +306,27 @@ describe("Command execution", () => {
     expect(result.session.tags).not.toContain("test");
   });
 
+  it("handles set primary when no previous primary exists", () => {
+    // Create a session with no primary
+    const sessionNoPrimary = {
+      ...session,
+      primaryHypothesisId: "",
+      alternativeHypothesisIds: ["hypo-1", "hypo-2"],
+    };
+
+    const cmd = createSetPrimaryCommand("hypo-1", "");
+    const result = executeCommand(sessionNoPrimary, stack, cmd);
+
+    // hypo-1 should be primary
+    expect(result.session.primaryHypothesisId).toBe("hypo-1");
+    // Empty string should NOT be in alternatives
+    expect(result.session.alternativeHypothesisIds).not.toContain("");
+    // hypo-2 should still be in alternatives
+    expect(result.session.alternativeHypothesisIds).toContain("hypo-2");
+    // hypo-1 should NOT be in alternatives (it's now primary)
+    expect(result.session.alternativeHypothesisIds).not.toContain("hypo-1");
+  });
+
   it("clears redo stack on new command", () => {
     const cmd1 = createConfidenceCommand("hypo-1", 50, 60, "First");
     const result1 = executeCommand(session, stack, cmd1);

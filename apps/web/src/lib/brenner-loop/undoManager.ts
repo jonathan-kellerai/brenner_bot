@@ -299,11 +299,13 @@ export function createRestoreCommand(
 export function createEvidenceCommand(
   evidence: EvidenceEntry
 ): SessionCommand<EvidenceRecordData> {
+  const obs = evidence.observation ?? "";
+  const truncatedObs = obs.length > 40 ? `${obs.slice(0, 40)}...` : obs;
   return {
     id: generateCommandId(),
     type: "record_evidence",
     timestamp: new Date().toISOString(),
-    description: `Record evidence: ${evidence.observation.slice(0, 40)}...`,
+    description: `Record evidence: ${truncatedObs || "(empty)"}`,
     executeData: { evidence },
     undoData: { evidence },
   };
@@ -410,16 +412,17 @@ export function applyCommand(
       const previousPrimary = session.primaryHypothesisId;
 
       // Move previous primary to alternatives, set new primary
+      // Only add previous primary to alternatives if it exists
+      const filteredAlternatives = session.alternativeHypothesisIds.filter(
+        (id) => id !== data.hypothesisId
+      );
       return {
         ...session,
         updatedAt,
         primaryHypothesisId: data.hypothesisId,
-        alternativeHypothesisIds: [
-          previousPrimary,
-          ...session.alternativeHypothesisIds.filter(
-            (id) => id !== data.hypothesisId
-          ),
-        ],
+        alternativeHypothesisIds: previousPrimary
+          ? [previousPrimary, ...filteredAlternatives]
+          : filteredAlternatives,
       };
     }
 
@@ -547,16 +550,17 @@ export function reverseCommand(
       const demotedPrimary = data.previousPrimaryId ?? session.primaryHypothesisId;
 
       // Swap back
+      // Only add demoted primary to alternatives if it exists
+      const filteredAlternatives = session.alternativeHypothesisIds.filter(
+        (id) => id !== data.hypothesisId && id !== demotedPrimary
+      );
       return {
         ...session,
         updatedAt,
         primaryHypothesisId: data.hypothesisId,
-        alternativeHypothesisIds: [
-          demotedPrimary,
-          ...session.alternativeHypothesisIds.filter(
-            (id) => id !== data.hypothesisId && id !== demotedPrimary
-          ),
-        ],
+        alternativeHypothesisIds: demotedPrimary
+          ? [demotedPrimary, ...filteredAlternatives]
+          : filteredAlternatives,
       };
     }
 
