@@ -129,6 +129,25 @@ const AGENT_PROGRESS_STEPS = [
 ];
 
 const MOCK_RESPONSE_TIMESTAMP = new Date(Date.now() - 1000 * 60 * 15);
+const LIVE_THREAD_PREFIX = "TRIBUNAL-";
+
+function normalizeAgentTag(raw: string): string {
+  return raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
+}
+
+function extractAgentTag(subject: string): string | null {
+  const tribunalMatch = subject.match(/TRIBUNAL\[([^\]]+)\]/i);
+  if (tribunalMatch) return normalizeAgentTag(tribunalMatch[1]);
+
+  const deltaMatch = subject.match(/^DELTA\[([^\]]+)\]/i);
+  if (deltaMatch) return normalizeAgentTag(deltaMatch[1]);
+
+  return null;
+}
 
 // ============================================================================
 // Types
@@ -311,6 +330,7 @@ function AgentCard({
                   size="sm"
                   variant="outline"
                   onClick={onInvoke}
+                  disabled={!onInvoke}
                   className={cn("gap-2", agent.color)}
                 >
                   <PlayIcon className="size-3" />
@@ -443,39 +463,45 @@ function SynthesisPanel({ responses, disagreements }: SynthesisPanelProps) {
 export default function AgentsPage() {
   const params = useParams();
   const threadId = params.threadId as string;
+  const isLiveThread = threadId.startsWith(LIVE_THREAD_PREFIX);
+  const allowMockInvoke = !isLiveThread;
 
   React.useEffect(() => {
     recordSessionResumeEntry(threadId, "agents");
   }, [threadId]);
 
-  const [agentStatuses, setAgentStatuses] = React.useState<Record<string, AgentStatus>>({
-    devils_advocate: "idle",
+  const [agentStatuses, setAgentStatuses] = React.useState<Record<string, AgentStatus>>(() => ({
+    devils_advocate: isLiveThread ? "idle" : "responded",
     experiment_designer: "idle",
     brenner_channeler: "idle",
-  });
+  }));
 
-  const [responses, setResponses] = React.useState<AgentResponse[]>([
-    {
-      agentId: "devils_advocate",
-      content: "I challenge the assumption that dopamine-driven feedback loops are the primary mechanism. Alternative explanations include: (1) selection effects where anxious individuals gravitate toward social media, (2) sleep disruption as the mediating factor, and (3) social comparison rather than reward mechanisms driving anxiety.",
-      timestamp: MOCK_RESPONSE_TIMESTAMP,
-      confidence: 72,
-      disagreements: ["The proposed mechanism may be too specific"],
-      suggestions: [
-        "Include a control group with similar screen time but no social features",
-        "Measure dopamine activity directly via neuroimaging",
-      ],
-    },
-  ]);
+  const [responses, setResponses] = React.useState<AgentResponse[]>(() => (
+    isLiveThread ? [] : [
+      {
+        agentId: "devils_advocate",
+        content: "I challenge the assumption that dopamine-driven feedback loops are the primary mechanism. Alternative explanations include: (1) selection effects where anxious individuals gravitate toward social media, (2) sleep disruption as the mediating factor, and (3) social comparison rather than reward mechanisms driving anxiety.",
+        timestamp: MOCK_RESPONSE_TIMESTAMP,
+        confidence: 72,
+        disagreements: ["The proposed mechanism may be too specific"],
+        suggestions: [
+          "Include a control group with similar screen time but no social features",
+          "Measure dopamine activity directly via neuroimaging",
+        ],
+      },
+    ]
+  ));
 
-  const [disagreements] = React.useState<Disagreement[]>([
-    {
-      id: "d1",
-      agents: ["devils_advocate", "experiment_designer"],
-      topic: "Whether neuroimaging is feasible within resource constraints",
-      resolutionStatus: "open",
-    },
-  ]);
+  const [disagreements] = React.useState<Disagreement[]>(() => (
+    isLiveThread ? [] : [
+      {
+        id: "d1",
+        agents: ["devils_advocate", "experiment_designer"],
+        topic: "Whether neuroimaging is feasible within resource constraints",
+        resolutionStatus: "open",
+      },
+    ]
+  ));
 
   const [agentProgress, setAgentProgress] = React.useState<Record<string, number>>({
     devils_advocate: 0,
@@ -511,7 +537,73 @@ export default function AgentsPage() {
     };
   }, []);
 
+  React.useEffect(() => {
+    if (!isLiveThread) return;
+    if (typeof window === "undefined" || typeof window.EventSource === "undefined") return;
+
+    const agentIds = new Set(AGENTS.map((agent) => agent.id));
+    const url = new URL("/api/realtime", window.location.origin);
+    url.searchParams.set("threadId", threadId);
+    url.searchParams.set("pollIntervalMs", "2000");
+
+    const eventSource = new EventSource(url.toString());
+
+    const handleThreadUpdate = (event: MessageEvent) => {
+      try {
+        const payload = JSON.parse(String(event.data ?? "")) as {
+          newMessages?: Array<{ subject?: string; from?: string; created_ts?: string }>;
+        };
+
+        for (const message of payload.newMessages ?? []) {
+          const subject = message.subject ?? "";
+          const tag = extractAgentTag(subject);
+          if (!tag || !agentIds.has(tag)) continue;
+
+          if (/^TRIBUNAL\[/i.test(subject)) {
+            setAgentStatuses((prev) => ({
+              ...prev,
+              [tag]: prev[tag] === "responded" ? prev[tag] : "thinking",
+            }));
+            setAgentProgress((prev) => ({
+              ...prev,
+              [tag]: Math.max(prev[tag] ?? 0, 1),
+            }));
+            continue;
+          }
+
+          if (/^DELTA\[/i.test(subject)) {
+            setAgentStatuses((prev) => ({ ...prev, [tag]: "responded" }));
+            setAgentProgress((prev) => ({
+              ...prev,
+              [tag]: AGENT_PROGRESS_STEPS.length - 1,
+            }));
+            setResponses((prev) => {
+              if (prev.some((response) => response.agentId === tag)) return prev;
+              const timestamp = message.created_ts ? new Date(message.created_ts) : new Date();
+              return [
+                ...prev,
+                {
+                  agentId: tag,
+                  content: `Response received from ${message.from ?? "agent"}. Open the thread to view the full response.`,
+                  timestamp,
+                },
+              ];
+            });
+          }
+        }
+      } catch {}
+    };
+
+    eventSource.addEventListener("thread_update", handleThreadUpdate);
+
+    return () => {
+      eventSource.removeEventListener("thread_update", handleThreadUpdate as EventListener);
+      eventSource.close();
+    };
+  }, [isLiveThread, threadId]);
+
   const handleInvokeAgent = (agentId: string) => {
+    if (!allowMockInvoke) return;
     clearAgentTimers(agentId);
     setAgentStatuses((prev) => ({ ...prev, [agentId]: "thinking" }));
     setAgentProgress((prev) => ({ ...prev, [agentId]: 0 }));
@@ -565,12 +657,14 @@ export default function AgentsPage() {
   };
 
   const handleCancelAgent = (agentId: string) => {
+    if (!allowMockInvoke) return;
     clearAgentTimers(agentId);
     setAgentStatuses((prev) => ({ ...prev, [agentId]: "idle" }));
     setAgentProgress((prev) => ({ ...prev, [agentId]: 0 }));
   };
 
   const invokeAllAgents = () => {
+    if (!allowMockInvoke) return;
     AGENTS.forEach((agent) => {
       if (agentStatuses[agent.id] === "idle") {
         handleInvokeAgent(agent.id);
@@ -621,7 +715,7 @@ export default function AgentsPage() {
             </div>
           </div>
 
-          <Button onClick={invokeAllAgents} className="gap-2">
+          <Button onClick={invokeAllAgents} className="gap-2" disabled={!allowMockInvoke}>
             <PlayIcon className="size-4" />
             Invoke All Agents
           </Button>
@@ -643,8 +737,8 @@ export default function AgentsPage() {
                   status={agentStatuses[agent.id]}
                   progressStep={agentProgress[agent.id] ?? 0}
                   response={responses.find((r) => r.agentId === agent.id)}
-                  onInvoke={() => handleInvokeAgent(agent.id)}
-                  onCancel={() => handleCancelAgent(agent.id)}
+                  onInvoke={allowMockInvoke ? () => handleInvokeAgent(agent.id) : undefined}
+                  onCancel={allowMockInvoke ? () => handleCancelAgent(agent.id) : undefined}
                 />
               </motion.div>
             ))}

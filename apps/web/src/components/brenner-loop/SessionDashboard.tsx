@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingOverlay } from "@/components/ui/loading-overlay";
 import { Skeleton, SkeletonCard, SkeletonButton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import { HypothesisCard } from "./HypothesisCard";
 import { useAsyncOperation } from "@/hooks/useAsyncOperation";
 import { CorpusSearchDialog } from "./CorpusSearch";
@@ -28,6 +29,7 @@ import {
   getPhaseStatusClass,
   getSessionProgress,
   exportSession,
+  type Session,
   type SessionPhase,
 } from "@/lib/brenner-loop";
 
@@ -356,6 +358,20 @@ function PhaseContent({ phase, className }: PhaseContentProps) {
   );
 }
 
+async function exportSessionToFile(session: Session, format: "json" | "markdown"): Promise<void> {
+  const blob = await exportSession(session, format);
+  const url = URL.createObjectURL(blob);
+
+  try {
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `brenner-session-${session.id}.${format === "json" ? "json" : "md"}`;
+    link.click();
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 // ============================================================================
 // SessionDashboard Component
 // ============================================================================
@@ -388,6 +404,7 @@ export function SessionDashboard({
   } = useSession();
   const exportOperation = useAsyncOperation();
   const [isCorpusSearchOpen, setIsCorpusSearchOpen] = React.useState(false);
+  const lastSaveErrorRef = React.useRef<string | null>(null);
 
   // useSessionMachine provides computed values (reachablePhases, isComplete, etc.)
   const machine = useSessionMachine(session);
@@ -411,6 +428,18 @@ export function SessionDashboard({
     }
     return null;
   }, [isDirty, saveState]);
+
+  React.useEffect(() => {
+    if (saveState.status === "error") {
+      const message = saveState.error?.message ?? "Failed to save session.";
+      if (message !== lastSaveErrorRef.current) {
+        toast.error("Save failed", message);
+        lastSaveErrorRef.current = message;
+      }
+      return;
+    }
+    lastSaveErrorRef.current = null;
+  }, [saveState.status, saveState.error]);
 
   // Loading state
   if (isLoading) {
@@ -485,23 +514,15 @@ export function SessionDashboard({
   };
 
   const handleExport = async (format: "json" | "markdown") => {
-    if (!session) return;
+    const currentSession = session;
+    if (!currentSession) return;
 
-    await exportOperation.run(async () => {
-      const blob = await exportSession(session, format);
-      const url = URL.createObjectURL(blob);
-
-      try {
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `brenner-session-${session.id}.${format === "json" ? "json" : "md"}`;
-        link.click();
-      } finally {
-        URL.revokeObjectURL(url);
-      }
-    }, {
+    await exportOperation.run(() => exportSessionToFile(currentSession, format), {
       message: "Exporting session...",
       estimatedDuration: 3,
+      onError: (error) => {
+        toast.error("Export failed", error.message);
+      },
     });
   };
 
