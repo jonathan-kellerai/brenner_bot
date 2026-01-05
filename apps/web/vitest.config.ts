@@ -72,13 +72,10 @@ export default defineConfig({
         "src/lib/brenner-loop/hypothesis.ts",
         // Additional modules below 75% branch threshold - track in brenner_bot-7usw.
         // TODO(coverage): Add branch tests to re-include these files.
-        "src/lib/brenner-loop/sessionHypothesis.ts", // 70.73% branches
         "src/lib/brenner-loop/test-queue.ts", // 68.46% branches
         "src/lib/brenner-loop/storage.ts", // 65.2% branches
         "src/lib/operator-library.ts", // 66.66% branches
-        "src/lib/session-kickoff.ts", // 70.79% branches
         "src/lib/storage/hypothesis-storage.ts", // 74.57% branches
-        "src/lib/threadStatus.ts", // 73.23% branches
         "src/lib/storage/test-storage.ts", // 73.41% branches
         "node_modules/**",
         ".next/**",
