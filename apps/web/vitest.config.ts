@@ -48,6 +48,8 @@ export default defineConfig({
         "**/*.d.ts",
         // Static content / integration shims (not worth unit coverage right now).
         "src/lib/analytics.ts",
+        // agentMail.ts has 56 unit tests but complex SSE/fetch branches hard to cover.
+        // Current: 69% functions, 60% branches. Target: 80%/75%. Track in brenner_bot-2fwg.
         "src/lib/agentMail.ts",
         "src/lib/operators.local.ts",
         "src/lib/tutorial-data/**",
