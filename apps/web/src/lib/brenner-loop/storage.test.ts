@@ -15,6 +15,7 @@ import {
   cleanupOldSessions,
   loadAssumptionLedger,
   saveAssumptionLedger,
+  rollbackSessionMigration,
 } from "./storage";
 import type { Session, SessionPhase } from "./types";
 
@@ -209,6 +210,59 @@ describe("LocalStorageSessionStorage", () => {
       localStorageMock.setItem("brenner-session-corrupted", "not valid json{");
 
       await expect(storage.load("corrupted")).rejects.toThrow(StorageError);
+    });
+
+    test("should migrate legacy sessions without _version (v0) and create a backup", async () => {
+      const session = createTestSession();
+      const legacy: Record<string, unknown> = { ...session };
+      delete (legacy as { _version?: unknown })._version;
+
+      localStorageMock.setItem(`brenner-session-${session.id}`, JSON.stringify(legacy));
+
+      const loaded = await storage.load(session.id);
+      expect(loaded).not.toBeNull();
+      if (!loaded) {
+        throw new Error("Expected session to load after migration");
+      }
+      expect(loaded._version).toBe(1);
+
+      const backup = localStorageMock.getItem(`brenner-session_backup:${session.id}:v0`);
+      expect(backup).toBeTruthy();
+
+      const persisted = localStorageMock.getItem(`brenner-session-${session.id}`);
+      expect(persisted).toBeTruthy();
+      if (!persisted) {
+        throw new Error("Expected migrated session to be persisted");
+      }
+      const parsed = JSON.parse(persisted) as Record<string, unknown>;
+      expect(parsed._version).toBe(1);
+    });
+
+    test("should allow rolling back a migrated legacy session", async () => {
+      const session = createTestSession();
+      const legacy: Record<string, unknown> = { ...session };
+      delete (legacy as { _version?: unknown })._version;
+
+      localStorageMock.setItem(`brenner-session-${session.id}`, JSON.stringify(legacy));
+
+      const loaded = await storage.load(session.id);
+      expect(loaded?._version).toBe(1);
+
+      const rolledBack = rollbackSessionMigration(session.id, 0);
+      expect(rolledBack).toBe(true);
+
+      const restoredRaw = localStorageMock.getItem(`brenner-session-${session.id}`);
+      expect(restoredRaw).toBeTruthy();
+      if (!restoredRaw) {
+        throw new Error("Expected restored session payload");
+      }
+      const restored = JSON.parse(restoredRaw) as Record<string, unknown>;
+      expect(restored._version).toBeUndefined();
+    });
+
+    test("rollbackSessionMigration should return false when no backup exists", () => {
+      const rolledBack = rollbackSessionMigration("SESSION-NO-BACKUP", 0);
+      expect(rolledBack).toBe(false);
     });
   });
 

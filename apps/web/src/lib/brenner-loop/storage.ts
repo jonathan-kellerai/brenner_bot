@@ -18,6 +18,12 @@
  * @module brenner-loop/storage
  */
 
+import {
+  CURRENT_SESSION_VERSION,
+  createSession,
+  isSession,
+  isSessionPhase,
+} from "./types";
 import type { Session, SessionPhase } from "./types";
 
 // ============================================================================
@@ -41,6 +47,179 @@ const STORAGE_VERSION = 1;
 
 /** Key prefix for assumption ledger entries */
 const ASSUMPTION_LEDGER_PREFIX = "brenner-assumption-ledger-";
+
+/**
+ * Backup key prefix for pre-migration session payloads.
+ * Intentionally does NOT match `SESSION_KEY_PREFIX` so recovery scans don't treat backups as sessions.
+ */
+const SESSION_BACKUP_KEY_PREFIX = "brenner-session_backup:";
+
+const FORBIDDEN_RECORD_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+type UnknownRecord = Record<string, unknown>;
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sessionBackupKey(sessionId: string, fromVersion: number): string {
+  return `${SESSION_BACKUP_KEY_PREFIX}${sessionId}:v${fromVersion}`;
+}
+
+function coerceString(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function coerceStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((entry) => typeof entry === "string");
+}
+
+function safeRecord<T>(value: unknown): Record<string, T> {
+  if (!isRecord(value)) return Object.create(null);
+  const out: Record<string, T> = Object.create(null);
+  for (const [key, entry] of Object.entries(value)) {
+    if (FORBIDDEN_RECORD_KEYS.has(key)) continue;
+    out[key] = entry as T;
+  }
+  return out;
+}
+
+type Migration = (data: unknown) => unknown;
+
+function removeSessionBackups(sessionId: string): void {
+  if (typeof window === "undefined") return;
+
+  const prefix = `${SESSION_BACKUP_KEY_PREFIX}${sessionId}:v`;
+  for (let i = window.localStorage.length - 1; i >= 0; i--) {
+    const key = window.localStorage.key(i);
+    if (key?.startsWith(prefix)) {
+      try {
+        window.localStorage.removeItem(key);
+      } catch {
+        // Best-effort cleanup only
+      }
+    }
+  }
+}
+
+function migrateV0ToV1(data: unknown): Session {
+  if (!isRecord(data)) {
+    throw new StorageError("Session data is corrupted", "CORRUPTED_DATA");
+  }
+
+  const id = coerceString(data.id);
+  if (!id) {
+    throw new StorageError("Session data is missing an id", "CORRUPTED_DATA");
+  }
+
+  const base = createSession({
+    id,
+    researchQuestion: coerceString(data.researchQuestion),
+    theme: coerceString(data.theme),
+    domain: coerceString(data.domain),
+    createdBy: coerceString(data.createdBy),
+  });
+
+  const phase =
+    typeof data.phase === "string" && isSessionPhase(data.phase)
+      ? (data.phase as SessionPhase)
+      : base.phase;
+
+  const operatorApplications = isRecord(data.operatorApplications)
+    ? {
+        levelSplit: Array.isArray(data.operatorApplications.levelSplit)
+          ? (data.operatorApplications.levelSplit as Session["operatorApplications"]["levelSplit"])
+          : base.operatorApplications.levelSplit,
+        exclusionTest: Array.isArray(data.operatorApplications.exclusionTest)
+          ? (data.operatorApplications.exclusionTest as Session["operatorApplications"]["exclusionTest"])
+          : base.operatorApplications.exclusionTest,
+        objectTranspose: Array.isArray(data.operatorApplications.objectTranspose)
+          ? (data.operatorApplications.objectTranspose as Session["operatorApplications"]["objectTranspose"])
+          : base.operatorApplications.objectTranspose,
+        scaleCheck: Array.isArray(data.operatorApplications.scaleCheck)
+          ? (data.operatorApplications.scaleCheck as Session["operatorApplications"]["scaleCheck"])
+          : base.operatorApplications.scaleCheck,
+      }
+    : base.operatorApplications;
+
+  return {
+    ...base,
+    _version: 1,
+    createdAt: coerceString(data.createdAt) ?? base.createdAt,
+    updatedAt: coerceString(data.updatedAt) ?? base.updatedAt,
+    phase,
+
+    primaryHypothesisId: coerceString(data.primaryHypothesisId) ?? base.primaryHypothesisId,
+    alternativeHypothesisIds: coerceStringArray(data.alternativeHypothesisIds),
+    archivedHypothesisIds: coerceStringArray(data.archivedHypothesisIds),
+    hypothesisCards: safeRecord(data.hypothesisCards),
+    hypothesisEvolution: Array.isArray(data.hypothesisEvolution)
+      ? (data.hypothesisEvolution as Session["hypothesisEvolution"])
+      : base.hypothesisEvolution,
+
+    operatorApplications,
+
+    predictionIds: coerceStringArray(data.predictionIds),
+    testIds: coerceStringArray(data.testIds),
+    assumptionIds: coerceStringArray(data.assumptionIds),
+
+    pendingAgentRequests: Array.isArray(data.pendingAgentRequests)
+      ? (data.pendingAgentRequests as Session["pendingAgentRequests"])
+      : base.pendingAgentRequests,
+    agentResponses: Array.isArray(data.agentResponses)
+      ? (data.agentResponses as Session["agentResponses"])
+      : base.agentResponses,
+    synthesis: isRecord(data.synthesis)
+      ? (data.synthesis as unknown as Session["synthesis"])
+      : base.synthesis,
+
+    evidenceLedger: Array.isArray(data.evidenceLedger)
+      ? (data.evidenceLedger as Session["evidenceLedger"])
+      : base.evidenceLedger,
+    artifacts: Array.isArray(data.artifacts) ? (data.artifacts as Session["artifacts"]) : base.artifacts,
+
+    commits: Array.isArray(data.commits) ? (data.commits as Session["commits"]) : base.commits,
+    headCommitId: coerceString(data.headCommitId) ?? base.headCommitId,
+
+    researchQuestion: coerceString(data.researchQuestion) ?? base.researchQuestion,
+    theme: coerceString(data.theme) ?? base.theme,
+    domain: coerceString(data.domain) ?? base.domain,
+    tags: Array.isArray(data.tags) ? (data.tags.filter((t) => typeof t === "string") as string[]) : base.tags,
+    notes: coerceString(data.notes) ?? base.notes,
+    createdBy: coerceString(data.createdBy) ?? base.createdBy,
+  };
+}
+
+const SESSION_MIGRATIONS: Record<number, Migration> = {
+  1: migrateV0ToV1,
+};
+
+function getSessionVersion(value: unknown): number {
+  if (!isRecord(value)) return 0;
+  const v = value._version;
+  if (typeof v !== "number" || !Number.isFinite(v) || v < 0) return 0;
+  return v;
+}
+
+function runSessionMigrations(data: unknown, fromVersion: number): Session {
+  let current: unknown = data;
+  for (let nextVersion = fromVersion + 1; nextVersion <= CURRENT_SESSION_VERSION; nextVersion++) {
+    const migration = SESSION_MIGRATIONS[nextVersion];
+    if (!migration) {
+      throw new StorageError(
+        `Missing migration for session schema v${nextVersion}`,
+        "CORRUPTED_DATA"
+      );
+    }
+    current = migration(current);
+  }
+
+  if (!isSession(current)) {
+    throw new StorageError("Session data is corrupted", "CORRUPTED_DATA");
+  }
+  return current;
+}
 
 // ============================================================================
 // Types
@@ -365,6 +544,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
     // Update session timestamp
     const updatedSession: Session = {
       ...session,
+      _version: CURRENT_SESSION_VERSION,
       updatedAt: new Date().toISOString(),
     };
 
@@ -434,6 +614,8 @@ export class LocalStorageSessionStorage implements SessionStorage {
         for (const old of toRemove) {
           try {
             window.localStorage.removeItem(this.getSessionKey(old.id));
+            window.localStorage.removeItem(assumptionLedgerKey(old.id));
+            removeSessionBackups(old.id);
           } catch {
             // Ignore cleanup errors
           }
@@ -466,18 +648,62 @@ export class LocalStorageSessionStorage implements SessionStorage {
         return null;
       }
 
-      const session = JSON.parse(raw) as Session;
+      const parsed = JSON.parse(raw) as unknown;
+      const version = getSessionVersion(parsed);
 
-      // Basic validation
-      if (!session.id || !session.phase) {
-        console.error(`Corrupted session data for ${sessionId}`);
+      if (version > CURRENT_SESSION_VERSION) {
         throw new StorageError(
-          "Session data is corrupted",
+          `Session schema v${version} is newer than supported (v${CURRENT_SESSION_VERSION})`,
           "CORRUPTED_DATA"
         );
       }
 
-      return session;
+      const needsMigrate = version < CURRENT_SESSION_VERSION;
+      if (!needsMigrate && isSession(parsed)) {
+        return parsed;
+      }
+
+      const backupKey = sessionBackupKey(sessionId, version);
+      try {
+        if (window.localStorage.getItem(backupKey) === null) {
+          window.localStorage.setItem(backupKey, raw);
+        }
+      } catch (error) {
+        throw new StorageError(
+          "Failed to create session backup before migration",
+          "QUOTA_EXCEEDED",
+          error
+        );
+      }
+
+      const migrated = needsMigrate ? runSessionMigrations(parsed, version) : migrateV0ToV1(parsed);
+
+      // Persist migrated payload without changing timestamps.
+      try {
+        window.localStorage.setItem(this.getSessionKey(sessionId), JSON.stringify(migrated));
+      } catch (error) {
+        throw new StorageError(
+          "Failed to save migrated session",
+          "QUOTA_EXCEEDED",
+          error
+        );
+      }
+
+      // Keep the index consistent.
+      const index = loadIndex();
+      const existingIdx = index.summaries.findIndex((s) => s.id === sessionId);
+      const summary = createSummary(migrated);
+      if (existingIdx >= 0) {
+        index.summaries[existingIdx] = summary;
+      } else {
+        index.summaries.unshift(summary);
+      }
+      index.summaries.sort(
+        (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      );
+      saveIndex(index);
+
+      return migrated;
     } catch (error) {
       if (error instanceof StorageError) throw error;
 
@@ -524,6 +750,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
     try {
       window.localStorage.removeItem(this.getSessionKey(sessionId));
       window.localStorage.removeItem(assumptionLedgerKey(sessionId));
+      removeSessionBackups(sessionId);
     } catch (error) {
       console.error(`Failed to delete session ${sessionId}:`, error);
     }
@@ -544,6 +771,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
       try {
         window.localStorage.removeItem(this.getSessionKey(summary.id));
         window.localStorage.removeItem(assumptionLedgerKey(summary.id));
+        removeSessionBackups(summary.id);
       } catch {
         // Ignore individual failures
       }
@@ -622,6 +850,30 @@ export const sessionStorage = new LocalStorageSessionStorage();
 // ============================================================================
 // Recovery Utilities
 // ============================================================================
+
+/**
+ * Roll back a migrated session to a prior stored backup version.
+ *
+ * Note: backups are written during `load()` when a migration/normalization occurs.
+ */
+export function rollbackSessionMigration(sessionId: string, toVersion: number): boolean {
+  if (typeof window === "undefined") return false;
+
+  const backup = window.localStorage.getItem(sessionBackupKey(sessionId, toVersion));
+  if (!backup) return false;
+
+  try {
+    window.localStorage.setItem(`${SESSION_KEY_PREFIX}${sessionId}`, backup);
+  } catch (error) {
+    throw new StorageError(
+      "Failed to restore session backup",
+      "QUOTA_EXCEEDED",
+      error
+    );
+  }
+
+  return true;
+}
 
 /**
  * Attempt to recover sessions from corrupted storage.
