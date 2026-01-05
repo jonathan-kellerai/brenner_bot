@@ -654,14 +654,14 @@ export function SessionList({ className, onSelect }: SessionListProps) {
       onSelect(sessionId);
     } else {
       const base = `/sessions/${sessionId}`;
+      const summary = sessionsById.get(sessionId);
+
+      if (summary?.phase === "complete") {
+        router.push(`${base}/brief`);
+        return;
+      }
+
       if (trimmedSearchQuery.length === 0) {
-        const summary = sessionsById.get(sessionId);
-
-        if (summary?.phase === "complete") {
-          router.push(`${base}/brief`);
-          return;
-        }
-
         const resume = resumeEntries[sessionId];
         if (resume?.location && resume.location !== "overview") {
           router.push(buildSessionPath(sessionId, resume.location));

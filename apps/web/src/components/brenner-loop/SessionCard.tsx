@@ -98,7 +98,7 @@ type SessionMatchLocation = "overview" | "hypothesis" | "evidence" | "operators"
 const MATCH_LOCATION_LABELS: Record<SessionMatchLocation, string> = {
   overview: "Overview",
   hypothesis: "Hypothesis",
-  evidence: "Evidence",
+  evidence: "Evidence Ledger",
   operators: "Operators",
   "test-queue": "Test Queue",
   agents: "Agents",
