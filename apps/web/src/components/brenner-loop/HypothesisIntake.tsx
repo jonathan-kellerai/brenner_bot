@@ -21,10 +21,19 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import type { HypothesisCard } from "@/lib/brenner-loop/hypothesis";
 import { createHypothesisCard, generateHypothesisCardId } from "@/lib/brenner-loop/hypothesis";
 import { upsertAssumptionLedger } from "@/lib/brenner-loop/storage";
 import { generateAssumptionId, type AssumptionCriticality } from "@/lib/schemas/assumption";
+import type { ExclusionTest, ExclusionTestCategory, TestFeasibility } from "@/lib/brenner-loop/operators/exclusion-test";
+import {
+  CATEGORY_DEFAULT_POWER,
+  EXCLUSION_TEST_CATEGORY_LABELS,
+  FEASIBILITY_LABELS,
+  generateTestId,
+} from "@/lib/brenner-loop/operators/exclusion-test";
+import { addManualQueueItem } from "@/lib/brenner-loop/test-queue";
 
 // ============================================================================
 // Types
@@ -74,6 +83,7 @@ export interface AssumptionDraft {
   statement: string;
   criticality: AssumptionCriticality;
   dependsOn: string[];
+  testDrafts: ExclusionTest[];
 }
 
 type IntakeStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -160,6 +170,7 @@ const buildAssumptionDraftsFromStatements = (
       statement,
       criticality: "important",
       dependsOn: [],
+      testDrafts: [],
     });
   }
   return drafts;
@@ -562,6 +573,90 @@ function AssumptionLadderInput({
   assumptions,
   onChange,
 }: AssumptionLadderInputProps) {
+  const [draftingAssumptionId, setDraftingAssumptionId] = React.useState<string | null>(null);
+  const [draftTest, setDraftTest] = React.useState<ExclusionTest | null>(null);
+  const [draftError, setDraftError] = React.useState<string | null>(null);
+
+  const startDraftTest = (assumption: AssumptionDraft) => {
+    setDraftError(null);
+    setDraftingAssumptionId(assumption.id);
+
+    const statement = assumption.statement.trim();
+    const label = statement.length > 0 ? statement.slice(0, 60) : assumption.id;
+
+    setDraftTest({
+      id: generateTestId(),
+      name: statement.length > 0 ? `Test: ${label}${statement.length > 60 ? "…" : ""}` : `Test ${assumption.id}`,
+      description: statement.length > 0 ? `Discriminative test for assumption: ${statement}` : "",
+      category: "custom",
+      discriminativePower: CATEGORY_DEFAULT_POWER.custom,
+      falsificationCondition: "",
+      supportCondition: "",
+      rationale: "",
+      feasibility: "medium",
+      isCustom: true,
+    });
+  };
+
+  const cancelDraftTest = () => {
+    setDraftingAssumptionId(null);
+    setDraftTest(null);
+    setDraftError(null);
+  };
+
+  const saveDraftTest = () => {
+    if (!draftingAssumptionId || !draftTest) return;
+
+    const name = draftTest.name.trim();
+    const support = draftTest.supportCondition.trim();
+    const falsification = draftTest.falsificationCondition.trim();
+    const rationale = draftTest.rationale.trim();
+
+    if (name.length === 0) {
+      setDraftError("Test name is required.");
+      return;
+    }
+    if (support.length === 0) {
+      setDraftError("Add what you’d expect to observe if the assumption is true.");
+      return;
+    }
+    if (falsification.length === 0) {
+      setDraftError("Add what would convince you the assumption is false.");
+      return;
+    }
+    if (rationale.length === 0) {
+      setDraftError("Add a short rationale for why this test is discriminative.");
+      return;
+    }
+
+    const cleaned: ExclusionTest = {
+      ...draftTest,
+      id: draftTest.id || generateTestId(),
+      name,
+      description: draftTest.description.trim(),
+      supportCondition: support,
+      falsificationCondition: falsification,
+      rationale,
+      feasibilityNotes: draftTest.feasibilityNotes?.trim() || undefined,
+      isCustom: true,
+    };
+
+    updateAssumption(draftingAssumptionId, (assumption) => {
+      const existing = Array.isArray(assumption.testDrafts) ? assumption.testDrafts : [];
+      const withoutDupes = existing.filter((t) => t.id !== cleaned.id);
+      return { ...assumption, testDrafts: [...withoutDupes, cleaned] };
+    });
+
+    cancelDraftTest();
+  };
+
+  const removeDraftTest = (assumptionId: string, testId: string) => {
+    updateAssumption(assumptionId, (assumption) => ({
+      ...assumption,
+      testDrafts: assumption.testDrafts.filter((test) => test.id !== testId),
+    }));
+  };
+
   const addAssumption = () => {
     const id = generateAssumptionId(sessionId, assumptions.map((assumption) => assumption.id));
     onChange([
@@ -571,6 +666,7 @@ function AssumptionLadderInput({
         statement: "",
         criticality: "important",
         dependsOn: [],
+        testDrafts: [],
       },
     ]);
   };
@@ -726,6 +822,192 @@ function AssumptionLadderInput({
                     </div>
                   )}
                 </div>
+              </div>
+
+              <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                      Assumption Tests
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Draft a discriminative test that could invalidate this assumption. Tests are added to the Test Queue after you finish intake.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    onClick={() => startDraftTest(assumption)}
+                  >
+                    <PlusIcon className="size-4" />
+                    <span className="ml-1">Draft test</span>
+                  </Button>
+                </div>
+
+                {assumption.testDrafts.length === 0 ? (
+                  <p className="text-xs text-muted-foreground italic">
+                    No tests drafted yet.
+                  </p>
+                ) : (
+                  <div className="space-y-2">
+                    {assumption.testDrafts.map((test) => (
+                      <div
+                        key={test.id}
+                        className="rounded-md border border-border bg-background px-3 py-2 flex items-start justify-between gap-3"
+                      >
+                        <div className="min-w-0">
+                          <div className="text-sm font-medium truncate">{test.name}</div>
+                          <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                            <span>{EXCLUSION_TEST_CATEGORY_LABELS[test.category]}</span>
+                            <span>Power: {test.discriminativePower}/5</span>
+                            <span className="capitalize">{test.feasibility}</span>
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => removeDraftTest(assumption.id, test.id)}
+                          aria-label={`Remove ${test.name}`}
+                        >
+                          <XMarkIcon className="size-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {draftingAssumptionId === assumption.id && draftTest && (
+                  <div className="rounded-lg border border-border bg-background p-4 space-y-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="text-sm font-semibold">Draft Test</div>
+                      <Button type="button" variant="ghost" size="sm" onClick={cancelDraftTest}>
+                        Cancel
+                      </Button>
+                    </div>
+
+                    {draftError && (
+                      <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 text-xs text-destructive">
+                        {draftError}
+                      </div>
+                    )}
+
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Category
+                        </Label>
+                        <select
+                          value={draftTest.category}
+                          onChange={(e) => {
+                            const category = e.target.value as ExclusionTestCategory;
+                            setDraftTest((prev) => prev ? ({
+                              ...prev,
+                              category,
+                              discriminativePower: CATEGORY_DEFAULT_POWER[category],
+                            }) : prev);
+                          }}
+                          className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                        >
+                          {Object.entries(EXCLUSION_TEST_CATEGORY_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                          Feasibility
+                        </Label>
+                        <select
+                          value={draftTest.feasibility}
+                          onChange={(e) => {
+                            const feasibility = e.target.value as TestFeasibility;
+                            setDraftTest((prev) => prev ? ({ ...prev, feasibility }) : prev);
+                          }}
+                          className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                        >
+                          {Object.entries(FEASIBILITY_LABELS).map(([value, label]) => (
+                            <option key={value} value={value}>
+                              {label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Test Name
+                      </Label>
+                      <Input
+                        value={draftTest.name}
+                        onChange={(e) => setDraftTest((prev) => prev ? ({ ...prev, name: e.target.value }) : prev)}
+                        placeholder="Short descriptive name"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Description (optional)
+                      </Label>
+                      <Textarea
+                        value={draftTest.description}
+                        onChange={(e) => setDraftTest((prev) => prev ? ({ ...prev, description: e.target.value }) : prev)}
+                        rows={2}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        If assumption is true… (support)
+                      </Label>
+                      <Textarea
+                        value={draftTest.supportCondition}
+                        onChange={(e) => setDraftTest((prev) => prev ? ({ ...prev, supportCondition: e.target.value }) : prev)}
+                        rows={2}
+                        placeholder="What would you expect to observe?"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        If assumption is false… (falsify)
+                      </Label>
+                      <Textarea
+                        value={draftTest.falsificationCondition}
+                        onChange={(e) => setDraftTest((prev) => prev ? ({ ...prev, falsificationCondition: e.target.value }) : prev)}
+                        rows={2}
+                        placeholder="What would force you to abandon the assumption?"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                        Rationale
+                      </Label>
+                      <Textarea
+                        value={draftTest.rationale}
+                        onChange={(e) => setDraftTest((prev) => prev ? ({ ...prev, rationale: e.target.value }) : prev)}
+                        rows={2}
+                        placeholder="Why is this test discriminative?"
+                      />
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button type="button" variant="outline" onClick={cancelDraftTest}>
+                        Cancel
+                      </Button>
+                      <Button type="button" onClick={saveDraftTest}>
+                        Save test
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="text-xs text-muted-foreground">
@@ -1107,6 +1389,7 @@ const normalizeAssumptionDrafts = (
       statement: draft.statement ?? "",
       criticality: draft.criticality ?? "important",
       dependsOn: draft.dependsOn ?? [],
+      testDrafts: Array.isArray(draft.testDrafts) ? draft.testDrafts : [],
     };
   });
 };
@@ -1260,6 +1543,49 @@ export function HypothesisIntake({
           persistAssumptionsToLedger(sessionId, assumptionDrafts);
         } catch (error) {
           console.error("Failed to persist assumption ledger:", error);
+        }
+      }
+
+      const draftedTests = assumptionDrafts.flatMap((assumption) =>
+        Array.isArray(assumption.testDrafts) ? assumption.testDrafts : []
+      );
+
+      if (draftedTests.length > 0) {
+        try {
+          for (const assumption of assumptionDrafts) {
+            for (const test of assumption.testDrafts) {
+              const cleaned: ExclusionTest = {
+                ...test,
+                id: test.id || generateTestId(),
+                name: test.name.trim(),
+                description: test.description.trim(),
+                falsificationCondition: test.falsificationCondition.trim(),
+                supportCondition: test.supportCondition.trim(),
+                rationale: test.rationale.trim(),
+                feasibilityNotes: test.feasibilityNotes?.trim() || undefined,
+                isCustom: true,
+              };
+
+              if (
+                cleaned.name.length === 0 ||
+                cleaned.supportCondition.length === 0 ||
+                cleaned.falsificationCondition.length === 0 ||
+                cleaned.rationale.length === 0
+              ) {
+                continue;
+              }
+
+              addManualQueueItem({
+                sessionId,
+                hypothesisId: id,
+                assumptionIds: [assumption.id],
+                test: cleaned,
+                source: "manual",
+              });
+            }
+          }
+        } catch (error) {
+          console.error("Failed to add assumption tests to Test Queue:", error);
         }
       }
       onAssumptionsCaptured?.(assumptionDrafts);

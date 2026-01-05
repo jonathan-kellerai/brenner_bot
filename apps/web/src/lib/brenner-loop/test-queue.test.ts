@@ -108,6 +108,45 @@ describe("test-queue", () => {
     expect(loaded).toHaveLength(2);
   });
 
+  it("defaults missing assumptionIds to an empty array", () => {
+    const legacyItem = {
+      id: "TQ-legacy",
+      sessionId,
+      hypothesisId,
+      test: makeExclusionTest({ id: "ET-legacy" }),
+      discriminativePower: 3,
+      status: "queued",
+      priority: "medium",
+      predictionIfTrue: "Supports",
+      predictionIfFalse: "Falsifies",
+      addedAt: new Date().toISOString(),
+      source: "manual",
+    };
+
+    localStorageMock.setItem(`brenner-test-queue-${sessionId}`, JSON.stringify([legacyItem]));
+    const loaded = loadTestQueue(sessionId);
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.assumptionIds).toEqual([]);
+  });
+
+  it("persists linked assumptions across reloads", () => {
+    const tests = [makeExclusionTest({ id: "ET-link", discriminativePower: 4 })];
+
+    const items = addExclusionTestsToQueue({
+      sessionId,
+      hypothesisId,
+      tests,
+      source: "exclusion_test",
+    });
+
+    const item = items[0];
+    updateQueueItem(sessionId, item.id, { assumptionIds: ["A-1", "A-2"] });
+
+    const loaded = loadTestQueue(sessionId);
+    expect(loaded).toHaveLength(1);
+    expect(loaded[0]?.assumptionIds).toEqual(["A-1", "A-2"]);
+  });
+
   it("locks predictions and prevents post-hoc edits", () => {
     const tests = [makeExclusionTest({ id: "ET-lock", discriminativePower: 4 })];
 
@@ -152,4 +191,3 @@ describe("test-queue", () => {
     expect(stats.byPriority.low).toBe(1);
   });
 });
-

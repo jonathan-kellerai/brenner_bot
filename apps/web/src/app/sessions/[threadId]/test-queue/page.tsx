@@ -30,6 +30,7 @@ import {
   getDiscriminativePowerStars,
   getFeasibilityColor,
 } from "@/lib/brenner-loop/operators/exclusion-test";
+import { loadAssumptionLedger, type AssumptionLedgerEntry } from "@/lib/brenner-loop/storage";
 import {
   addExclusionTestsToQueue,
   clearTestQueue,
@@ -133,11 +134,23 @@ export default function TestQueuePage() {
   const [selectedTestIds, setSelectedTestIds] = React.useState<Set<string>>(new Set());
   const [activeHypothesisId, setActiveHypothesisId] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  const [assumptionLedger, setAssumptionLedger] = React.useState<AssumptionLedgerEntry[]>([]);
 
   React.useEffect(() => {
     if (!queueSessionId) return;
     setItems(loadTestQueue(queueSessionId));
   }, [queueSessionId]);
+
+  React.useEffect(() => {
+    if (!queueSessionId) return;
+    setAssumptionLedger(loadAssumptionLedger(queueSessionId));
+  }, [queueSessionId]);
+
+  const assumptionById = React.useMemo(() => {
+    const map = new Map<string, AssumptionLedgerEntry>();
+    for (const entry of assumptionLedger) map.set(entry.id, entry);
+    return map;
+  }, [assumptionLedger]);
 
   const stats = React.useMemo(() => getTestQueueStats(items), [items]);
   const grouped = React.useMemo(() => groupByPriority(items), [items]);
@@ -447,6 +460,66 @@ export default function TestQueuePage() {
                           </CardHeader>
 
                           <CardContent className="space-y-5">
+                            {assumptionLedger.length > 0 && (
+                              <div className="space-y-2">
+                                <Label>Linked Assumptions</Label>
+                                {item.assumptionIds.length === 0 ? (
+                                  <p className="text-xs text-muted-foreground">
+                                    None yet. Link assumptions to make each test’s target explicit.
+                                  </p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-2">
+                                    {item.assumptionIds.map((assumptionId) => {
+                                      const entry = assumptionById.get(assumptionId);
+                                      return (
+                                        <Badge
+                                          key={assumptionId}
+                                          variant="outline"
+                                          className="max-w-full gap-2"
+                                        >
+                                          <span className="font-mono text-[11px]">{assumptionId}</span>
+                                          {entry?.statement && (
+                                            <span className="text-[11px] text-muted-foreground line-clamp-1">
+                                              {entry.statement}
+                                            </span>
+                                          )}
+                                        </Badge>
+                                      );
+                                    })}
+                                  </div>
+                                )}
+
+                                <details className="rounded-lg border border-border bg-muted/20 p-3">
+                                  <summary className="cursor-pointer text-xs font-medium text-muted-foreground">
+                                    Link / unlink assumptions
+                                  </summary>
+                                  <div className="mt-3 space-y-2">
+                                    {assumptionLedger.map((assumption) => (
+                                      <label key={assumption.id} className="flex items-start gap-2 text-sm">
+                                        <input
+                                          type="checkbox"
+                                          checked={item.assumptionIds.includes(assumption.id)}
+                                          onChange={() => {
+                                            const next = item.assumptionIds.includes(assumption.id)
+                                              ? item.assumptionIds.filter((id) => id !== assumption.id)
+                                              : [...item.assumptionIds, assumption.id];
+                                            setItems(updateQueueItem(queueSessionId, item.id, { assumptionIds: next }));
+                                          }}
+                                          className="mt-0.5 h-4 w-4 rounded border-border"
+                                        />
+                                        <span className="flex-1">
+                                          <span className="font-mono text-xs">{assumption.id}</span>
+                                          <span className="block text-xs text-muted-foreground line-clamp-2">
+                                            {assumption.statement}
+                                          </span>
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </details>
+                              </div>
+                            )}
+
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
                                 <Label>Prediction if True</Label>
@@ -596,4 +669,3 @@ export default function TestQueuePage() {
     </div>
   );
 }
-

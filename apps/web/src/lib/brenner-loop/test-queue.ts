@@ -40,6 +40,9 @@ export interface TestQueueItem {
   /** Hypothesis this test is meant to discriminate */
   hypothesisId: string;
 
+  /** Assumptions this test is meant to probe */
+  assumptionIds: string[];
+
   /** The test definition (from Exclusion Test ⊘) */
   test: ExclusionTest;
 
@@ -153,6 +156,11 @@ function coerceItem(raw: unknown): TestQueueItem | null {
   if (typeof r.id !== "string") return null;
   if (typeof r.sessionId !== "string") return null;
   if (typeof r.hypothesisId !== "string") return null;
+
+  const assumptionIds = Array.isArray(r.assumptionIds)
+    ? r.assumptionIds.filter((entry): entry is string => typeof entry === "string" && entry.length > 0)
+    : [];
+
   if (!r.test || typeof r.test !== "object") return null;
   const test = r.test as Record<string, unknown>;
   if (typeof test.id !== "string") return null;
@@ -179,6 +187,7 @@ function coerceItem(raw: unknown): TestQueueItem | null {
     id: r.id,
     sessionId: r.sessionId,
     hypothesisId: r.hypothesisId,
+    assumptionIds,
     test: r.test as ExclusionTest,
     discriminativePower: r.discriminativePower as TestQueueItem["discriminativePower"],
     status: r.status,
@@ -339,6 +348,7 @@ export function addExclusionTestsToQueue(args: {
       id,
       sessionId,
       hypothesisId,
+      assumptionIds: [],
       test,
       discriminativePower: test.discriminativePower,
       status: "queued",
@@ -358,17 +368,23 @@ export function addExclusionTestsToQueue(args: {
 export function addManualQueueItem(args: {
   sessionId: string;
   hypothesisId: string;
+  assumptionIds?: string[];
   test: ExclusionTest;
   source: TestQueueSource;
 }): TestQueueItem[] {
-  const { sessionId, hypothesisId, test, source } = args;
+  const { sessionId, hypothesisId, assumptionIds, test, source } = args;
   const existing = loadTestQueue(sessionId);
+  const existingIds = new Set(existing.map((item) => item.id));
   const now = new Date().toISOString();
+  const id = stableIdForExclusionTest(sessionId, test);
+
+  if (existingIds.has(id)) return existing;
 
   const item: TestQueueItem = {
-    id: generateQueueItemId(sessionId),
+    id,
     sessionId,
     hypothesisId,
+    assumptionIds: Array.isArray(assumptionIds) ? assumptionIds : [],
     test,
     discriminativePower: test.discriminativePower,
     status: "queued",
