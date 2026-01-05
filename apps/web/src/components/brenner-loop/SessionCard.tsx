@@ -30,6 +30,8 @@ export interface SessionCardProps {
   className?: string;
   isArchived?: boolean;
   archivedAt?: string;
+  highlightTokens?: string[];
+  matchLocations?: SessionMatchLocation[];
   onContinue?: (sessionId: string) => void;
   onDelete?: (sessionId: string) => void;
   onArchiveChange?: (sessionId: string, nextArchived: boolean) => void;
@@ -86,6 +88,43 @@ function getPhaseColor(phase: string): string {
     default:
       return "bg-muted text-muted-foreground border-border";
   }
+}
+
+type SessionMatchLocation = "overview" | "hypothesis" | "evidence" | "operators" | "test-queue" | "agents" | "brief";
+
+const MATCH_LOCATION_LABELS: Record<SessionMatchLocation, string> = {
+  overview: "Overview",
+  hypothesis: "Hypothesis",
+  evidence: "Evidence",
+  operators: "Operators",
+  "test-queue": "Test Queue",
+  agents: "Agents",
+  brief: "Brief",
+};
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function highlightText(text: string, tokens: string[]): React.ReactNode {
+  const cleanTokens = Array.from(new Set(tokens.map((token) => token.trim()).filter(Boolean)));
+  if (cleanTokens.length === 0) return text;
+
+  cleanTokens.sort((a, b) => b.length - a.length);
+  const regex = new RegExp(`(${cleanTokens.map(escapeRegExp).join("|")})`, "gi");
+  const parts = text.split(regex);
+
+  return parts.map((part, index) => {
+    const lower = part.toLowerCase();
+    const isMatch = cleanTokens.some((token) => token === lower);
+    if (!isMatch) return <React.Fragment key={index}>{part}</React.Fragment>;
+
+    return (
+      <mark key={index} className="rounded bg-primary/15 px-0.5 text-foreground">
+        {part}
+      </mark>
+    );
+  });
 }
 
 // ============================================================================
@@ -261,6 +300,8 @@ export function SessionCard({
   className,
   isArchived = false,
   archivedAt,
+  highlightTokens,
+  matchLocations,
   onContinue,
   onDelete,
   onArchiveChange,
@@ -272,6 +313,14 @@ export function SessionCard({
   const [isExporting, setIsExporting] = React.useState(false);
 
   const isComplete = session.phase === "complete";
+
+  const visibleMatchLocations = React.useMemo(() => {
+    if (!matchLocations || matchLocations.length === 0) return null;
+    const unique = Array.from(new Set(matchLocations));
+    const withoutOverview = unique.filter((location) => location !== "overview");
+    const display = withoutOverview.length > 0 ? withoutOverview : unique;
+    return display.map((location) => MATCH_LOCATION_LABELS[location] ?? location);
+  }, [matchLocations]);
 
   const handleContinue = () => {
     if (onContinue) {
@@ -351,8 +400,19 @@ export function SessionCard({
 
           {/* Hypothesis preview */}
           <div className="text-sm text-muted-foreground mb-3 line-clamp-2">
-            {session.hypothesis || "No hypothesis yet"}
+            {session.hypothesis && highlightTokens && highlightTokens.length > 0
+              ? highlightText(session.hypothesis, highlightTokens)
+              : (session.hypothesis || "No hypothesis yet")}
           </div>
+
+          {visibleMatchLocations && (
+            <div className="text-xs text-muted-foreground mb-3">
+              Matches in:{" "}
+              <span className="text-foreground font-medium">
+                {visibleMatchLocations.join(", ")}
+              </span>
+            </div>
+          )}
 
           {/* Badges row: phase, confidence */}
           <div className="flex flex-wrap items-center gap-2 mb-4">

@@ -17,6 +17,7 @@ import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
   sessionStorage,
   importSession,
@@ -203,6 +204,138 @@ function filterSessions(
 }
 
 // ============================================================================
+// Search
+// ============================================================================
+
+function tokenizeSearchQuery(query: string): string[] {
+  return query
+    .trim()
+    .toLowerCase()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+type SessionJumpTarget = "overview" | "hypothesis" | "evidence" | "operators" | "test-queue" | "agents" | "brief";
+
+function fieldContainsAnyToken(value: string | undefined, tokens: string[]): boolean {
+  if (!value || tokens.length === 0) return false;
+  const haystack = value.toLowerCase();
+  return tokens.some((token) => haystack.includes(token));
+}
+
+function matchesTokensAcrossFields(fields: Array<string | undefined>, tokens: string[]): boolean {
+  if (tokens.length === 0) return true;
+  const normalized = fields
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.toLowerCase());
+
+  return tokens.every((token) => normalized.some((value) => value.includes(token)));
+}
+
+function matchesSessionSummary(summary: SessionSummary, tokens: string[]): boolean {
+  return matchesTokensAcrossFields(
+    [summary.id, summary.hypothesis, summary.researchQuestion, summary.theme, summary.phase],
+    tokens
+  );
+}
+
+function valueContainsAnyToken(value: unknown, tokens: string[]): boolean {
+  if (tokens.length === 0) return false;
+  const seen = new WeakSet<object>();
+  const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 8 }];
+  let visits = 0;
+
+  while (stack.length > 0) {
+    if (++visits > 100_000) return false;
+
+    const current = stack.pop();
+    if (!current) return false;
+    const { value: node, depth } = current;
+    if (depth < 0) continue;
+
+    if (typeof node === "string") {
+      const haystack = node.toLowerCase();
+      if (tokens.some((token) => haystack.includes(token))) return true;
+      continue;
+    }
+
+    if (typeof node !== "object" || node === null) continue;
+
+    if (node instanceof Date) {
+      const haystack = node.toISOString().toLowerCase();
+      if (tokens.some((token) => haystack.includes(token))) return true;
+      continue;
+    }
+
+    if (seen.has(node)) continue;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) stack.push({ value: item, depth: depth - 1 });
+      continue;
+    }
+
+    for (const item of Object.values(node as Record<string, unknown>)) {
+      stack.push({ value: item, depth: depth - 1 });
+    }
+  }
+
+  return false;
+}
+
+function valueMatchesTokens(value: unknown, tokens: string[]): boolean {
+  if (tokens.length === 0) return true;
+  const remaining = new Set(tokens);
+  const seen = new WeakSet<object>();
+  const stack: Array<{ value: unknown; depth: number }> = [{ value, depth: 8 }];
+  let visits = 0;
+
+  const consume = (text: string) => {
+    const haystack = text.toLowerCase();
+    for (const token of Array.from(remaining)) {
+      if (haystack.includes(token)) remaining.delete(token);
+    }
+  };
+
+  while (stack.length > 0) {
+    if (remaining.size === 0) return true;
+    if (++visits > 100_000) break;
+
+    const current = stack.pop();
+    if (!current) break;
+    const { value: node, depth } = current;
+    if (depth < 0) continue;
+
+    if (typeof node === "string") {
+      if (node.trim().length > 0) consume(node);
+      continue;
+    }
+
+    if (typeof node !== "object" || node === null) continue;
+
+    if (node instanceof Date) {
+      consume(node.toISOString());
+      continue;
+    }
+
+    if (seen.has(node)) continue;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) stack.push({ value: item, depth: depth - 1 });
+      continue;
+    }
+
+    for (const item of Object.values(node as Record<string, unknown>)) {
+      stack.push({ value: item, depth: depth - 1 });
+    }
+  }
+
+  return remaining.size === 0;
+}
+
+// ============================================================================
 // Sort Button Component
 // ============================================================================
 
@@ -305,11 +438,18 @@ export function SessionList({ className, onSelect }: SessionListProps) {
   const [showClearArchivedModal, setShowClearArchivedModal] = React.useState(false);
   const [isClearingArchived, setIsClearingArchived] = React.useState(false);
   const inputRef = React.useRef<HTMLInputElement>(null);
+  const searchRunId = React.useRef(0);
 
   // Sorting & filtering state
   const [sortField, setSortField] = React.useState<SortField>("date");
   const [sortDirection, setSortDirection] = React.useState<SortDirection>("desc");
   const [statusFilter, setStatusFilter] = React.useState<StatusFilter>("all");
+
+  // Search state (local-only)
+  const [searchQuery, setSearchQuery] = React.useState("");
+  const [searchMatchIds, setSearchMatchIds] = React.useState<Set<string> | null>(null);
+  const [searchMatchLocations, setSearchMatchLocations] = React.useState<Record<string, SessionJumpTarget[]> | null>(null);
+  const [isSearching, setIsSearching] = React.useState(false);
 
   const refreshSessions = React.useCallback(async () => {
     const list = await sessionStorage.list();
@@ -351,6 +491,112 @@ export function SessionList({ className, onSelect }: SessionListProps) {
       return Date.parse(bAt) - Date.parse(aAt);
     });
   }, [sessions, archivedById]);
+
+  React.useEffect(() => {
+    const tokens = tokenizeSearchQuery(searchQuery);
+    searchRunId.current += 1;
+    const runId = searchRunId.current;
+
+    if (tokens.length === 0) {
+      setSearchMatchIds(null);
+      setSearchMatchLocations(null);
+      setIsSearching(false);
+      return;
+    }
+
+    setIsSearching(true);
+
+    const run = async () => {
+      const summaryMatches = new Set<string>();
+      const summaryLocations: Record<string, SessionJumpTarget[]> = {};
+
+      for (const summary of sessions) {
+        if (!matchesSessionSummary(summary, tokens)) continue;
+        summaryMatches.add(summary.id);
+
+        const locations = new Set<SessionJumpTarget>();
+
+        if (fieldContainsAnyToken(summary.hypothesis, tokens)) locations.add("hypothesis");
+        if (
+          fieldContainsAnyToken(summary.id, tokens) ||
+          fieldContainsAnyToken(summary.researchQuestion, tokens) ||
+          fieldContainsAnyToken(summary.theme, tokens) ||
+          fieldContainsAnyToken(summary.phase, tokens)
+        ) {
+          locations.add("overview");
+        }
+
+        if (locations.size === 0) locations.add("overview");
+        summaryLocations[summary.id] = Array.from(locations);
+      }
+
+      if (runId !== searchRunId.current) return;
+      setSearchMatchIds(summaryMatches);
+      setSearchMatchLocations(summaryLocations);
+
+      const allMatches = new Set(summaryMatches);
+      const allLocations: Record<string, SessionJumpTarget[]> = { ...summaryLocations };
+
+      for (const summary of sessions) {
+        if (runId !== searchRunId.current) return;
+
+        try {
+          const session = await sessionStorage.load(summary.id);
+          if (runId !== searchRunId.current) return;
+          if (!session) continue;
+          if (!valueMatchesTokens(session, tokens)) continue;
+
+          allMatches.add(summary.id);
+
+          const locations = new Set<SessionJumpTarget>(allLocations[summary.id] ?? []);
+
+          if (valueContainsAnyToken(session.hypothesisCards, tokens)) locations.add("hypothesis");
+          if (valueContainsAnyToken(session.evidenceLedger, tokens)) locations.add("evidence");
+          if (valueContainsAnyToken(session.operatorApplications, tokens)) locations.add("operators");
+
+          if (
+            valueContainsAnyToken(
+              {
+                pendingAgentRequests: session.pendingAgentRequests,
+                agentResponses: session.agentResponses,
+                synthesis: session.synthesis,
+              },
+              tokens
+            )
+          ) {
+            locations.add("agents");
+          }
+
+          if (valueContainsAnyToken(session.artifacts, tokens)) locations.add("brief");
+
+          if (locations.size === 0) locations.add("overview");
+          allLocations[summary.id] = Array.from(locations);
+        } catch {
+          // Ignore sessions that fail to load; list view should remain resilient.
+        }
+      }
+
+      if (runId !== searchRunId.current) return;
+      setSearchMatchIds(allMatches);
+      setSearchMatchLocations(allLocations);
+      setIsSearching(false);
+    };
+
+    void run();
+  }, [sessions, searchQuery]);
+
+  const trimmedSearchQuery = searchQuery.trim();
+  const searchTokens = React.useMemo(() => tokenizeSearchQuery(searchQuery), [searchQuery]);
+
+  const visibleActiveSessions = React.useMemo(() => {
+    if (!searchMatchIds) return activeSessions;
+    return activeSessions.filter((session) => searchMatchIds.has(session.id));
+  }, [activeSessions, searchMatchIds]);
+
+  const visibleArchivedSessions = React.useMemo(() => {
+    if (!searchMatchIds) return archivedSessions;
+    return archivedSessions.filter((session) => searchMatchIds.has(session.id));
+  }, [archivedSessions, searchMatchIds]);
 
   const handleImport = React.useCallback(async (file: File) => {
     setImportError(null);
@@ -396,7 +642,45 @@ export function SessionList({ className, onSelect }: SessionListProps) {
     if (onSelect) {
       onSelect(sessionId);
     } else {
-      router.push(`/sessions/${sessionId}`);
+      const base = `/sessions/${sessionId}`;
+      if (trimmedSearchQuery.length === 0) {
+        router.push(base);
+        return;
+      }
+
+      const locations = searchMatchLocations?.[sessionId] ?? [];
+      const priority: SessionJumpTarget[] = [
+        "evidence",
+        "hypothesis",
+        "operators",
+        "test-queue",
+        "agents",
+        "brief",
+        "overview",
+      ];
+      const target = priority.find((location) => locations.includes(location)) ?? "overview";
+
+      const path = (() => {
+        switch (target) {
+          case "hypothesis":
+            return `${base}/hypothesis`;
+          case "evidence":
+            return `${base}/evidence`;
+          case "operators":
+            return `${base}/operators`;
+          case "test-queue":
+            return `${base}/test-queue`;
+          case "agents":
+            return `${base}/agents`;
+          case "brief":
+            return `${base}/brief`;
+          case "overview":
+          default:
+            return base;
+        }
+      })();
+
+      router.push(path);
     }
   };
 
@@ -449,19 +733,19 @@ export function SessionList({ className, onSelect }: SessionListProps) {
 
   // Calculate counts for filter pills
   const counts = React.useMemo(() => {
-    const complete = activeSessions.filter((s) => s.phase === "complete").length;
+    const complete = visibleActiveSessions.filter((s) => s.phase === "complete").length;
     return {
-      all: activeSessions.length,
-      active: activeSessions.length - complete,
+      all: visibleActiveSessions.length,
+      active: visibleActiveSessions.length - complete,
       complete,
     };
-  }, [activeSessions]);
+  }, [visibleActiveSessions]);
 
   // Apply filter and sort
   const displayedSessions = React.useMemo(() => {
-    const filtered = filterSessions(activeSessions, statusFilter);
+    const filtered = filterSessions(visibleActiveSessions, statusFilter);
     return sortSessions(filtered, sortField, sortDirection);
-  }, [activeSessions, statusFilter, sortField, sortDirection]);
+  }, [visibleActiveSessions, statusFilter, sortField, sortDirection]);
 
   const storageSummary = React.useMemo(() => {
     if (!storageStats) return null;
@@ -571,6 +855,33 @@ export function SessionList({ className, onSelect }: SessionListProps) {
         </Card>
       )}
 
+      {/* Search */}
+      {sessions.length > 0 && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex flex-1 flex-wrap items-center gap-2">
+            <Input
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search sessions (hypotheses, evidence, notes)"
+              className="max-w-md"
+              aria-label="Search sessions"
+            />
+            {trimmedSearchQuery.length > 0 && (
+              <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")}>
+                Clear
+              </Button>
+            )}
+          </div>
+          {trimmedSearchQuery.length > 0 && (
+            <div className="text-xs text-muted-foreground">
+              {isSearching
+                ? "Searching…"
+                : `${visibleActiveSessions.length + visibleArchivedSessions.length} result(s)`}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Controls: Filter + Sort */}
       {activeSessions.length > 0 && (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -612,7 +923,11 @@ export function SessionList({ className, onSelect }: SessionListProps) {
             <CardContent className="py-8 text-center text-sm text-muted-foreground">
               {activeSessions.length === 0
                 ? "No local sessions yet. Import one to get started."
-                : "No sessions match the current filter."}
+                : trimmedSearchQuery.length > 0
+                  ? (visibleArchivedSessions.length > 0
+                      ? "No active sessions match your search."
+                      : "No sessions match your search.")
+                  : "No sessions match the current filter."}
             </CardContent>
           </Card>
         ) : (
@@ -620,6 +935,8 @@ export function SessionList({ className, onSelect }: SessionListProps) {
             <SessionCard
               key={session.id}
               session={session}
+              highlightTokens={trimmedSearchQuery.length > 0 ? searchTokens : undefined}
+              matchLocations={trimmedSearchQuery.length > 0 ? searchMatchLocations?.[session.id] : undefined}
               onContinue={handleContinue}
               onDelete={handleDelete}
               onArchiveChange={handleArchiveChange}
@@ -628,21 +945,30 @@ export function SessionList({ className, onSelect }: SessionListProps) {
         )}
       </div>
 
-      {archivedSessions.length > 0 && (
+      {visibleArchivedSessions.length > 0 && (
         <details className="rounded-2xl border border-border bg-muted/10 px-4 py-3">
           <summary className="cursor-pointer list-none flex items-center justify-between gap-3">
             <div className="text-sm font-semibold text-foreground">
-              Archived Sessions <span className="text-muted-foreground">({archivedSessions.length})</span>
+              Archived Sessions{" "}
+              <span className="text-muted-foreground">
+                ({visibleArchivedSessions.length}
+                {searchMatchIds && visibleArchivedSessions.length !== archivedSessions.length
+                  ? `/${archivedSessions.length}`
+                  : ""}
+                )
+              </span>
             </div>
             <span className="text-xs text-muted-foreground">Click to expand</span>
           </summary>
           <div className="mt-4 grid gap-3">
-            {archivedSessions.map((session) => (
+            {visibleArchivedSessions.map((session) => (
               <SessionCard
                 key={session.id}
                 session={session}
                 isArchived
                 archivedAt={archivedById.get(session.id)}
+                highlightTokens={trimmedSearchQuery.length > 0 ? searchTokens : undefined}
+                matchLocations={trimmedSearchQuery.length > 0 ? searchMatchLocations?.[session.id] : undefined}
                 onContinue={handleContinue}
                 onDelete={handleDelete}
                 onArchiveChange={handleArchiveChange}
