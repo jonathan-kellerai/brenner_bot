@@ -136,18 +136,18 @@ if (typeof window !== "undefined") {
     window.removeEventListener("storage", previousStorageHandler as (e: StorageEvent) => void);
   }
 
-	  const storageHandler = (e: StorageEvent) => {
-	    if (e.key === STORAGE_KEY && e.newValue) {
-	      try {
-	        const parsed = JSON.parse(e.newValue) as unknown;
-	        if (isRecord(parsed)) {
-	          readingStore.setState(() => ({ positions: sanitizePositions(parsed.positions) }));
-	        }
-	      } catch {
-	        // Ignore parse errors
-	      }
-	    }
-	  };
+  const storageHandler = (e: StorageEvent) => {
+    if (e.key === STORAGE_KEY && e.newValue) {
+      try {
+        const parsed = JSON.parse(e.newValue) as unknown;
+        if (isRecord(parsed)) {
+          readingStore.setState(() => ({ positions: sanitizePositions(parsed.positions) }));
+        }
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  };
 
   window.addEventListener("storage", storageHandler);
   (globalThis as unknown as Record<string, unknown>)[GLOBAL_STORAGE_HANDLER_KEY] = storageHandler;
