@@ -48,7 +48,11 @@ async function handleNavigate(request) {
     return response;
   } catch {
     const cached = await caches.match(request);
-    return cached || (await caches.match(OFFLINE_URL));
+    return (
+      cached ||
+      (await caches.match(OFFLINE_URL)) ||
+      new Response("Offline", { status: 504, headers: { "Content-Type": "text/plain" } })
+    );
   }
 }
 
@@ -61,7 +65,7 @@ async function handleAsset(request) {
     await cacheIfOk(request, response);
     return response;
   } catch {
-    return cached;
+    return new Response("", { status: 504, statusText: "Offline" });
   }
 }
 
