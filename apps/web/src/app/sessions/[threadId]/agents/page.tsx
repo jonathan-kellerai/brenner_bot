@@ -13,6 +13,8 @@ import * as React from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -266,10 +268,10 @@ function AgentCard({
 
       {/* Response Content */}
       {response ? (
-        <div className="p-4 bg-background">
-          <div className="prose prose-sm max-w-none dark:prose-invert">
-            <p className="text-foreground leading-relaxed">{response.content}</p>
-          </div>
+        <div className="p-4 bg-background prose prose-sm max-w-none dark:prose-invert">
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {response.content}
+          </ReactMarkdown>
 
           {/* Suggestions */}
           {response.suggestions && response.suggestions.length > 0 && (
@@ -558,6 +560,7 @@ export default function AgentsPage() {
     const url = new URL("/api/realtime", window.location.origin);
     url.searchParams.set("threadId", threadId);
     url.searchParams.set("pollIntervalMs", "2000");
+    url.searchParams.set("includeBodies", "1");
     // Start from 0 so the first thread_update includes existing messages too.
     url.searchParams.set("cursor", "0");
 
@@ -566,13 +569,23 @@ export default function AgentsPage() {
     const handleThreadUpdate = (event: MessageEvent) => {
       try {
         const payload = JSON.parse(String(event.data ?? "")) as {
-          newMessages?: Array<{ subject?: string; from?: string; created_ts?: string; reply_to?: number }>;
+          newMessages?: Array<{
+            subject?: string;
+            from?: string;
+            created_ts?: string;
+            reply_to?: number;
+            body_md?: string;
+          }>;
         };
 
         for (const message of payload.newMessages ?? []) {
           const subject = message.subject ?? "";
           const tag = extractAgentTag(subject);
           if (!tag || !agentIds.has(tag)) continue;
+          const timestamp = message.created_ts ? new Date(message.created_ts) : new Date();
+          const content = message.body_md?.trim()
+            ? message.body_md
+            : `Response received from ${message.from ?? "agent"}. Open the thread to view the full response.`;
 
           if (/^TRIBUNAL\[/i.test(subject)) {
             if (typeof message.reply_to === "number") {
@@ -582,16 +595,15 @@ export default function AgentsPage() {
                 [tag]: AGENT_PROGRESS_STEPS.length - 1,
               }));
               setResponses((prev) => {
-                if (prev.some((response) => response.agentId === tag)) return prev;
-                const timestamp = message.created_ts ? new Date(message.created_ts) : new Date();
-                return [
-                  ...prev,
-                  {
-                    agentId: tag,
-                    content: `Response received from ${message.from ?? "agent"}. Open the thread to view the full response.`,
-                    timestamp,
-                  },
-                ];
+                const existingIndex = prev.findIndex((response) => response.agentId === tag);
+                if (existingIndex >= 0) {
+                  const existing = prev[existingIndex];
+                  if (!message.body_md) return prev;
+                  const updated = [...prev];
+                  updated[existingIndex] = { ...existing, content, timestamp };
+                  return updated;
+                }
+                return [...prev, { agentId: tag, content, timestamp }];
               });
               continue;
             }
@@ -613,16 +625,15 @@ export default function AgentsPage() {
               [tag]: AGENT_PROGRESS_STEPS.length - 1,
             }));
             setResponses((prev) => {
-              if (prev.some((response) => response.agentId === tag)) return prev;
-              const timestamp = message.created_ts ? new Date(message.created_ts) : new Date();
-              return [
-                ...prev,
-                {
-                  agentId: tag,
-                  content: `Response received from ${message.from ?? "agent"}. Open the thread to view the full response.`,
-                  timestamp,
-                },
-              ];
+              const existingIndex = prev.findIndex((response) => response.agentId === tag);
+              if (existingIndex >= 0) {
+                const existing = prev[existingIndex];
+                if (!message.body_md) return prev;
+                const updated = [...prev];
+                updated[existingIndex] = { ...existing, content, timestamp };
+                return updated;
+              }
+              return [...prev, { agentId: tag, content, timestamp }];
             });
           }
         }

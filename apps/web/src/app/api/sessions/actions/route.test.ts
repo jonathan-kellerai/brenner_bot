@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolve, win32 } from "node:path";
 import {
   AgentMailTestServer,
   createMockRequest,
@@ -18,6 +19,11 @@ vi.mock("@/lib/auth", () => ({
 
 import { POST } from "./route";
 
+const normalizeProjectKey = (value: string): string => {
+  const isWindowsPath = win32.isAbsolute(value) && !value.startsWith("/");
+  return isWindowsPath ? win32.normalize(value) : resolve(value);
+};
+
 describe("POST /api/sessions/actions", () => {
   let server: AgentMailTestServer;
   let originalEnv: Record<string, string | undefined>;
@@ -35,6 +41,7 @@ describe("POST /api/sessions/actions", () => {
 
   beforeEach(() => {
     server.reset();
+    process.env.BRENNER_PROJECT_KEY = "/test/project";
   });
 
   afterEach(() => {
@@ -287,10 +294,11 @@ describe("POST /api/sessions/actions", () => {
   describe("project key handling", () => {
     it("defaults to BRENNER_PROJECT_KEY when body.projectKey is omitted", async () => {
       process.env.BRENNER_PROJECT_KEY = "/abs/from/env";
+      const normalizedProjectKey = normalizeProjectKey("/abs/from/env");
 
       // Seed thread in the env-specified project
       server.seedThread({
-        projectKey: "/abs/from/env",
+        projectKey: normalizedProjectKey,
         threadId: "TEST-ENV",
         messages: [
           {
@@ -326,7 +334,7 @@ describe("POST /api/sessions/actions", () => {
       expect(response.status).toBe(200);
 
       // Verify project was used from env var
-      const project = server.getProject("/abs/from/env");
+      const project = server.getProject(normalizedProjectKey);
       expect(project).toBeDefined();
     });
   });

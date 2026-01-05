@@ -153,6 +153,7 @@ const ROLE_SHORTHAND_MAP: Record<string, BrennerRole> = {
 const SUBJECT_PATTERNS = {
   kickoff: /^(KICKOFF:|\[[^\]]+\]\s+Brenner Loop kickoff\b)/i,
   delta: /^DELTA\[([^\]]+)\]:/i,
+  tribunal: /^TRIBUNAL\[[^\]]+\]:/i,
   compiled: /^COMPILED:/i,
   critique: /^CRITIQUE:/i,
   ack: /^ACK:/i,
@@ -184,6 +185,7 @@ export function parseSubjectType(
   type:
     | "kickoff"
     | "delta"
+    | "tribunal"
     | "compiled"
     | "critique"
     | "ack"
@@ -210,7 +212,7 @@ export function parseSubjectType(
   for (const [type, pattern] of Object.entries(SUBJECT_PATTERNS)) {
     if (type === "delta") continue; // Already handled
     if (pattern.test(trimmed)) {
-      return { type: type as "kickoff" | "compiled" | "critique" | "ack" | "claim" | "handoff" | "blocked" | "question" | "info" };
+      return { type: type as "kickoff" | "tribunal" | "compiled" | "critique" | "ack" | "claim" | "handoff" | "blocked" | "question" | "info" };
     }
   }
 

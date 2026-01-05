@@ -105,6 +105,11 @@ describe("parseSubjectType", () => {
     expect(result.shorthand).toBe("adversarial_critic");
   });
 
+  it("parses TRIBUNAL subjects", () => {
+    const result = parseSubjectType("TRIBUNAL[devils_advocate]: H-1023");
+    expect(result.type).toBe("tribunal");
+  });
+
   it("parses COMPILED subjects", () => {
     const result = parseSubjectType("COMPILED: v3 artifact with contributions");
     expect(result.type).toBe("compiled");
@@ -133,6 +138,7 @@ describe("parseSubjectType", () => {
   it("is case-insensitive for prefixes", () => {
     expect(parseSubjectType("kickoff: test").type).toBe("kickoff");
     expect(parseSubjectType("DELTA[OPUS]: test").type).toBe("delta");
+    expect(parseSubjectType("tribunal[statistician]: test").type).toBe("tribunal");
     expect(parseSubjectType("Compiled: test").type).toBe("compiled");
   });
 });

@@ -96,6 +96,23 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function resolveProjectKey(rawProjectKey?: string): { ok: true; projectKey: string } | { ok: false; error: string; code: "VALIDATION_ERROR" | "SERVER_ERROR" } {
+  const fallback = process.env.BRENNER_PROJECT_KEY || repoRootFromWebCwd();
+  const trimmed = rawProjectKey?.trim();
+  const candidate = trimmed && trimmed.length > 0 ? trimmed : fallback;
+  const isAbs = isAbsolute(candidate) || win32.isAbsolute(candidate);
+  if (!isAbs) {
+    return {
+      ok: false,
+      error: trimmed ? "Invalid projectKey: must be an absolute path" : "Server misconfigured: BRENNER_PROJECT_KEY must be absolute",
+      code: trimmed ? "VALIDATION_ERROR" : "SERVER_ERROR",
+    };
+  }
+  const isWindowsPath = win32.isAbsolute(candidate) && !candidate.startsWith("/");
+  const projectKey = isWindowsPath ? win32.normalize(candidate) : resolve(candidate);
+  return { ok: true, projectKey };
+}
+
 function parseEnsureProjectSlug(result: unknown): string | null {
   if (!isRecord(result)) return null;
 
@@ -305,15 +322,10 @@ async function ensureProjectAndRegisterSender(args: {
 }): Promise<ErrorResponse | null> {
   const { client, projectKey, sender, taskDescription } = args;
 
-  // Ensure project exists (tools expect project_key to be the human_key / absolute path).
-  // NOTE: Treat Windows absolute paths as absolute even on non-Windows runtimes.
-  const isAbsoluteProjectKey = isAbsolute(projectKey) || win32.isAbsolute(projectKey);
-  if (isAbsoluteProjectKey) {
-    const ensured = await client.toolsCall("ensure_project", { human_key: projectKey });
-    const ensuredSlug = parseEnsureProjectSlug(ensured);
-    if (!ensuredSlug) {
-      return { success: false, error: "Agent Mail: could not resolve project slug", code: "NETWORK_ERROR" };
-    }
+  const ensured = await client.toolsCall("ensure_project", { human_key: projectKey });
+  const ensuredSlug = parseEnsureProjectSlug(ensured);
+  if (!ensuredSlug) {
+    return { success: false, error: "Agent Mail: could not resolve project slug", code: "NETWORK_ERROR" };
   }
 
   await client.toolsCall("register_agent", {
@@ -371,7 +383,14 @@ export async function POST(
   }
 
   const threadId = body.threadId.trim();
-  const projectKey = body.projectKey || process.env.BRENNER_PROJECT_KEY || repoRootFromWebCwd();
+  const projectKeyResult = resolveProjectKey(body.projectKey);
+  if (!projectKeyResult.ok) {
+    return NextResponse.json(
+      { success: false, error: projectKeyResult.error, code: projectKeyResult.code },
+      { status: projectKeyResult.code === "VALIDATION_ERROR" ? 400 : 500 }
+    );
+  }
+  const projectKey = projectKeyResult.projectKey;
 
   if (action === "compile") {
     const compiled = await compileThread({ projectKey, threadId });

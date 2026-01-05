@@ -1,4 +1,5 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
+import { resolve, win32 } from "node:path";
 import {
   AgentMailTestServer,
   createMockRequest,
@@ -23,6 +24,11 @@ vi.mock("@/lib/prompts", () => ({
 
 import { POST } from "./route";
 
+const normalizeProjectKey = (value: string): string => {
+  const isWindowsPath = win32.isAbsolute(value) && !value.startsWith("/");
+  return isWindowsPath ? win32.normalize(value) : resolve(value);
+};
+
 describe("POST /api/sessions", () => {
   let server: AgentMailTestServer;
   let originalEnv: Record<string, string | undefined>;
@@ -40,6 +46,7 @@ describe("POST /api/sessions", () => {
 
   beforeEach(() => {
     server.reset();
+    process.env.BRENNER_PROJECT_KEY = "/test/project";
   });
 
   afterEach(() => {
@@ -96,12 +103,13 @@ describe("POST /api/sessions", () => {
     expect(json).toMatchObject({ success: true, threadId: "TEST-ABS" });
 
     // Verify project was created in test server
-    const project = server.getProject(projectKey);
+    const normalizedProjectKey = normalizeProjectKey(projectKey);
+    const project = server.getProject(normalizedProjectKey);
     expect(project).toBeDefined();
-    expect(project?.human_key).toBe(projectKey);
+    expect(project?.human_key).toBe(normalizedProjectKey);
 
     // Verify sender agent was registered (recipients are auto-registered)
-    const agents = server.getProjectAgents(projectKey);
+    const agents = server.getProjectAgents(normalizedProjectKey);
     expect(agents.length).toBeGreaterThanOrEqual(1);
     const operatorAgent = agents.find((a) => a.name === "Operator");
     expect(operatorAgent).toBeDefined();
@@ -113,9 +121,7 @@ describe("POST /api/sessions", () => {
     expect(messages[0].subject).toContain("KICKOFF");
   });
 
-  it("handles relative projectKey without calling ensure_project explicitly", async () => {
-    // For relative paths, route skips calling ensure_project explicitly
-    // but still sends messages (project is auto-created by test server)
+  it("rejects relative projectKey", async () => {
     const response = await POST(
       createMockRequest({
         method: "POST",
@@ -129,14 +135,13 @@ describe("POST /api/sessions", () => {
       })
     );
 
-    expect(response.status).toBe(200);
+    expect(response.status).toBe(400);
     const json = await response.json();
-    expect(json).toMatchObject({ success: true, threadId: "TEST-REL" });
-
-    // Message should be sent successfully
-    const messages = server.getMessagesTo("Claude");
-    expect(messages).toHaveLength(1);
-    expect(messages[0].thread_id).toBe("TEST-REL");
+    expect(json).toMatchObject({
+      success: false,
+      code: "VALIDATION_ERROR",
+      error: "Invalid projectKey: must be an absolute path",
+    });
   });
 
   it("defaults to BRENNER_PROJECT_KEY when body.projectKey is omitted", async () => {
@@ -159,7 +164,8 @@ describe("POST /api/sessions", () => {
     expect(json).toMatchObject({ success: true, threadId: "TEST-ENV" });
 
     // Verify project was created from env var
-    const project = server.getProject("/abs/from/env");
+    const normalizedProjectKey = normalizeProjectKey("/abs/from/env");
+    const project = server.getProject(normalizedProjectKey);
     expect(project).toBeDefined();
 
     // Verify message was sent
