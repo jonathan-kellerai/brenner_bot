@@ -9,3 +9,4 @@ export { RefreshControls } from "./RefreshControls";
 export { SessionActions } from "./SessionActions";
 export { OperatorSelector, DEFAULT_OPERATORS, type OperatorSelection } from "./OperatorSelector";
 export { RosterAssignment, applyDefaultRoles, type RosterEntry } from "./RosterAssignment";
+export { FirstRunOnboarding } from "./FirstRunOnboarding";

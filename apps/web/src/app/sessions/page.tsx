@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
-import { RefreshControls } from "@/components/sessions";
+import { FirstRunOnboarding, RefreshControls } from "@/components/sessions";
 import { SessionList } from "@/components/brenner-loop";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
@@ -154,22 +154,110 @@ function LockedState({ reason }: { reason: string }) {
 
 function EmptyState() {
   return (
-    <div className="max-w-2xl mx-auto animate-fade-in-up">
-      <div className="rounded-2xl border border-dashed border-border bg-muted/20 p-12 text-center">
-        <div className="flex items-center justify-center size-16 mx-auto mb-4 rounded-xl bg-muted/50 animate-float-slow">
-          <InboxIcon className="size-8 text-muted-foreground" />
+    <div className="max-w-3xl mx-auto space-y-6 animate-fade-in-up">
+      <FirstRunOnboarding />
+
+      <div className="rounded-2xl border border-border bg-card p-8">
+        <div className="flex items-start gap-4">
+          <div className="flex items-center justify-center size-12 rounded-xl bg-primary/10 border border-primary/20 text-primary">
+            <InboxIcon className="size-6" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold tracking-tight text-foreground">Welcome — start your first session</h2>
+            <p className="text-sm text-muted-foreground max-w-2xl">
+              Sessions are where you apply the <Jargon term="brenner-loop">Brenner Loop</Jargon> to a real question: generate hypotheses,
+              demand <Jargon term="discriminative-experiment">discriminative</Jargon> tests, and keep an evidence-linked audit trail.
+            </p>
+          </div>
         </div>
-        <h2 className="text-lg font-semibold text-foreground mb-2">No sessions yet</h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
-          Start a new <Jargon term="brenner-loop">Brenner Loop</Jargon> research session to kick off a collaborative <Jargon term="discriminative-experiment">discriminative</Jargon> discussion.
-        </p>
-        <Link
-          href="/sessions/new"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-primary text-primary-foreground text-sm font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 active:scale-[0.98] transition-all touch-manipulation focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
-        >
-          <PlusIcon className="size-4" />
-          New Session
-        </Link>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          <Link
+            href="/sessions/new"
+            className="group rounded-xl border border-border bg-background p-4 hover:border-primary/30 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">Start a new session</div>
+                <div className="text-xs text-muted-foreground mt-1">Create a thread and run intake → operators → synthesis.</div>
+              </div>
+              <ChevronRightIcon className="size-4 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-colors" />
+            </div>
+          </Link>
+
+          <Link
+            href="/tutorial/quick-start"
+            className="group rounded-xl border border-border bg-background p-4 hover:border-primary/30 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">Quick Start tutorial</div>
+                <div className="text-xs text-muted-foreground mt-1">~30 minutes. Minimal setup.</div>
+              </div>
+              <ChevronRightIcon className="size-4 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-colors" />
+            </div>
+          </Link>
+
+          <Link
+            href="/distillations"
+            className="group rounded-xl border border-border bg-background p-4 hover:border-primary/30 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">Read the distillations</div>
+                <div className="text-xs text-muted-foreground mt-1">Three model syntheses of the method.</div>
+              </div>
+              <ChevronRightIcon className="size-4 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-colors" />
+            </div>
+          </Link>
+
+          <Link
+            href="/corpus"
+            className="group rounded-xl border border-border bg-background p-4 hover:border-primary/30 hover:bg-muted/30 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <div className="font-medium text-foreground">Browse the corpus</div>
+                <div className="text-xs text-muted-foreground mt-1">Transcript, quote bank, and specs.</div>
+              </div>
+              <ChevronRightIcon className="size-4 text-muted-foreground opacity-60 group-hover:opacity-100 group-hover:text-primary transition-colors" />
+            </div>
+          </Link>
+        </div>
+
+        <div className="mt-6 grid gap-3">
+          <details className="rounded-xl border border-border bg-muted/20 p-4">
+            <summary className="cursor-pointer select-none font-medium text-foreground">
+              What is the Brenner Loop?
+            </summary>
+            <div className="mt-3 text-sm text-muted-foreground space-y-2">
+              <p>
+                A workflow for turning vague questions into falsifiable claims — and then systematically trying to kill those claims.
+              </p>
+              <ul className="list-disc pl-5 space-y-1">
+                <li>Make the hypothesis explicit (claim + mechanism).</li>
+                <li>Force discriminative predictions (what would prove you wrong?).</li>
+                <li>Generate tests ranked by discriminative power.</li>
+                <li>Record evidence and update confidence transparently.</li>
+              </ul>
+            </div>
+          </details>
+
+          <details className="rounded-xl border border-border bg-muted/20 p-4">
+            <summary className="cursor-pointer select-none font-medium text-foreground">
+              Quick Start vs Multi-Agent?
+            </summary>
+            <div className="mt-3 text-sm text-muted-foreground space-y-2">
+              <p>
+                Quick Start is fastest. Multi-Agent is most powerful — it orchestrates different agent roles via Agent Mail to produce
+                merged artifacts with explicit deltas.
+              </p>
+              <p className="text-xs">
+                If you’re new, start with Quick Start. If you’re comfortable with orchestration, try Multi-Agent.
+              </p>
+            </div>
+          </details>
+        </div>
       </div>
     </div>
   );
