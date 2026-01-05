@@ -59,6 +59,10 @@ function storageKey(threadId: string): string {
   return `brenner-objection-register:${threadId}`;
 }
 
+function snapshotKey(threadId: string): string {
+  return `brenner-objection-register-snapshot:${threadId}`;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -96,6 +100,15 @@ function saveStatuses(threadId: string, statuses: Record<string, ObjectionStatus
     window.localStorage.setItem(storageKey(threadId), JSON.stringify(statuses));
   } catch {
     // Best-effort: localStorage quota / privacy mode should not break the page.
+  }
+}
+
+function saveObjectionSnapshot(threadId: string, objections: ExtractedObjection[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(snapshotKey(threadId), JSON.stringify(objections));
+  } catch {
+    // Best-effort: snapshot is helpful but should never block the page.
   }
 }
 
@@ -227,6 +240,10 @@ export function ObjectionRegisterPanel({ threadId, messages, className }: Object
   const objections = React.useMemo(() => extractTribunalObjections(messages).sort(sortObjections), [messages]);
 
   const [statusById, setStatusById] = React.useState<Record<string, ObjectionStatus>>(() => loadStatuses(threadId));
+
+  React.useEffect(() => {
+    saveObjectionSnapshot(threadId, objections);
+  }, [threadId, objections]);
 
   React.useEffect(() => {
     setStatusById(loadStatuses(threadId));

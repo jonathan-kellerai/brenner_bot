@@ -344,11 +344,34 @@ describe("research-brief-template", () => {
     const filled = renderResearchBriefTemplate({
       metadata: { sessionId: "S-1", finalConfidence: 72, brennerCitations: ["§42"] },
       executiveSummary: "Summary",
+      objectionRegister: {
+        objections: [
+          {
+            id: "123:0",
+            type: "reverse_causation",
+            severity: "fatal",
+            status: "open",
+            summary: "Reverse causation is plausible.",
+            source: { agentName: "DevilBot", role: "devils_advocate", messageId: 123 },
+          },
+          {
+            id: "124:0",
+            type: "missing_evidence",
+            severity: "moderate",
+            status: "addressed",
+            summary: "Claim needs evidence.",
+            source: { agentName: "StatsBot", role: "statistician", messageId: 124 },
+          },
+        ],
+      },
       recommendedNextSteps: ["Run the discriminative test", "Update confidence"],
     });
     expect(filled).toContain("session_id: S-1");
     expect(filled).toContain("final_confidence: 72%");
     expect(filled).toContain("- §42");
+    expect(filled).toContain("## Objection Register");
+    expect(filled).toContain("Unresolved objections:** 1");
+    expect(filled).toContain("[Open]");
     expect(filled).toContain("1. Run the discriminative test");
   });
 });

@@ -123,7 +123,7 @@ interface ExportFormat {
   available: boolean;
 }
 
-const BRIEF_SECTIONS: BriefSection[] = [
+const BASE_BRIEF_SECTIONS: BriefSection[] = [
   {
     id: "hypothesis_slate",
     title: "Hypothesis Slate",
@@ -468,6 +468,206 @@ function formatRelativeTime(timestampMs: number, nowMs: number): string {
   return `${days} day${days === 1 ? "" : "s"} ago`;
 }
 
+type ObjectionStatus =
+  | "open"
+  | "acknowledged"
+  | "testing"
+  | "addressed"
+  | "accepted"
+  | "dismissed";
+
+type ObjectionSnapshot = {
+  id: string;
+  type?: string;
+  severity?: string;
+  summary?: string;
+  source?: {
+    agentName?: string | null;
+    role?: string | null;
+    messageId?: number;
+    createdAt?: string;
+    subject?: string;
+  };
+};
+
+const FORBIDDEN_RECORD_KEYS = new Set(["__proto__", "prototype", "constructor"]);
+
+const OBJECTION_STATUS_LABELS: Record<ObjectionStatus, string> = {
+  open: "Open",
+  acknowledged: "Acknowledged",
+  testing: "Testing",
+  addressed: "Addressed",
+  accepted: "Accepted",
+  dismissed: "Dismissed",
+};
+
+const RESOLVED_OBJECTION_STATUSES = new Set<ObjectionStatus>(["addressed", "accepted", "dismissed"]);
+
+const objectionStatusKey = (threadId: string): string => `brenner-objection-register:${threadId}`;
+
+const objectionSnapshotKey = (threadId: string): string => `brenner-objection-register-snapshot:${threadId}`;
+
+const isRecord = (value: unknown): value is Record<string, unknown> => {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+};
+
+const isObjectionStatus = (value: unknown): value is ObjectionStatus =>
+  typeof value === "string" && value in OBJECTION_STATUS_LABELS;
+
+const loadObjectionStatuses = (threadId: string): Record<string, ObjectionStatus> => {
+  if (typeof window === "undefined") return Object.create(null);
+  try {
+    const raw = window.localStorage.getItem(objectionStatusKey(threadId));
+    if (!raw) return Object.create(null);
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!isRecord(parsed)) return Object.create(null);
+
+    const out: Record<string, ObjectionStatus> = Object.create(null);
+    for (const [key, value] of Object.entries(parsed)) {
+      if (FORBIDDEN_RECORD_KEYS.has(key)) continue;
+      if (!isObjectionStatus(value)) continue;
+      out[key] = value;
+    }
+
+    return out;
+  } catch {
+    return Object.create(null);
+  }
+};
+
+const loadObjectionSnapshot = (threadId: string): ObjectionSnapshot[] => {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(objectionSnapshotKey(threadId));
+    if (!raw) return [];
+
+    const parsed = JSON.parse(raw) as unknown;
+    if (!Array.isArray(parsed)) return [];
+
+    const out: ObjectionSnapshot[] = [];
+    for (const entry of parsed) {
+      if (!isRecord(entry)) continue;
+
+      const id = typeof entry.id === "string" ? entry.id : "";
+      if (!id || FORBIDDEN_RECORD_KEYS.has(id)) continue;
+
+      const type = typeof entry.type === "string" ? entry.type : undefined;
+      const severity = typeof entry.severity === "string" ? entry.severity : undefined;
+      const summary = typeof entry.summary === "string" ? entry.summary : undefined;
+      const source = isRecord(entry.source) ? entry.source : undefined;
+
+      out.push({
+        id,
+        type,
+        severity,
+        summary,
+        source: source
+          ? {
+              agentName: typeof source.agentName === "string" ? source.agentName : null,
+              role: typeof source.role === "string" ? source.role : null,
+              messageId: typeof source.messageId === "number" ? source.messageId : undefined,
+              createdAt: typeof source.createdAt === "string" ? source.createdAt : undefined,
+              subject: typeof source.subject === "string" ? source.subject : undefined,
+            }
+          : undefined,
+      });
+    }
+
+    return out;
+  } catch {
+    return [];
+  }
+};
+
+const formatObjectionListItem = (objection: ObjectionSnapshot, status: ObjectionStatus): string => {
+  const statusLabel = OBJECTION_STATUS_LABELS[status] ?? status;
+  const typeLabel = objection.type ? objection.type.replace(/_/g, " ") : "objection";
+  const severityLabel = objection.severity ? objection.severity.toUpperCase() : "MODERATE";
+  const sourceLabel =
+    objection.source?.role?.trim() ||
+    objection.source?.agentName?.trim() ||
+    (typeof objection.source?.messageId === "number" ? `msg ${objection.source.messageId}` : "");
+  const sourceSuffix = sourceLabel ? ` — ${sourceLabel}` : "";
+  const summary = objection.summary?.trim() || `Objection ${objection.id}`;
+
+  return `[${statusLabel}] (${severityLabel}) ${typeLabel}: ${summary}${sourceSuffix}`;
+};
+
+const buildObjectionRegisterBriefSection = (threadId: string): BriefSection | null => {
+  const snapshot = loadObjectionSnapshot(threadId);
+  const statuses = loadObjectionStatuses(threadId);
+
+  const fallbackIds = Object.keys(statuses).filter((id) => id && !FORBIDDEN_RECORD_KEYS.has(id));
+  const ids = snapshot.length > 0 ? snapshot.map((o) => o.id) : fallbackIds;
+  if (ids.length === 0) return null;
+
+  const items: string[] = [];
+  let unresolvedCount = 0;
+
+  for (const id of ids) {
+    const status = statuses[id] ?? "open";
+    if (!RESOLVED_OBJECTION_STATUSES.has(status)) unresolvedCount += 1;
+    const objection = snapshot.find((o) => o.id === id) ?? { id };
+    items.push(formatObjectionListItem(objection, status));
+  }
+
+  const total = ids.length;
+  const status: BriefSection["status"] =
+    unresolvedCount === 0 ? "complete" : unresolvedCount === total ? "pending" : "partial";
+
+  return {
+    id: "objection_register",
+    title: "Objection Register",
+    icon: <span className="text-lg">⚠️</span>,
+    color: "text-rose-500",
+    bgColor: "bg-rose-500/10",
+    status,
+    items,
+    summary: `${unresolvedCount} unresolved / ${total} total objections`,
+  };
+};
+
+const renderBriefMarkdown = (params: { threadId: string; generatedAt: string; qualityScore: number; sections: BriefSection[] }): string => {
+  const { threadId, generatedAt, qualityScore, sections } = params;
+  const lines: string[] = [];
+
+  lines.push("# Research Brief");
+  lines.push("");
+  lines.push(`- Thread ID: ${threadId}`);
+  lines.push(`- Generated at: ${generatedAt}`);
+  lines.push(`- Quality score: ${qualityScore}%`);
+  lines.push("");
+
+  for (const section of sections) {
+    lines.push(`## ${section.title}`);
+    if (section.summary) {
+      lines.push("");
+      lines.push(section.summary);
+    }
+    lines.push("");
+
+    if (section.items.length > 0) {
+      section.items.forEach((item) => lines.push(`- ${item}`));
+    } else {
+      lines.push("- _No items recorded._");
+    }
+    lines.push("");
+  }
+
+  return lines.join("\n").trimEnd() + "\n";
+};
+
+const downloadTextFile = (filename: string, content: string, mime: string): void => {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+};
+
 // ============================================================================
 // Main Page
 // ============================================================================
@@ -487,6 +687,7 @@ export default function BriefPage() {
   const [lastUpdatedAt, setLastUpdatedAt] = useState(() => Date.now());
   const [now, setNow] = useState(() => Date.now());
   const [isRefreshing, startRefresh] = useTransition();
+  const [objectionSection, setObjectionSection] = useState<BriefSection | null>(null);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -507,16 +708,71 @@ export default function BriefPage() {
     });
   };
 
+  useEffect(() => {
+    setObjectionSection(buildObjectionRegisterBriefSection(threadId));
+  }, [threadId]);
+
+  const briefSections = objectionSection ? [...BASE_BRIEF_SECTIONS, objectionSection] : BASE_BRIEF_SECTIONS;
+
   const handleExport = async (formatId: string) => {
     setExportingFormat(formatId);
-    // Simulate export
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    setExportingFormat(null);
+    try {
+      const generatedAt = new Date().toISOString();
+      const completedSections = briefSections.filter((s) => s.status === "complete").length;
+      const qualityScore = Math.round((completedSections / briefSections.length) * 100);
+
+      if (formatId === "markdown") {
+        const markdown = renderBriefMarkdown({ threadId, generatedAt, qualityScore, sections: briefSections });
+        downloadTextFile(`research-brief-${threadId}.md`, markdown, "text/markdown");
+        return;
+      }
+
+      if (formatId === "json") {
+        const payload = {
+          type: "research_brief_export",
+          version: "0.1",
+          threadId,
+          generatedAt,
+          qualityScore,
+          sections: briefSections.map((section) => ({
+            id: section.id,
+            title: section.title,
+            status: section.status,
+            summary: section.summary ?? null,
+            items: section.items,
+          })),
+        };
+
+        downloadTextFile(`research-brief-${threadId}.json`, JSON.stringify(payload, null, 2), "application/json");
+        return;
+      }
+
+      if (formatId === "pdf") {
+        window.print();
+      }
+    } finally {
+      setExportingFormat(null);
+    }
   };
 
   const handleCopy = async () => {
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      const completedSections = briefSections.filter((s) => s.status === "complete").length;
+      const qualityScore = Math.round((completedSections / briefSections.length) * 100);
+      const markdown = renderBriefMarkdown({
+        threadId,
+        generatedAt: new Date().toISOString(),
+        qualityScore,
+        sections: briefSections,
+      });
+
+      await navigator.clipboard.writeText(markdown);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
   };
 
   const handleRefresh = () => {
@@ -526,8 +782,8 @@ export default function BriefPage() {
     });
   };
 
-  const completedSections = BRIEF_SECTIONS.filter(s => s.status === "complete").length;
-  const qualityScore = Math.round((completedSections / BRIEF_SECTIONS.length) * 100);
+  const completedSections = briefSections.filter(s => s.status === "complete").length;
+  const qualityScore = Math.round((completedSections / briefSections.length) * 100);
   const lastUpdatedLabel = formatRelativeTime(lastUpdatedAt, now);
 
   return (
@@ -612,7 +868,7 @@ export default function BriefPage() {
             <div className="flex-1">
               <div className="font-medium text-foreground">Brief Generated Successfully</div>
               <div className="text-sm text-muted-foreground">
-                Last updated {lastUpdatedLabel} · {completedSections}/{BRIEF_SECTIONS.length} sections complete
+                Last updated {lastUpdatedLabel} · {completedSections}/{briefSections.length} sections complete
               </div>
             </div>
             <button
@@ -638,19 +894,19 @@ export default function BriefPage() {
               <h2 className="font-semibold text-foreground">Brief Contents</h2>
               <button
                 onClick={() => {
-                  if (expandedSections.size === BRIEF_SECTIONS.length) {
+                  if (expandedSections.size === briefSections.length) {
                     setExpandedSections(new Set());
                   } else {
-                    setExpandedSections(new Set(BRIEF_SECTIONS.map(s => s.id)));
+                    setExpandedSections(new Set(briefSections.map(s => s.id)));
                   }
                 }}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                {expandedSections.size === BRIEF_SECTIONS.length ? "Collapse All" : "Expand All"}
+                {expandedSections.size === briefSections.length ? "Collapse All" : "Expand All"}
               </button>
             </div>
             <div className="space-y-2">
-              {BRIEF_SECTIONS.map((section, idx) => (
+              {briefSections.map((section, idx) => (
                 <motion.div
                   key={section.id}
                   initial={{ opacity: 0, y: 10 }}

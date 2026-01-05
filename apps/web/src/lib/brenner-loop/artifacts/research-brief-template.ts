@@ -7,6 +7,8 @@
  * @see brenner_bot-nu8g.1 (Design Research Brief Template)
  */
 
+import type { ObjectionSeverity, ObjectionType } from "../agents/objections";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -68,6 +70,37 @@ export interface AgentAnalysis {
   conflicts?: string[];
 }
 
+export type ObjectionStatus =
+  | "open"
+  | "acknowledged"
+  | "testing"
+  | "addressed"
+  | "accepted"
+  | "dismissed";
+
+export interface ResearchBriefObjectionSource {
+  agentName?: string | null;
+  role?: string | null;
+  messageId?: number;
+  createdAt?: string;
+  subject?: string;
+}
+
+export interface ResearchBriefObjection {
+  id: string;
+  type: ObjectionType;
+  severity: ObjectionSeverity;
+  status: ObjectionStatus;
+  summary: string;
+  source?: ResearchBriefObjectionSource;
+  response?: string;
+}
+
+export interface ObjectionRegisterSection {
+  objections?: ResearchBriefObjection[];
+  note?: string;
+}
+
 export interface EvidenceSummary {
   testsRun?: string[];
   results?: string[];
@@ -82,6 +115,7 @@ export interface ResearchBriefTemplateInput {
   discriminativeStructure?: DiscriminativeStructure;
   operatorsApplied?: OperatorAppliedSummary[];
   agentAnalysis?: AgentAnalysis;
+  objectionRegister?: ObjectionRegisterSection;
   evidenceSummary?: EvidenceSummary;
   brennerPrinciples?: string[];
   recommendedNextSteps?: string[];
@@ -97,7 +131,7 @@ export const RESEARCH_BRIEF_TEMPLATE_VERSION = "1.0";
 // Public API
 // ============================================================================
 
-export function renderResearchBriefTemplate(input: ResearchBriefTemplateInput = {}): string {
+export const renderResearchBriefTemplate = (input: ResearchBriefTemplateInput = {}): string => {
   const metadata = normalizeMetadata(input.metadata);
   const lines: string[] = [];
 
@@ -164,6 +198,10 @@ export function renderResearchBriefTemplate(input: ResearchBriefTemplateInput = 
   lines.push(formatList("Conflicts", input.agentAnalysis?.conflicts));
   lines.push("");
 
+  lines.push("## Objection Register");
+  lines.push(...formatObjectionRegister(input.objectionRegister));
+  lines.push("");
+
   lines.push("## Evidence Summary");
   lines.push(formatList("Tests run", input.evidenceSummary?.testsRun));
   lines.push(formatList("Results", input.evidenceSummary?.results));
@@ -178,7 +216,7 @@ export function renderResearchBriefTemplate(input: ResearchBriefTemplateInput = 
   lines.push(formatOrderedList(input.recommendedNextSteps));
 
   return lines.join("\n");
-}
+};
 
 export const createResearchBriefTemplate = renderResearchBriefTemplate;
 
@@ -191,7 +229,18 @@ type NormalizedMetadata = Omit<Required<ResearchBriefMetadata>, "finalConfidence
   finalConfidence: number | null;
 };
 
-function normalizeMetadata(metadata?: Partial<ResearchBriefMetadata>): NormalizedMetadata {
+const OBJECTION_STATUS_LABELS: Record<ObjectionStatus, string> = {
+  open: "Open",
+  acknowledged: "Acknowledged",
+  testing: "Testing",
+  addressed: "Addressed",
+  accepted: "Accepted",
+  dismissed: "Dismissed",
+};
+
+const RESOLVED_OBJECTION_STATUSES = new Set<ObjectionStatus>(["addressed", "accepted", "dismissed"]);
+
+const normalizeMetadata = (metadata?: Partial<ResearchBriefMetadata>): NormalizedMetadata => {
   const now = new Date().toISOString();
   return {
     type: "research_brief",
@@ -207,42 +256,92 @@ function normalizeMetadata(metadata?: Partial<ResearchBriefMetadata>): Normalize
     testsCompleted: typeof metadata?.testsCompleted === "number" ? metadata.testsCompleted : 0,
     brennerCitations: metadata?.brennerCitations ?? [],
   };
-}
+};
 
-function formatConfidence(value: number | null): string {
+const formatConfidence = (value: number | null): string => {
   if (value === null) return "unknown";
   return `${Math.round(value)}%`;
-}
+};
 
-function formatYamlList(items?: string[]): string {
+const formatYamlList = (items?: string[]): string => {
   if (!items || items.length === 0) return " []";
   return `\n${items.map((item) => `  - ${item}`).join("\n")}`;
-}
+};
 
-function formatInlineList(items?: string[]): string {
+const formatObjectionSource = (source?: ResearchBriefObjectionSource): string => {
+  if (!source) return "";
+
+  const who = source.role?.trim() || source.agentName?.trim() || "";
+  const messageId = typeof source.messageId === "number" ? source.messageId : null;
+
+  if (who && messageId !== null) return `${who} (msg ${messageId})`;
+  if (who) return who;
+  if (messageId !== null) return `msg ${messageId}`;
+  return "";
+};
+
+const formatObjectionRegister = (section?: ObjectionRegisterSection): string[] => {
+  const objections = section?.objections ?? [];
+  const lines: string[] = [];
+
+  if (objections.length === 0) {
+    lines.push("- _No objections recorded yet._");
+    return lines;
+  }
+
+  const unresolvedCount = objections.reduce(
+    (acc, objection) => acc + (RESOLVED_OBJECTION_STATUSES.has(objection.status) ? 0 : 1),
+    0
+  );
+
+  lines.push(`- **Total objections:** ${objections.length}`);
+  lines.push(`- **Unresolved objections:** ${unresolvedCount}`);
+
+  if (section?.note && section.note.trim().length > 0) {
+    lines.push(`- **Note:** ${section.note.trim()}`);
+  }
+
+  lines.push("");
+  for (const objection of objections) {
+    const statusLabel = OBJECTION_STATUS_LABELS[objection.status] ?? objection.status;
+    const typeLabel = objection.type.replace(/_/g, " ");
+    const severityLabel = objection.severity.charAt(0).toUpperCase() + objection.severity.slice(1);
+    const source = formatObjectionSource(objection.source);
+    const sourceSuffix = source ? ` — ${source}` : "";
+
+    lines.push(`- [${statusLabel}] (${severityLabel}) ${typeLabel}: ${objection.summary}${sourceSuffix}`);
+    if (objection.response && objection.response.trim().length > 0) {
+      lines.push(`  - Response: ${objection.response.trim()}`);
+    }
+  }
+
+  return lines;
+};
+
+const formatInlineList = (items?: string[]): string => {
   if (!items || items.length === 0) return "unknown";
   return items.join(", ");
-}
+};
 
-function formatParagraph(value: string | undefined, fallback: string): string {
+const formatParagraph = (value: string | undefined, fallback: string): string => {
   return value && value.trim().length > 0 ? value : `_${fallback}_`;
-}
+};
 
-function formatField(label: string, value?: string): string {
+const formatField = (label: string, value?: string): string => {
   const safeValue = value && value.trim().length > 0 ? value : "_Not provided yet._";
   return `- **${label}:** ${safeValue}`;
-}
+};
 
-function formatList(label: string, items?: string[]): string {
+const formatList = (label: string, items?: string[]): string => {
   if (items && items.length > 0) {
     return [`- **${label}:**`, ...items.map((item) => `  - ${item}`)].join("\n");
   }
   return `- **${label}:** _Not provided yet._`;
-}
+};
 
-function formatOrderedList(items?: string[]): string {
+const formatOrderedList = (items?: string[]): string => {
   if (items && items.length > 0) {
     return items.map((item, index) => `${index + 1}. ${item}`).join("\n");
   }
   return "1. _Identify the most discriminative test to run next._";
-}
+};

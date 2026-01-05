@@ -33,6 +33,9 @@ describe("ObjectionRegisterPanel", () => {
 
     const trigger = screen.getByLabelText("Objection status 123:0");
     expect(trigger).toHaveTextContent("Open");
+
+    const snapshotRaw = localStorage.getItem("brenner-objection-register-snapshot:TRIBUNAL-SESSION-abc");
+    expect(snapshotRaw).toContain("Reverse causation is plausible.");
   });
 
   it("persists status changes per thread in localStorage", async () => {
