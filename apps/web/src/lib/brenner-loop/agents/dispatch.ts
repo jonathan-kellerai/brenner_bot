@@ -494,58 +494,131 @@ export async function pollForResponses(
     const newResponses: TribunalAgentResponse[] = [...dispatch.responses];
     const updatedTasks: AgentTask[] = [];
 
+    const roleSet = new Set<TribunalAgentRole>(dispatch.tasks.map((t) => t.role));
+    const messageIdToRole = new Map<number, TribunalAgentRole>();
     for (const task of dispatch.tasks) {
-      // Skip if already received or not dispatched
-      if (task.status === "received" || task.status === "pending") {
+      if (typeof task.messageId === "number") {
+        messageIdToRole.set(task.messageId, task.role);
+      }
+    }
+
+    const roleToResponseMessage = new Map<TribunalAgentRole, AgentMailMessage>();
+    const usedMessageIds = new Set<number>();
+    const dispatchMessageIds = new Set<number>(
+      dispatch.tasks.flatMap((task) =>
+        typeof task.messageId === "number" ? [task.messageId] : []
+      )
+    );
+
+    const inferRoleFromSubject = (subject: string | undefined): TribunalAgentRole | null => {
+      const subjectText = typeof subject === "string" ? subject : "";
+      if (subjectText.length === 0) return null;
+
+      const bracketMatch = subjectText.match(/\bTRIBUNAL\[([^\]]+)\]:/i);
+      if (bracketMatch && bracketMatch[1]) {
+        const token = bracketMatch[1].trim().toLowerCase().replace(/-/g, "_");
+        if (roleSet.has(token as TribunalAgentRole)) {
+          return token as TribunalAgentRole;
+        }
+      }
+
+      const normalized = subjectText.toLowerCase();
+      for (const role of roleSet) {
+        if (normalized.includes(role.toLowerCase())) return role;
+      }
+
+      return null;
+    };
+
+    // Prefer newest messages (thread is typically chronological).
+    for (const msg of [...thread.messages].reverse()) {
+      if (!msg.body_md) continue;
+      if (dispatchMessageIds.has(msg.id)) continue;
+      if (usedMessageIds.has(msg.id)) continue;
+
+      let role: TribunalAgentRole | null = null;
+
+      if (typeof msg.reply_to === "number") {
+        role = messageIdToRole.get(msg.reply_to) ?? null;
+      }
+
+      if (!role) {
+        role = inferRoleFromSubject(msg.subject);
+      }
+
+      if (!role) continue;
+      if (roleToResponseMessage.has(role)) continue;
+
+      roleToResponseMessage.set(role, msg);
+      usedMessageIds.add(msg.id);
+    }
+
+    const unresolvedRoles = dispatch.tasks
+      .filter(
+        (task) =>
+          task.status === "dispatched" && !roleToResponseMessage.has(task.role)
+      )
+      .map((task) => task.role);
+    const unmatchedMessages = thread.messages.filter((m): m is AgentMailMessage & { body_md: string } => {
+      if (!m.body_md) return false;
+      if (dispatchMessageIds.has(m.id)) return false;
+      return inferRoleFromSubject(m.subject) === null && typeof m.reply_to !== "number";
+    });
+
+    for (const task of dispatch.tasks) {
+      if (task.status === "received" || task.status === "pending" || task.status === "error") {
         updatedTasks.push(task);
         continue;
       }
 
-      // Look for responses to this task
-      // TODO: This matching logic is fragile - a message with "re:" in subject would
-      // match ANY task. Consider using reply_to field or stricter subject matching
-      // (e.g., require the role name to appear in responses, or use thread structure).
-      const responseMessage = thread.messages.find((msg: AgentMailMessage) => {
-        // A response should be:
-        // 1. Not the original dispatch message
-        // 2. Have body content
-        // 3. Related to this role (contains role name in subject)
-        if (!msg.body_md) return false;
-        if (msg.id === task.messageId) return false;
+      const responseMessage = roleToResponseMessage.get(task.role) ?? null;
 
-        // Check if this message is a response to our dispatch
-        // Prefer role-specific matching, fall back to generic reply indicators
-        const hasRoleName = msg.subject?.toLowerCase().includes(task.role.toLowerCase());
-        const isGenericReply =
-          msg.subject?.toLowerCase().includes("re:") ||
-          msg.subject?.toLowerCase().includes("response");
+      if (!responseMessage || !responseMessage.body_md) {
+        // If there's exactly one outstanding task, allow a single ambiguous reply.
+        if (unresolvedRoles.length === 1 && unresolvedRoles[0] === task.role && unmatchedMessages.length === 1) {
+          const fallbackMsg = unmatchedMessages[0];
+          const response: TribunalAgentResponse = {
+            role: task.role,
+            content: fallbackMsg.body_md,
+            receivedAt: fallbackMsg.created_ts,
+            messageId: fallbackMsg.id,
+            agentName: fallbackMsg.from,
+          };
 
-        // Prioritize role-specific matches
-        return hasRoleName || isGenericReply;
-      });
+          if (!newResponses.some((r) => r.messageId === response.messageId)) {
+            newResponses.push(response);
+          }
 
-      if (responseMessage && responseMessage.body_md) {
-        const response: TribunalAgentResponse = {
-          role: task.role,
-          content: responseMessage.body_md,
-          receivedAt: responseMessage.created_ts,
-          messageId: responseMessage.id,
-          agentName: responseMessage.from,
-        };
-
-        // Only add if not already in responses
-        if (!newResponses.some((r) => r.messageId === response.messageId)) {
-          newResponses.push(response);
+          updatedTasks.push({
+            ...task,
+            status: "received",
+            response,
+          });
+          continue;
         }
 
-        updatedTasks.push({
-          ...task,
-          status: "received",
-          response,
-        });
-      } else {
         updatedTasks.push(task);
+        continue;
       }
+
+      const response: TribunalAgentResponse = {
+        role: task.role,
+        content: responseMessage.body_md,
+        receivedAt: responseMessage.created_ts,
+        messageId: responseMessage.id,
+        agentName: responseMessage.from,
+      };
+
+      // Only add if not already in responses
+      if (!newResponses.some((r) => r.messageId === response.messageId)) {
+        newResponses.push(response);
+      }
+
+      updatedTasks.push({
+        ...task,
+        status: "received",
+        response,
+      });
     }
 
     // Check if all tasks are complete

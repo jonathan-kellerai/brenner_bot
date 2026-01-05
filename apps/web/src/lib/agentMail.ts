@@ -24,6 +24,7 @@ export type AgentMailMessage = {
   id: number;
   project_id?: number;
   sender_id?: number;
+  reply_to?: number;
   thread_id: string | null;
   subject: string;
   importance?: AgentMailImportance;
