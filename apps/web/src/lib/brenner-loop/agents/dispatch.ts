@@ -165,6 +165,7 @@ export interface PollOptions {
 export const DEFAULT_DISPATCH_ROLES: TribunalAgentRole[] = [
   "devils_advocate",
   "experiment_designer",
+  "statistician",
   "brenner_channeler",
 ];
 

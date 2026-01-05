@@ -62,6 +62,7 @@ export interface OperatorAppliedSummary {
 export interface AgentAnalysis {
   devilsAdvocate?: string[];
   experimentDesigner?: string[];
+  statistician?: string[];
   brennerChanneler?: string[];
   consensus?: string[];
   conflicts?: string[];
@@ -157,6 +158,7 @@ export function renderResearchBriefTemplate(input: ResearchBriefTemplateInput = 
   lines.push("## Agent Analysis");
   lines.push(formatList("Devil's Advocate", input.agentAnalysis?.devilsAdvocate));
   lines.push(formatList("Experiment Designer", input.agentAnalysis?.experimentDesigner));
+  lines.push(formatList("Statistician", input.agentAnalysis?.statistician));
   lines.push(formatList("Brenner Channeler", input.agentAnalysis?.brennerChanneler));
   lines.push(formatList("Consensus", input.agentAnalysis?.consensus));
   lines.push(formatList("Conflicts", input.agentAnalysis?.conflicts));

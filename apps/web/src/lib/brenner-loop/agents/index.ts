@@ -17,6 +17,7 @@
 export type TribunalAgentRole =
   | "devils_advocate"
   | "experiment_designer"
+  | "statistician"
   | "brenner_channeler"
   | "synthesis";
 
@@ -61,6 +62,14 @@ export const TRIBUNAL_AGENTS: Record<TribunalAgentRole, TribunalAgentConfig> = {
     icon: "\u{1F7E2}", // Green circle
     color: "green",
     promptPath: "prompts/experiment-designer.md",
+  },
+  statistician: {
+    role: "statistician",
+    displayName: "Statistician",
+    description: "Provides quantitative rigor (effect sizes, power, uncertainty)",
+    icon: "\u{1F4CA}", // Bar chart
+    color: "blue",
+    promptPath: "prompts/statistician.md",
   },
   brenner_channeler: {
     role: "brenner_channeler",
@@ -147,6 +156,7 @@ export function clearPromptCache(): void {
 export const TRIBUNAL_ORDER: readonly TribunalAgentRole[] = [
   "devils_advocate",
   "experiment_designer",
+  "statistician",
   "brenner_channeler",
   "synthesis",
 ] as const;
@@ -213,6 +223,7 @@ export {
   // Individual personas
   DEVILS_ADVOCATE_PERSONA,
   EXPERIMENT_DESIGNER_PERSONA,
+  STATISTICIAN_PERSONA,
   BRENNER_CHANNELER_PERSONA,
   SYNTHESIS_PERSONA,
 
