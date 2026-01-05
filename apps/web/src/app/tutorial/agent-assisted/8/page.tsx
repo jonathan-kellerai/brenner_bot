@@ -272,6 +272,28 @@ Return the updated artifact in full.`;
           <TutorialCodeBlock code={revisionPrompt} language="text" title="Revision prompt" />
         </div>
 
+        <div className="p-5 rounded-xl border border-border bg-card/50 space-y-2">
+          <h2 className="text-xl font-semibold">Compare to Worked Examples</h2>
+          <p className="text-muted-foreground">
+            If you’re unsure what “good” looks like, compare your artifact to the canonical worked examples.
+            Notice how hypotheses are genuinely different, predictions are contrastive, and tests are designed to exclude.
+          </p>
+          <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+            <Link href="/tutorial/examples" className="text-primary hover:underline">
+              Browse all examples →
+            </Link>
+            <Link href="/tutorial/examples/biology-cell-fate" className="text-primary hover:underline">
+              Biology
+            </Link>
+            <Link href="/tutorial/examples/cs-llm-hallucination" className="text-primary hover:underline">
+              Computer Science
+            </Link>
+            <Link href="/tutorial/examples/social-community-toxicity" className="text-primary hover:underline">
+              Social Science
+            </Link>
+          </div>
+        </div>
+
         <ProTip>
           You can archive your final artifact as a Session in the web UI. Start a new session at{" "}
           <Link href="/sessions/new" className="underline underline-offset-4 hover:text-foreground">

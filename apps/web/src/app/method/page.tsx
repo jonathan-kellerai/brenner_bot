@@ -253,6 +253,26 @@ export default function MethodPage() {
               <ArrowRightIcon />
             </div>
           </Link>
+
+          <Link
+            href="/tutorial/examples"
+            className="group rounded-xl border border-border bg-card p-5 transition-all hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] touch-manipulation"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center justify-center size-10 rounded-lg bg-success/10 text-success">
+                <BeakerIcon />
+              </div>
+              <div>
+                <span className="text-xs font-medium text-muted-foreground">Study</span>
+                <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">Worked Examples</h3>
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">Canonical, lintable artifacts across domains (biology, CS, social science).</p>
+            <div className="flex items-center gap-1 mt-3 text-sm font-medium text-primary">
+              <span>Browse examples</span>
+              <ArrowRightIcon />
+            </div>
+          </Link>
         </div>
       </section>
 

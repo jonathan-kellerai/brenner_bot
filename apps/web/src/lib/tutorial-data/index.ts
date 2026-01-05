@@ -110,3 +110,15 @@ export {
   getTotalEstimatedTime,
 } from "./quick-start";
 export type { QuickStartStepData, ArtifactSectionData } from "./quick-start";
+
+// Domain examples (worked artifacts)
+export {
+  BIOLOGY_CELL_FATE_EXAMPLE,
+  CS_LLM_HALLUCINATION_EXAMPLE,
+  SOCIAL_COMMUNITY_TOXICITY_EXAMPLE,
+  TUTORIAL_DOMAIN_EXAMPLES,
+  getAllTutorialDomainExamples,
+  getTutorialDomainExample,
+  getTutorialDomainExamplesByDomain,
+} from "./examples";
+export type { TutorialDomainExample, TutorialExampleDomain } from "./examples";

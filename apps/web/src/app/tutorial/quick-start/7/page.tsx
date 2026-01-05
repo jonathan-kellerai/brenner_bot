@@ -266,6 +266,17 @@ export default function QuickStartStep7() {
               </p>
             </div>
           </div>
+
+          <div className="p-4 rounded-xl border border-primary/20 bg-primary/5 space-y-2">
+            <h4 className="font-medium">See a Worked Example Artifact</h4>
+            <p className="text-sm text-muted-foreground">
+              Compare your output to a canonical example (biology) and notice how the hypotheses,
+              predictions, tests, and critiques are phrased to be genuinely discriminative.
+            </p>
+            <Link href="/tutorial/examples/biology-cell-fate" className="text-sm text-primary hover:underline">
+              Open the biology example →
+            </Link>
+          </div>
         </div>
 
         <ProTip>
