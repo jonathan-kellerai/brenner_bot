@@ -108,6 +108,30 @@ describe("errorRecovery", () => {
     ).rejects.toThrow(/Retry attempts exhausted/);
   });
 
+  it("applies jittered backoff when enabled", async () => {
+    const { withRetry } = await loadModule();
+
+    vi.useFakeTimers();
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+
+    let attempts = 0;
+    const promise = withRetry(
+      async () => {
+        attempts += 1;
+        if (attempts === 1) throw new Error("transient");
+        return "ok";
+      },
+      { maxAttempts: 2, baseDelayMs: 10, maxDelayMs: 10, jitterRatio: 0.5 }
+    );
+
+    await vi.runAllTimersAsync();
+    await expect(promise).resolves.toBe("ok");
+    expect(attempts).toBe(2);
+
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
   it("fails fast when timeout elapses", async () => {
     const { TimeoutError, withTimeout } = await loadModule();
     vi.useFakeTimers();
@@ -197,5 +221,44 @@ describe("errorRecovery", () => {
     const result = await loadSessionWithRecovery(sessionId);
     expect(result.recovered).toBe(true);
     expect(result.data?.id).toBe(sessionId);
+  });
+
+  it("returns {data:null} when the requested session does not exist", async () => {
+    const { loadSessionWithRecovery } = await loadModule();
+    const result = await loadSessionWithRecovery("SESSION-MISSING");
+    expect(result.data).toBeNull();
+    expect(result.recovered).toBe(false);
+  });
+
+  it("returns an error when storage fails with non-corruption codes", async () => {
+    const { loadSessionWithRecovery } = await loadModule();
+
+    const sessionId = "SESSION-QUOTA";
+    localStorageMock.setItem(
+      `brenner-session-${sessionId}`,
+      JSON.stringify({
+        id: sessionId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        phase: "intake",
+        primaryHypothesisId: "",
+        alternativeHypothesisIds: [],
+        hypothesisCards: {},
+      })
+    );
+
+    const originalSetItem = localStorageMock.setItem;
+    localStorageMock.setItem = (key: string, value: string) => {
+      if (key.startsWith("brenner-session_backup:")) {
+        throw new Error("quota exceeded");
+      }
+      originalSetItem(key, value);
+    };
+
+    const result = await loadSessionWithRecovery(sessionId);
+    expect(result.data).toBeNull();
+    expect(result.error).toBeInstanceOf(Error);
+
+    localStorageMock.setItem = originalSetItem;
   });
 });

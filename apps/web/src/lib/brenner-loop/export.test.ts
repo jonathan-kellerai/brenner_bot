@@ -124,6 +124,55 @@ describe("exportSession / importSession", () => {
     expect(markdown).toContain("transcript-42");
   });
 
+  test("renders operator applications and evidence in markdown", async () => {
+    const session = buildTestSession();
+    session.tags = ["alpha", "beta"];
+    session.operatorApplications = {
+      levelSplit: [
+        {
+          appliedAt: "2026-01-01T00:00:00Z",
+          appliedBy: "tester",
+          levels: [{ name: "X", levelType: "x", description: "desc" }],
+        },
+      ],
+      exclusionTest: [
+        {
+          appliedAt: "2026-01-01T00:00:00Z",
+          appliedBy: "tester",
+          designedTests: [{ name: "T1", procedure: "Do it" }],
+        },
+      ],
+      objectTranspose: [
+        {
+          appliedAt: "2026-01-01T00:00:00Z",
+          appliedBy: "tester",
+          originalSystem: "System",
+          alternativeSystems: [{ name: "Alt" }],
+        },
+      ],
+      scaleCheck: [
+        {
+          appliedAt: "2026-01-01T00:00:00Z",
+          appliedBy: "tester",
+          plausible: true,
+          calculations: [{ name: "Calc", result: 1, units: "u", implication: "imp" }],
+        },
+      ],
+    } as never;
+    session.evidenceLedger = [{ recordedAt: "2026-01-01T00:00:00Z", observation: "Observed" }] as never;
+
+    const blob = await exportSession(session, "markdown");
+    const markdown = await blob.text();
+
+    expect(markdown).toContain("Operator Applications");
+    expect(markdown).toContain("Level Split Results");
+    expect(markdown).toContain("Exclusion Test Results");
+    expect(markdown).toContain("Object Transpose Results");
+    expect(markdown).toContain("Scale Check Results");
+    expect(markdown).toContain("Evidence Ledger");
+    expect(markdown).toContain("Tags: alpha, beta");
+  });
+
   test("renders markdown even when primary card is missing", async () => {
     const session = buildTestSession();
     session.primaryHypothesisId = "HC-MISSING";

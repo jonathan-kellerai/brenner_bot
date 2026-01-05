@@ -6,7 +6,7 @@ import { randomUUID } from "node:crypto";
 import { createResearchProgram, ResearchProgramSchema } from "../schemas/research-program";
 import { ProgramStorage } from "./program-storage";
 
-describe.sequential("ProgramStorage", () => {
+describe("ProgramStorage", () => {
   let baseDir: string;
 
   beforeEach(async () => {

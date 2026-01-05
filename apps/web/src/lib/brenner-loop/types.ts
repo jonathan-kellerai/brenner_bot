@@ -46,26 +46,6 @@ export type {
   EvolutionGraph,
 } from "./hypothesis-history";
 
-export {
-  EVOLUTION_TRIGGER_LABELS,
-  createHistoryStore,
-  addRootHypothesis,
-  evolveHypothesis,
-  abandonHypothesis,
-  getAncestors,
-  getDescendants,
-  getRoot,
-  getLeaves,
-  findCommonAncestor,
-  diffHypotheses,
-  generateEvolutionGraph,
-  generateLineageGraph,
-  getEvolutionStats,
-  findByTrigger,
-  findByTimeRange,
-  isAncestor,
-} from "./hypothesis-history";
-
 // ============================================================================
 // Session Phases
 // ============================================================================

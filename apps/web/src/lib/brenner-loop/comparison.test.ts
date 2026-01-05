@@ -134,6 +134,35 @@ describe("comparison", () => {
     expect(unknown?.similarity).toBe(0);
   });
 
+  it("covers all comparison field accessors", () => {
+    const hypothesisA = makeHypothesis({
+      id: "H-all-a",
+      statement: "A -> B",
+      mechanism: "Mechanism A",
+      predictionsIfTrue: ["P1"],
+      predictionsIfFalse: ["F1"],
+      impossibleIfTrue: ["X cannot happen"],
+      assumptions: ["Assume A"],
+      confounds: [{ id: "CF-1", name: "Confound", description: "Desc", likelihood: 0.2, domain: "testing" } as never],
+      confidence: 70,
+    });
+    const hypothesisB = makeHypothesis({
+      id: "H-all-b",
+      statement: "A -> B",
+      mechanism: "Mechanism B",
+      predictionsIfTrue: ["P1"],
+      predictionsIfFalse: ["F2"],
+      impossibleIfTrue: ["X cannot happen"],
+      assumptions: ["Assume A"],
+      confounds: [{ id: "CF-2", name: "Other", description: "Desc", likelihood: 0.2, domain: "testing" } as never],
+      confidence: 65,
+    });
+
+    const results = buildComparisonResults(hypothesisA, hypothesisB);
+    expect(results.length).toBeGreaterThanOrEqual(7);
+    expect(results.some((result) => result.field === "confounds")).toBe(true);
+  });
+
   it("builds prediction conflict matrix and summary", () => {
     const matrix = makeMatrix();
     const rows = buildPredictionConflictMatrix(matrix, "H1", "H2");

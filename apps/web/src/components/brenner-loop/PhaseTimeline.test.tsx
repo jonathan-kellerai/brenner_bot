@@ -2,7 +2,6 @@ import * as React from "react";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
-import { PhaseTimeline } from "./PhaseTimeline";
 import type { SessionPhase } from "@/lib/brenner-loop";
 
 vi.mock("framer-motion", () => ({
@@ -11,11 +10,31 @@ vi.mock("framer-motion", () => ({
   },
 }));
 
+vi.mock("@/lib/brenner-loop", () => ({
+  PHASE_ORDER: [
+    "intake",
+    "sharpening",
+    "level_split",
+    "exclusion_test",
+    "object_transpose",
+    "scale_check",
+    "agent_dispatch",
+    "synthesis",
+    "evidence_gathering",
+    "revision",
+    "complete",
+  ] as const,
+  getPhaseName: (phase: string) => phase.replace(/_/g, " "),
+  getPhaseSymbol: () => null,
+  getSessionProgress: () => 50,
+}));
+
 describe("PhaseTimeline", () => {
   it("renders current phase and triggers clicks for available phases", async () => {
     const user = userEvent.setup();
     const onPhaseClick = vi.fn();
 
+    const { PhaseTimeline } = await import("./PhaseTimeline");
     render(
       <PhaseTimeline
         phases={["intake", "sharpening", "level_split", "exclusion_test"] as SessionPhase[]}
@@ -40,6 +59,7 @@ describe("PhaseTimeline", () => {
     const user = userEvent.setup();
     const onPhaseClick = vi.fn();
 
+    const { PhaseTimeline } = await import("./PhaseTimeline");
     render(
       <PhaseTimeline
         phases={["intake", "sharpening", "level_split", "exclusion_test"] as SessionPhase[]}
@@ -62,4 +82,3 @@ describe("PhaseTimeline", () => {
     expect(onPhaseClick).toHaveBeenCalledWith("exclusion_test");
   });
 });
-

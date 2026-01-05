@@ -213,6 +213,9 @@ describe("type guards + evolution + scoring helpers", () => {
     expect(calculateSpecificityScore(high)).toBeGreaterThan(20);
 
     expect(interpretConfidence(10)).toBe("Very speculative");
+    expect(interpretConfidence(30)).toBe("Interesting but untested");
+    expect(interpretConfidence(50)).toBe("Reasonable, some support");
+    expect(interpretConfidence(70)).toBe("Strong support");
     expect(interpretConfidence(200)).toBe("Near-certain"); // clamped
     expect(() => interpretConfidence(Number.NaN)).toThrow(/finite number/);
   });
