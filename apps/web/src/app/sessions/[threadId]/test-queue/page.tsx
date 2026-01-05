@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { recordSessionResumeEntry } from "@/lib/brenner-loop";
 import { createHypothesisCard, generateHypothesisCardId } from "@/lib/brenner-loop/hypothesis";
 import type { ExclusionTest } from "@/lib/brenner-loop/operators/exclusion-test";
 import {
@@ -123,6 +124,10 @@ function groupByPriority(items: TestQueueItem[]): Record<TestQueuePriority, Test
 export default function TestQueuePage() {
   const params = useParams();
   const threadId = getThreadIdParam(params);
+
+  React.useEffect(() => {
+    recordSessionResumeEntry(threadId, "test-queue");
+  }, [threadId]);
 
   const queueSessionId = threadId;
   const hypothesisSessionId = React.useMemo(() => toSafeHypothesisSessionId(threadId), [threadId]);

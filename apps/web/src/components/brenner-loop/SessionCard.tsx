@@ -18,7 +18,9 @@ import {
   exportSession,
   getPhaseName,
   getPhaseSymbol,
+  SESSION_RESUME_LOCATION_LABELS,
   type SessionSummary,
+  type SessionResumeEntry,
 } from "@/lib/brenner-loop";
 
 // ============================================================================
@@ -30,6 +32,7 @@ export interface SessionCardProps {
   className?: string;
   isArchived?: boolean;
   archivedAt?: string;
+  resumeEntry?: SessionResumeEntry | null;
   highlightTokens?: string[];
   matchLocations?: SessionMatchLocation[];
   onContinue?: (sessionId: string) => void;
@@ -300,6 +303,7 @@ export function SessionCard({
   className,
   isArchived = false,
   archivedAt,
+  resumeEntry,
   highlightTokens,
   matchLocations,
   onContinue,
@@ -313,6 +317,17 @@ export function SessionCard({
   const [isExporting, setIsExporting] = React.useState(false);
 
   const isComplete = session.phase === "complete";
+
+  const stalenessLabel = React.useMemo(() => {
+    if (isComplete || isArchived) return null;
+    const updatedAt = new Date(session.updatedAt).getTime();
+    if (Number.isNaN(updatedAt)) return null;
+
+    const diffDays = Math.floor((Date.now() - updatedAt) / (1000 * 60 * 60 * 24));
+    if (diffDays >= 30) return `Dormant · ${diffDays}d`;
+    if (diffDays >= 7) return `Stale · ${diffDays}d`;
+    return null;
+  }, [isArchived, isComplete, session.updatedAt]);
 
   const visibleMatchLocations = React.useMemo(() => {
     if (!matchLocations || matchLocations.length === 0) return null;
@@ -414,6 +429,16 @@ export function SessionCard({
             </div>
           )}
 
+          {resumeEntry?.location && resumeEntry.location !== "overview" && resumeEntry.visitedAt && (
+            <div className="text-xs text-muted-foreground mb-3">
+              Last viewed:{" "}
+              <span className="text-foreground font-medium">
+                {SESSION_RESUME_LOCATION_LABELS[resumeEntry.location] ?? resumeEntry.location}
+              </span>{" "}
+              <span className="text-muted-foreground">· {formatRelativeTime(resumeEntry.visitedAt)}</span>
+            </div>
+          )}
+
           {/* Badges row: phase, confidence */}
           <div className="flex flex-wrap items-center gap-2 mb-4">
             {/* Phase badge with symbol */}
@@ -434,6 +459,12 @@ export function SessionCard({
               </span>
               <span className="ml-1 text-muted-foreground">confidence</span>
             </span>
+
+            {stalenessLabel && (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-warning/15 text-warning border border-warning/20">
+                {stalenessLabel}
+              </span>
+            )}
           </div>
 
           {/* Actions row */}

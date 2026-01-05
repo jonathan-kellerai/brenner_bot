@@ -120,6 +120,8 @@ export type {
   // Storage interface
   SessionStorage,
   SessionSummary,
+  SessionResumeLocation,
+  SessionResumeEntry,
   StorageStats,
   StorageErrorCode,
   StorageChangeCallback,
@@ -130,6 +132,14 @@ export {
   LocalStorageSessionStorage,
   sessionStorage,
   StorageError,
+
+  // Resume metadata
+  SESSION_RESUME_LOCATION_LABELS,
+  recordSessionResumeEntry,
+  getSessionResumeEntry,
+  listSessionResumeEntries,
+  removeSessionResumeEntry,
+  buildSessionPath,
 
   // Recovery utilities
   recoverSessions,

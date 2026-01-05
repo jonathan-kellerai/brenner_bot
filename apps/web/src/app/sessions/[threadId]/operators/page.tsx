@@ -26,6 +26,7 @@ import {
   loadEmbeddings,
   type EmbeddingEntry,
 } from "@/lib/brenner-loop/search/embeddings";
+import { recordSessionResumeEntry } from "@/lib/brenner-loop";
 
 // ============================================================================
 // Icons
@@ -379,6 +380,10 @@ function OperatorWorkspace({ operator, values, onChange, onComplete }: OperatorW
 export default function OperatorsPage() {
   const params = useParams();
   const threadId = params.threadId as string;
+
+  React.useEffect(() => {
+    recordSessionResumeEntry(threadId, "operators");
+  }, [threadId]);
 
   const [activeOperator, setActiveOperator] = React.useState<string>("level_split");
   const [completedOperators, setCompletedOperators] = React.useState<Set<string>>(new Set());

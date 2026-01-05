@@ -21,7 +21,10 @@ import { Input } from "@/components/ui/input";
 import {
   sessionStorage,
   importSession,
+  listSessionResumeEntries,
+  buildSessionPath,
   type SessionSummary,
+  type SessionResumeEntry,
   type StorageStats,
 } from "@/lib/brenner-loop";
 import { SessionCard } from "./SessionCard";
@@ -431,6 +434,7 @@ export function SessionList({ className, onSelect }: SessionListProps) {
   const router = useRouter();
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
   const [archivedEntries, setArchivedEntries] = React.useState<ArchivedSessionEntry[]>([]);
+  const [resumeEntries, setResumeEntries] = React.useState<Record<string, SessionResumeEntry>>({});
   const [storageStats, setStorageStats] = React.useState<StorageStats | null>(null);
   const [importWarnings, setImportWarnings] = React.useState<string[]>([]);
   const [importError, setImportError] = React.useState<string | null>(null);
@@ -454,6 +458,7 @@ export function SessionList({ className, onSelect }: SessionListProps) {
   const refreshSessions = React.useCallback(async () => {
     const list = await sessionStorage.list();
     setSessions(list);
+    setResumeEntries(listSessionResumeEntries());
     try {
       setStorageStats(await sessionStorage.stats());
     } catch {
@@ -479,6 +484,12 @@ export function SessionList({ className, onSelect }: SessionListProps) {
     () => sessions.filter((session) => !archivedById.has(session.id)),
     [sessions, archivedById]
   );
+
+  const sessionsById = React.useMemo(() => {
+    const map = new Map<string, SessionSummary>();
+    for (const session of sessions) map.set(session.id, session);
+    return map;
+  }, [sessions]);
 
   const archivedSessions = React.useMemo(() => {
     const list = sessions.filter((session) => archivedById.has(session.id));
@@ -644,13 +655,25 @@ export function SessionList({ className, onSelect }: SessionListProps) {
     } else {
       const base = `/sessions/${sessionId}`;
       if (trimmedSearchQuery.length === 0) {
+        const summary = sessionsById.get(sessionId);
+
+        if (summary?.phase === "complete") {
+          router.push(`${base}/brief`);
+          return;
+        }
+
+        const resume = resumeEntries[sessionId];
+        if (resume?.location && resume.location !== "overview") {
+          router.push(buildSessionPath(sessionId, resume.location));
+          return;
+        }
+
         router.push(base);
         return;
       }
 
       const locations = searchMatchLocations?.[sessionId] ?? [];
       const priority: SessionJumpTarget[] = [
-        "evidence",
         "hypothesis",
         "operators",
         "test-queue",
@@ -935,6 +958,7 @@ export function SessionList({ className, onSelect }: SessionListProps) {
             <SessionCard
               key={session.id}
               session={session}
+              resumeEntry={resumeEntries[session.id] ?? null}
               highlightTokens={trimmedSearchQuery.length > 0 ? searchTokens : undefined}
               matchLocations={trimmedSearchQuery.length > 0 ? searchMatchLocations?.[session.id] : undefined}
               onContinue={handleContinue}
@@ -967,6 +991,7 @@ export function SessionList({ className, onSelect }: SessionListProps) {
                 session={session}
                 isArchived
                 archivedAt={archivedById.get(session.id)}
+                resumeEntry={resumeEntries[session.id] ?? null}
                 highlightTokens={trimmedSearchQuery.length > 0 ? searchTokens : undefined}
                 matchLocations={trimmedSearchQuery.length > 0 ? searchMatchLocations?.[session.id] : undefined}
                 onContinue={handleContinue}

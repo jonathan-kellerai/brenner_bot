@@ -21,6 +21,7 @@ import { AgentProgress } from "@/components/brenner-loop/AgentProgress";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import { recordSessionResumeEntry } from "@/lib/brenner-loop";
 
 // ============================================================================
 // Icons
@@ -423,6 +424,10 @@ function SynthesisPanel({ responses, disagreements }: SynthesisPanelProps) {
 export default function AgentsPage() {
   const params = useParams();
   const threadId = params.threadId as string;
+
+  React.useEffect(() => {
+    recordSessionResumeEntry(threadId, "agents");
+  }, [threadId]);
 
   const [agentStatuses, setAgentStatuses] = React.useState<Record<string, AgentStatus>>({
     devils_advocate: "idle",

@@ -1,9 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
+import { recordSessionResumeEntry } from "@/lib/brenner-loop";
 
 // ============================================================================
 // Icons
@@ -460,6 +461,10 @@ function QuickAction({
 export default function BriefPage() {
   const params = useParams();
   const threadId = params.threadId as string;
+
+  useEffect(() => {
+    recordSessionResumeEntry(threadId, "brief");
+  }, [threadId]);
 
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(["hypothesis_slate"]));
   const [exportingFormat, setExportingFormat] = useState<string | null>(null);

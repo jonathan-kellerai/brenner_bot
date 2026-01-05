@@ -29,6 +29,7 @@ import {
   CollapsibleTrigger,
   CollapsibleContent,
 } from "@/components/ui/collapsible";
+import { recordSessionResumeEntry } from "@/lib/brenner-loop";
 
 // ============================================================================
 // Icons
@@ -280,6 +281,10 @@ function EvolutionTimeline({ events }: { events: EvolutionEvent[] }) {
 export default function HypothesisPage() {
   const params = useParams();
   const threadId = params.threadId as string;
+
+  React.useEffect(() => {
+    recordSessionResumeEntry(threadId, "hypothesis");
+  }, [threadId]);
 
   const [isEditing, setIsEditing] = React.useState(false);
   const [structureOpen, setStructureOpen] = React.useState(true);

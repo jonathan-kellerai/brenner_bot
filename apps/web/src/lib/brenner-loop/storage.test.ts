@@ -16,6 +16,8 @@ import {
   loadAssumptionLedger,
   saveAssumptionLedger,
   rollbackSessionMigration,
+  recordSessionResumeEntry,
+  getSessionResumeEntry,
 } from "./storage";
 import type { Session, SessionPhase } from "./types";
 
@@ -356,6 +358,51 @@ describe("LocalStorageSessionStorage", () => {
       await storage.delete(session.id);
 
       expect(loadAssumptionLedger(session.id)).toEqual([]);
+    });
+  });
+
+  describe("resume metadata", () => {
+    test("should record and retrieve last visited location", () => {
+      recordSessionResumeEntry("SESSION-TEST-001", "hypothesis");
+      expect(getSessionResumeEntry("SESSION-TEST-001")).toEqual({
+        location: "hypothesis",
+        visitedAt: expect.any(String),
+      });
+    });
+
+    test("should not overwrite when ifMissing=true", () => {
+      recordSessionResumeEntry("SESSION-TEST-002", "operators");
+      const first = getSessionResumeEntry("SESSION-TEST-002");
+      expect(first?.location).toBe("operators");
+
+      recordSessionResumeEntry("SESSION-TEST-002", "test-queue", { ifMissing: true });
+      expect(getSessionResumeEntry("SESSION-TEST-002")).toEqual(first);
+    });
+
+    test("should be removed when deleting a session", async () => {
+      const session = createTestSession({ id: "SESSION-RESUME-DELETE" });
+      await storage.save(session);
+
+      recordSessionResumeEntry(session.id, "evidence");
+      expect(getSessionResumeEntry(session.id)?.location).toBe("evidence");
+
+      await storage.delete(session.id);
+      expect(getSessionResumeEntry(session.id)).toBeNull();
+    });
+
+    test("should be removed when clearing all sessions", async () => {
+      const session1 = createTestSession({ id: "SESSION-RESUME-CLEAR-1" });
+      const session2 = createTestSession({ id: "SESSION-RESUME-CLEAR-2" });
+      await storage.save(session1);
+      await storage.save(session2);
+
+      recordSessionResumeEntry(session1.id, "hypothesis");
+      recordSessionResumeEntry(session2.id, "operators");
+
+      await storage.clear();
+
+      expect(getSessionResumeEntry(session1.id)).toBeNull();
+      expect(getSessionResumeEntry(session2.id)).toBeNull();
     });
   });
 

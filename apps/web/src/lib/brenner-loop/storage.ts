@@ -36,6 +36,9 @@ const SESSION_KEY_PREFIX = "brenner-session-";
 /** Key for the sessions index */
 const INDEX_KEY = "brenner-sessions-index";
 
+/** Key for last-visited metadata (resume intelligence) */
+const RESUME_INDEX_KEY = "brenner-sessions-resume-index";
+
 /** Maximum sessions to store (prevent runaway storage) */
 const MAX_SESSIONS = 100;
 
@@ -60,6 +63,153 @@ type UnknownRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is UnknownRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// ============================================================================
+// Session Resume Intelligence (bead brenner_bot-5199)
+// ============================================================================
+
+export type SessionResumeLocation =
+  | "overview"
+  | "hypothesis"
+  | "evidence"
+  | "operators"
+  | "test-queue"
+  | "agents"
+  | "brief";
+
+export interface SessionResumeEntry {
+  location: SessionResumeLocation;
+  visitedAt: string;
+}
+
+export const SESSION_RESUME_LOCATION_LABELS: Record<SessionResumeLocation, string> = {
+  overview: "Overview",
+  hypothesis: "Hypothesis",
+  evidence: "Evidence",
+  operators: "Operators",
+  "test-queue": "Test Queue",
+  agents: "Agents",
+  brief: "Brief",
+};
+
+const LOCAL_SESSION_ID_PREFIX = "SESSION-";
+const SESSION_RESUME_LOCATIONS = new Set<SessionResumeLocation>([
+  "overview",
+  "hypothesis",
+  "evidence",
+  "operators",
+  "test-queue",
+  "agents",
+  "brief",
+]);
+
+function isSessionResumeLocation(value: unknown): value is SessionResumeLocation {
+  return typeof value === "string" && SESSION_RESUME_LOCATIONS.has(value as SessionResumeLocation);
+}
+
+type ResumeIndex = Record<string, SessionResumeEntry>;
+
+function loadResumeIndex(): ResumeIndex {
+  if (typeof window === "undefined") return Object.create(null);
+
+  try {
+    const raw = window.localStorage.getItem(RESUME_INDEX_KEY);
+    if (!raw) return Object.create(null);
+    const parsed = JSON.parse(raw) as unknown;
+    const rawIndex = safeRecord<unknown>(parsed);
+
+    const out: ResumeIndex = Object.create(null);
+    for (const [sessionId, entry] of Object.entries(rawIndex)) {
+      if (!sessionId.startsWith(LOCAL_SESSION_ID_PREFIX)) continue;
+      if (!isRecord(entry)) continue;
+
+      const location = entry.location;
+      const visitedAt = coerceString(entry.visitedAt);
+      if (!isSessionResumeLocation(location)) continue;
+      if (!visitedAt) continue;
+
+      out[sessionId] = { location, visitedAt };
+    }
+
+    return out;
+  } catch {
+    return Object.create(null);
+  }
+}
+
+function saveResumeIndex(index: ResumeIndex): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(RESUME_INDEX_KEY, JSON.stringify(index));
+  } catch {
+    // Best-effort only; resume metadata should never block core flows.
+  }
+}
+
+function removeResumeEntries(sessionIds: string[]): void {
+  if (typeof window === "undefined") return;
+  if (sessionIds.length === 0) return;
+
+  const index = loadResumeIndex();
+  let changed = false;
+
+  for (const sessionId of sessionIds) {
+    if (!(sessionId in index)) continue;
+    delete index[sessionId];
+    changed = true;
+  }
+
+  if (changed) saveResumeIndex(index);
+}
+
+export function recordSessionResumeEntry(
+  sessionId: string,
+  location: SessionResumeLocation,
+  options: { ifMissing?: boolean } = {}
+): void {
+  if (typeof window === "undefined") return;
+  if (!sessionId.startsWith(LOCAL_SESSION_ID_PREFIX)) return;
+
+  const index = loadResumeIndex();
+  if (options.ifMissing && index[sessionId]) return;
+
+  index[sessionId] = { location, visitedAt: new Date().toISOString() };
+  saveResumeIndex(index);
+}
+
+export function getSessionResumeEntry(sessionId: string): SessionResumeEntry | null {
+  const index = loadResumeIndex();
+  return index[sessionId] ?? null;
+}
+
+export function listSessionResumeEntries(): ResumeIndex {
+  return loadResumeIndex();
+}
+
+export function removeSessionResumeEntry(sessionId: string): void {
+  removeResumeEntries([sessionId]);
+}
+
+export function buildSessionPath(sessionId: string, location: SessionResumeLocation): string {
+  const base = `/sessions/${sessionId}`;
+  switch (location) {
+    case "hypothesis":
+      return `${base}/hypothesis`;
+    case "evidence":
+      return `${base}/evidence`;
+    case "operators":
+      return `${base}/operators`;
+    case "test-queue":
+      return `${base}/test-queue`;
+    case "agents":
+      return `${base}/agents`;
+    case "brief":
+      return `${base}/brief`;
+    case "overview":
+    default:
+      return base;
+  }
 }
 
 function sessionBackupKey(sessionId: string, fromVersion: number): string {
@@ -620,6 +770,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
             // Ignore cleanup errors
           }
         }
+        removeResumeEntries(toRemove.map((old) => old.id));
         console.warn(
           `Removed ${toRemove.length} old sessions to stay under limit`
         );
@@ -724,12 +875,14 @@ export class LocalStorageSessionStorage implements SessionStorage {
     const index = loadIndex();
 
     // Verify summaries against actual storage (cleanup orphans)
+    const orphanedIds: string[] = [];
     const validSummaries = index.summaries.filter((summary) => {
       const exists =
         window.localStorage.getItem(this.getSessionKey(summary.id)) !==
         null;
       if (!exists) {
         console.warn(`Orphaned index entry for ${summary.id}, removing`);
+        orphanedIds.push(summary.id);
       }
       return exists;
     });
@@ -738,6 +891,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
     if (validSummaries.length !== index.summaries.length) {
       index.summaries = validSummaries;
       saveIndex(index);
+      removeResumeEntries(orphanedIds);
     }
 
     return validSummaries;
@@ -754,6 +908,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
     } catch (error) {
       console.error(`Failed to delete session ${sessionId}:`, error);
     }
+    removeResumeEntries([sessionId]);
 
     // Remove from index
     const index = loadIndex();
@@ -780,6 +935,12 @@ export class LocalStorageSessionStorage implements SessionStorage {
     // Clear the index
     index.summaries = [];
     saveIndex(index);
+
+    try {
+      window.localStorage.removeItem(RESUME_INDEX_KEY);
+    } catch {
+      // Best-effort only
+    }
   }
 
   async stats(): Promise<StorageStats> {

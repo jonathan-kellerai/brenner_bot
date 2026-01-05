@@ -11,7 +11,13 @@ import {
   exportSession,
   getPhaseName,
   getPhaseSymbol,
+  buildSessionPath,
+  getSessionResumeEntry,
+  recordSessionResumeEntry,
+  SESSION_RESUME_LOCATION_LABELS,
   type Session,
+  type SessionResumeEntry,
+  type SessionResumeLocation,
 } from "@/lib/brenner-loop";
 
 export interface LocalSessionHubProps {
@@ -65,13 +71,40 @@ async function downloadExport(session: Session, format: "json" | "markdown"): Pr
   URL.revokeObjectURL(url);
 }
 
+function suggestedLocationFromPhase(phase: Session["phase"]): SessionResumeLocation {
+  switch (phase) {
+    case "intake":
+    case "sharpening":
+    case "revision":
+      return "hypothesis";
+    case "exclusion_test":
+      return "test-queue";
+    case "agent_dispatch":
+    case "synthesis":
+      return "agents";
+    case "complete":
+      return "brief";
+    case "level_split":
+    case "object_transpose":
+    case "scale_check":
+    default:
+      return "operators";
+  }
+}
+
 export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) {
   const router = useRouter();
   const [session, setSession] = React.useState<Session | null>(null);
+  const [resumeEntry, setResumeEntry] = React.useState<SessionResumeEntry | null>(null);
   const [isLoading, setIsLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isExporting, setIsExporting] = React.useState(false);
   const [isDeleting, setIsDeleting] = React.useState(false);
+
+  React.useEffect(() => {
+    recordSessionResumeEntry(sessionId, "overview", { ifMissing: true });
+    setResumeEntry(getSessionResumeEntry(sessionId));
+  }, [sessionId]);
 
   React.useEffect(() => {
     let cancelled = false;
@@ -99,6 +132,17 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
   }, [sessionId]);
 
   const primaryHypothesis = session ? getPrimaryHypothesisPreview(session) : null;
+
+  const suggestedLocation = React.useMemo(() => {
+    if (resumeEntry?.location && resumeEntry.location !== "overview") return resumeEntry.location;
+    if (session) return suggestedLocationFromPhase(session.phase);
+    return "hypothesis";
+  }, [resumeEntry, session]);
+
+  const suggestedHref = React.useMemo(() => {
+    const id = session?.id ?? sessionId;
+    return buildSessionPath(id, suggestedLocation);
+  }, [session?.id, sessionId, suggestedLocation]);
 
   const handleExport = async (format: "json" | "markdown") => {
     if (!session) return;
@@ -166,6 +210,9 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
             <div className="mt-1 text-sm text-muted-foreground font-mono break-words">{session.id}</div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => router.push(suggestedHref)}>
+              Resume: {SESSION_RESUME_LOCATION_LABELS[suggestedLocation] ?? suggestedLocation}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -202,6 +249,14 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
           <span className="mx-2">·</span>
           <span className="font-medium text-foreground/80">Updated:</span>{" "}
           {formatRelativeTime(session.updatedAt)}
+          {resumeEntry?.location && resumeEntry.location !== "overview" && resumeEntry.visitedAt && (
+            <>
+              <span className="mx-2">·</span>
+              <span className="font-medium text-foreground/80">Last viewed:</span>{" "}
+              {SESSION_RESUME_LOCATION_LABELS[resumeEntry.location] ?? resumeEntry.location}{" "}
+              <span className="text-muted-foreground">({formatRelativeTime(resumeEntry.visitedAt)})</span>
+            </>
+          )}
         </div>
 
         {error && (
@@ -225,9 +280,14 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
         </CardContent>
       </Card>
 
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <Link href={`/sessions/${session.id}/hypothesis`} className="block">
-          <Card className="h-full hover:border-primary/30 hover:bg-muted/20 transition-colors">
+          <Card
+            className={cn(
+              "h-full hover:border-primary/30 hover:bg-muted/20 transition-colors",
+              suggestedLocation === "hypothesis" && "border-primary/40 bg-primary/5"
+            )}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Hypothesis</CardTitle>
               <CardDescription>Refine the core hypothesis</CardDescription>
@@ -236,7 +296,12 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
         </Link>
 
         <Link href={`/sessions/${session.id}/operators`} className="block">
-          <Card className="h-full hover:border-primary/30 hover:bg-muted/20 transition-colors">
+          <Card
+            className={cn(
+              "h-full hover:border-primary/30 hover:bg-muted/20 transition-colors",
+              suggestedLocation === "operators" && "border-primary/40 bg-primary/5"
+            )}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Operators</CardTitle>
               <CardDescription>Apply Σ ⊘ ⟳ ⊙</CardDescription>
@@ -245,7 +310,12 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
         </Link>
 
         <Link href={`/sessions/${session.id}/test-queue`} className="block">
-          <Card className="h-full hover:border-primary/30 hover:bg-muted/20 transition-colors">
+          <Card
+            className={cn(
+              "h-full hover:border-primary/30 hover:bg-muted/20 transition-colors",
+              suggestedLocation === "test-queue" && "border-primary/40 bg-primary/5"
+            )}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Test Queue</CardTitle>
               <CardDescription>Plan discriminative tests</CardDescription>
@@ -253,8 +323,27 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
           </Card>
         </Link>
 
+        <Link href={`/sessions/${session.id}/agents`} className="block">
+          <Card
+            className={cn(
+              "h-full hover:border-primary/30 hover:bg-muted/20 transition-colors",
+              suggestedLocation === "agents" && "border-primary/40 bg-primary/5"
+            )}
+          >
+            <CardHeader className="pb-3">
+              <CardTitle className="text-sm">Agents</CardTitle>
+              <CardDescription>Run the tribunal</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+
         <Link href={`/sessions/${session.id}/brief`} className="block">
-          <Card className="h-full hover:border-primary/30 hover:bg-muted/20 transition-colors">
+          <Card
+            className={cn(
+              "h-full hover:border-primary/30 hover:bg-muted/20 transition-colors",
+              suggestedLocation === "brief" && "border-primary/40 bg-primary/5"
+            )}
+          >
             <CardHeader className="pb-3">
               <CardTitle className="text-sm">Brief</CardTitle>
               <CardDescription>Review artifacts</CardDescription>
@@ -271,4 +360,3 @@ export function LocalSessionHub({ sessionId, className }: LocalSessionHubProps) 
     </div>
   );
 }
-
