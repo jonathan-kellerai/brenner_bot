@@ -39,6 +39,9 @@ const MAX_SESSION_SIZE = 50_000; // 50KB per session
 /** Current storage schema version for migrations */
 const STORAGE_VERSION = 1;
 
+/** Key prefix for assumption ledger entries */
+const ASSUMPTION_LEDGER_PREFIX = "brenner-assumption-ledger-";
+
 // ============================================================================
 // Types
 // ============================================================================
@@ -135,6 +138,18 @@ export interface StorageStats {
 }
 
 /**
+ * Assumption ledger entry persisted alongside sessions (localStorage).
+ */
+export interface AssumptionLedgerEntry {
+  id: string;
+  statement: string;
+  criticality: "foundational" | "important" | "minor";
+  dependsOn: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
  * Error types for storage operations.
  */
 export class StorageError extends Error {
@@ -154,6 +169,69 @@ export type StorageErrorCode =
   | "SESSION_NOT_FOUND"
   | "SERIALIZATION_ERROR"
   | "UNKNOWN_ERROR";
+
+function assumptionLedgerKey(sessionId: string): string {
+  return `${ASSUMPTION_LEDGER_PREFIX}${sessionId}`;
+}
+
+/**
+ * Load assumption ledger entries for a session.
+ */
+export function loadAssumptionLedger(sessionId: string): AssumptionLedgerEntry[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(assumptionLedgerKey(sessionId));
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? (parsed as AssumptionLedgerEntry[]) : [];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * Save assumption ledger entries for a session.
+ */
+export function saveAssumptionLedger(
+  sessionId: string,
+  entries: AssumptionLedgerEntry[]
+): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      assumptionLedgerKey(sessionId),
+      JSON.stringify(entries)
+    );
+  } catch (error) {
+    throw new StorageError(
+      "Failed to save assumption ledger",
+      "QUOTA_EXCEEDED",
+      error
+    );
+  }
+}
+
+/**
+ * Merge new entries into the assumption ledger, preserving createdAt.
+ */
+export function upsertAssumptionLedger(
+  sessionId: string,
+  entries: AssumptionLedgerEntry[]
+): void {
+  const existing = loadAssumptionLedger(sessionId);
+  const byId = new Map(existing.map((entry) => [entry.id, entry]));
+
+  for (const entry of entries) {
+    const prior = byId.get(entry.id);
+    byId.set(entry.id, {
+      ...prior,
+      ...entry,
+      createdAt: prior?.createdAt ?? entry.createdAt,
+    });
+  }
+
+  saveAssumptionLedger(sessionId, Array.from(byId.values()));
+}
 
 // ============================================================================
 // Index Management
@@ -445,6 +523,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
     // Remove from storage
     try {
       window.localStorage.removeItem(this.getSessionKey(sessionId));
+      window.localStorage.removeItem(assumptionLedgerKey(sessionId));
     } catch (error) {
       console.error(`Failed to delete session ${sessionId}:`, error);
     }
@@ -464,6 +543,7 @@ export class LocalStorageSessionStorage implements SessionStorage {
     for (const summary of index.summaries) {
       try {
         window.localStorage.removeItem(this.getSessionKey(summary.id));
+        window.localStorage.removeItem(assumptionLedgerKey(summary.id));
       } catch {
         // Ignore individual failures
       }
@@ -650,60 +730,82 @@ export type StorageChangeCallback = (
 
 const changeListeners = new Set<StorageChangeCallback>();
 
+let storageListenerAttached = false;
+let storageListener: ((event: StorageEvent) => void) | null = null;
+
+function handleStorageEvent(event: StorageEvent) {
+  if (!event.key) {
+    // Storage was cleared
+    changeListeners.forEach((cb) => cb("clear"));
+    return;
+  }
+
+  if (event.key === INDEX_KEY) {
+    // Index changed, likely a save or delete
+    if (event.newValue && event.oldValue) {
+      try {
+        const oldIndex = JSON.parse(event.oldValue) as StorageIndex;
+        const newIndex = JSON.parse(event.newValue) as StorageIndex;
+
+        // Find what changed
+        const oldIds = new Set(oldIndex.summaries.map((s) => s.id));
+        const newIds = new Set(newIndex.summaries.map((s) => s.id));
+
+        // Deleted sessions
+        oldIndex.summaries.forEach((s) => {
+          if (!newIds.has(s.id)) {
+            changeListeners.forEach((cb) => cb("delete", s.id));
+          }
+        });
+
+        // New or updated sessions
+        newIndex.summaries.forEach((s) => {
+          if (!oldIds.has(s.id)) {
+            changeListeners.forEach((cb) => cb("save", s.id));
+          } else {
+            // Check if updated
+            const oldSummary = oldIndex.summaries.find((os) => os.id === s.id);
+            if (oldSummary && oldSummary.updatedAt !== s.updatedAt) {
+              changeListeners.forEach((cb) => cb("save", s.id));
+            }
+          }
+        });
+      } catch {
+        // Ignore parse errors
+      }
+    }
+  }
+}
+
+function attachStorageListenerIfNeeded() {
+  if (storageListenerAttached) return;
+  if (typeof window === "undefined") return;
+  storageListener = handleStorageEvent;
+  window.addEventListener("storage", storageListener);
+  storageListenerAttached = true;
+}
+
+function detachStorageListenerIfNeeded() {
+  if (!storageListenerAttached) return;
+  if (typeof window === "undefined") return;
+  if (storageListener) {
+    window.removeEventListener("storage", storageListener);
+  }
+  storageListener = null;
+  storageListenerAttached = false;
+}
+
 /**
  * Subscribe to storage changes (for cross-tab sync).
  */
 export function onStorageChange(callback: StorageChangeCallback): () => void {
   changeListeners.add(callback);
-  return () => changeListeners.delete(callback);
-}
+  attachStorageListenerIfNeeded();
 
-// Set up storage event listener for cross-tab sync
-if (typeof window !== "undefined") {
-  window.addEventListener("storage", (event) => {
-    if (!event.key) {
-      // Storage was cleared
-      changeListeners.forEach((cb) => cb("clear"));
-      return;
+  return () => {
+    changeListeners.delete(callback);
+    if (changeListeners.size === 0) {
+      detachStorageListenerIfNeeded();
     }
-
-    if (event.key === INDEX_KEY) {
-      // Index changed, likely a save or delete
-      if (event.newValue && event.oldValue) {
-        try {
-          const oldIndex = JSON.parse(event.oldValue) as StorageIndex;
-          const newIndex = JSON.parse(event.newValue) as StorageIndex;
-
-          // Find what changed
-          const oldIds = new Set(oldIndex.summaries.map((s) => s.id));
-          const newIds = new Set(newIndex.summaries.map((s) => s.id));
-
-          // Deleted sessions
-          oldIndex.summaries.forEach((s) => {
-            if (!newIds.has(s.id)) {
-              changeListeners.forEach((cb) => cb("delete", s.id));
-            }
-          });
-
-          // New or updated sessions
-          newIndex.summaries.forEach((s) => {
-            if (!oldIds.has(s.id)) {
-              changeListeners.forEach((cb) => cb("save", s.id));
-            } else {
-              // Check if updated
-              const oldSummary = oldIndex.summaries.find((os) => os.id === s.id);
-              if (
-                oldSummary &&
-                oldSummary.updatedAt !== s.updatedAt
-              ) {
-                changeListeners.forEach((cb) => cb("save", s.id));
-              }
-            }
-          });
-        } catch {
-          // Ignore parse errors
-        }
-      }
-    }
-  });
+  };
 }

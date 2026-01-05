@@ -16,6 +16,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LoadingOverlay } from "@/components/ui/loading-overlay";
+import { Skeleton, SkeletonCard, SkeletonButton } from "@/components/ui/skeleton";
 import { HypothesisCard } from "./HypothesisCard";
 import {
   useSession,
@@ -379,10 +381,28 @@ export function SessionDashboard({
   // Loading state
   if (isLoading) {
     return (
-      <div className={cn("flex items-center justify-center min-h-[400px]", className)}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full size-8 border-b-2 border-primary mx-auto" />
-          <p className="mt-4 text-muted-foreground">Loading session...</p>
+      <div className={cn("flex flex-col gap-6", className)}>
+        <div className="flex items-center justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <div className="flex items-center gap-2">
+            <SkeletonButton size="sm" />
+            <SkeletonButton size="sm" />
+            <Skeleton className="h-3 w-16" />
+          </div>
+        </div>
+        <Skeleton className="h-10 w-full" />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-4">
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
+          <div className="flex flex-col gap-4">
+            <SkeletonCard />
+            <SkeletonCard />
+          </div>
         </div>
       </div>
     );
@@ -439,6 +459,11 @@ export function SessionDashboard({
 
   return (
     <div className={cn("flex flex-col gap-6", className)}>
+      <LoadingOverlay
+        visible={isExporting}
+        message="Exporting session..."
+        detail="Preparing your research brief for download."
+      />
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

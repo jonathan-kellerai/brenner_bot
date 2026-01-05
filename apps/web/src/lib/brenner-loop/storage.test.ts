@@ -13,6 +13,8 @@ import {
   recoverSessions,
   estimateRemainingStorage,
   cleanupOldSessions,
+  loadAssumptionLedger,
+  saveAssumptionLedger,
 } from "./storage";
 import type { Session, SessionPhase } from "./types";
 
@@ -281,6 +283,26 @@ describe("LocalStorageSessionStorage", () => {
       // If we get here, the test passed
       expect(true).toBe(true);
     });
+
+    test("should remove assumption ledger entries for the session", async () => {
+      const session = createTestSession();
+      await storage.save(session);
+
+      saveAssumptionLedger(session.id, [
+        {
+          id: "A-TEST-001",
+          statement: "Assumption ledger entry",
+          criticality: "important",
+          dependsOn: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+
+      await storage.delete(session.id);
+
+      expect(loadAssumptionLedger(session.id)).toEqual([]);
+    });
   });
 
   describe("clear", () => {
@@ -294,6 +316,40 @@ describe("LocalStorageSessionStorage", () => {
 
       const summaries = await storage.list();
       expect(summaries).toHaveLength(0);
+    });
+
+    test("should remove all assumption ledger entries", async () => {
+      const session1 = createTestSession({ id: "SESSION-1" });
+      const session2 = createTestSession({ id: "SESSION-2" });
+      await storage.save(session1);
+      await storage.save(session2);
+
+      saveAssumptionLedger(session1.id, [
+        {
+          id: "A-SESSION-1-001",
+          statement: "Session 1 assumption",
+          criticality: "minor",
+          dependsOn: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+
+      saveAssumptionLedger(session2.id, [
+        {
+          id: "A-SESSION-2-001",
+          statement: "Session 2 assumption",
+          criticality: "foundational",
+          dependsOn: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+
+      await storage.clear();
+
+      expect(loadAssumptionLedger(session1.id)).toEqual([]);
+      expect(loadAssumptionLedger(session2.id)).toEqual([]);
     });
   });
 

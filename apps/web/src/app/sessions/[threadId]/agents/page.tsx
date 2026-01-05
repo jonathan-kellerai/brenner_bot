@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { AgentProgress } from "@/components/brenner-loop/AgentProgress";
 import {
   TooltipProvider,
 } from "@/components/ui/tooltip";
@@ -117,6 +118,13 @@ const AGENTS: AgentConfig[] = [
     avatar: "BC",
     model: "gemini-2.5-pro",
   },
+];
+
+const AGENT_PROGRESS_STEPS = [
+  "Reading hypothesis",
+  "Identifying assumptions",
+  "Formulating response",
+  "Drafting feedback",
 ];
 
 const MOCK_RESPONSE_TIMESTAMP = new Date(Date.now() - 1000 * 60 * 15);
@@ -266,21 +274,13 @@ function AgentCard({ agent, status, response, onInvoke }: AgentCardProps) {
           <div className="flex flex-col items-center justify-center py-6 text-center">
             {status === "thinking" ? (
               <>
-                <div className="flex gap-1 mb-3">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      className={cn("size-2 rounded-full", agent.bgColor)}
-                      animate={{ y: [0, -6, 0] }}
-                      transition={{
-                        duration: 0.6,
-                        repeat: Infinity,
-                        delay: i * 0.2,
-                      }}
-                    />
-                  ))}
-                </div>
-                <p className="text-sm text-muted-foreground">Agent is analyzing...</p>
+                <AgentProgress
+                  agent={agent.name}
+                  steps={AGENT_PROGRESS_STEPS}
+                  currentStep={1}
+                  status="working"
+                  className="w-full"
+                />
               </>
             ) : (
               <>

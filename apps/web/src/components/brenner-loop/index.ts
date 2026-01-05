@@ -13,6 +13,24 @@ export type { HypothesisIntakeProps } from "./HypothesisIntake";
 export { HypothesisArena } from "./HypothesisArena";
 export type { HypothesisArenaProps } from "./HypothesisArena";
 
+export { ComparisonView } from "./ComparisonView";
+export type { ComparisonViewProps } from "./ComparisonView";
+
+export { HypothesisDiff } from "./HypothesisDiff";
+export type { HypothesisDiffProps } from "./HypothesisDiff";
+
+export { PredictionMatrix } from "./PredictionMatrix";
+export type { PredictionMatrixProps } from "./PredictionMatrix";
+
+export { ErrorBoundary } from "./ErrorBoundary";
+export type { ErrorBoundaryProps } from "./ErrorBoundary";
+
+export { ErrorRecoveryModal } from "./ErrorRecoveryModal";
+export type { ErrorRecoveryModalProps } from "./ErrorRecoveryModal";
+
+export { AgentProgress } from "./AgentProgress";
+export type { AgentProgressProps } from "./AgentProgress";
+
 export {
   PredictionLock,
   PredictionLockItem,

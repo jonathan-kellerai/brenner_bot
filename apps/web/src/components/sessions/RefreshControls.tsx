@@ -3,11 +3,13 @@
 import * as React from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
 
 type RefreshControlsProps = {
   autoIntervalMs?: number;
   defaultAuto?: boolean;
   className?: string;
+  threadId?: string;
 };
 
 function RefreshIcon({ className }: { className?: string }) {
@@ -34,20 +36,112 @@ function ClockIcon({ className }: { className?: string }) {
   );
 }
 
-export function RefreshControls({ autoIntervalMs = 15_000, defaultAuto = false, className }: RefreshControlsProps) {
+export function RefreshControls({
+  autoIntervalMs = 15_000,
+  defaultAuto = false,
+  className,
+  threadId,
+}: RefreshControlsProps) {
   const router = useRouter();
   const [auto, setAuto] = React.useState(defaultAuto);
+  const lastToastAtRef = React.useRef(0);
 
   React.useEffect(() => {
     if (!auto) return;
 
-    const intervalId = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      router.refresh();
-    }, autoIntervalMs);
+    let intervalId: number | null = null;
+    let eventSource: EventSource | null = null;
+    let fallbackTimer: number | null = null;
+    let opened = false;
+    let cleanedUp = false;
 
-    return () => window.clearInterval(intervalId);
-  }, [auto, autoIntervalMs, router]);
+    const intervalSeconds = Math.max(1, Math.round(autoIntervalMs / 1000));
+
+    const startInterval = () => {
+      if (intervalId !== null) return;
+      intervalId = window.setInterval(() => {
+        if (document.visibilityState !== "visible") return;
+        router.refresh();
+      }, autoIntervalMs);
+    };
+
+    const maybeToast = (title: string, message?: string) => {
+      const now = Date.now();
+      if (now - lastToastAtRef.current < 2500) return;
+      lastToastAtRef.current = now;
+      toast.info(title, message, 3000);
+    };
+
+    if (typeof window !== "undefined" && typeof window.EventSource !== "undefined") {
+      // Prefer SSE when threadId is provided (fallback to interval refresh if it can't connect).
+      // Note: EventSource cannot attach custom headers, so lab auth must use cookies or CF Access.
+      const url = new URL("/api/realtime", window.location.origin);
+      if (threadId) url.searchParams.set("threadId", threadId);
+      url.searchParams.set("pollIntervalMs", String(Math.min(5000, Math.max(1000, Math.round(autoIntervalMs / 3)))));
+
+      if (threadId) {
+        eventSource = new EventSource(url.toString());
+
+        fallbackTimer = window.setTimeout(() => {
+          if (cleanedUp || opened) return;
+          maybeToast("Real-time unavailable", `Falling back to ${intervalSeconds}s refresh`);
+          startInterval();
+        }, 5000);
+
+        eventSource.addEventListener("open", () => {
+          opened = true;
+          if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+        });
+
+        eventSource.addEventListener("ready", () => {
+          opened = true;
+          if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+        });
+
+        eventSource.addEventListener("thread_update", (event) => {
+          if (document.visibilityState !== "visible") return;
+
+          opened = true;
+          if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+
+          try {
+            const payload = JSON.parse(String((event as MessageEvent).data ?? "")) as {
+              newCount?: number;
+              newMessages?: Array<{ subjectType?: string; from?: string; subject?: string }>;
+            };
+
+            const first = payload.newMessages?.[0];
+            const label = first?.subjectType && first.subjectType !== "unknown" ? first.subjectType.toUpperCase() : "UPDATE";
+            const from = first?.from ? ` from ${first.from}` : "";
+            const count = typeof payload.newCount === "number" && payload.newCount > 1 ? ` (+${payload.newCount})` : "";
+            maybeToast(`New ${label}${from}${count}`);
+          } catch {}
+
+          router.refresh();
+        });
+
+        eventSource.onerror = () => {
+          // If the connection was established but is now closed, fall back to polling.
+          if (!opened) return;
+          if (!eventSource) return;
+          if (eventSource.readyState !== EventSource.CLOSED) return;
+          maybeToast("Real-time disconnected", `Falling back to ${intervalSeconds}s refresh`);
+          startInterval();
+        };
+      } else {
+        startInterval();
+      }
+    } else {
+      startInterval();
+    }
+
+    return () => {
+      cleanedUp = true;
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      if (eventSource) eventSource.close();
+      if (intervalId !== null) window.clearInterval(intervalId);
+    };
+  }, [auto, autoIntervalMs, router, threadId]);
 
   const intervalSeconds = Math.max(1, Math.round(autoIntervalMs / 1000));
 
@@ -75,4 +169,3 @@ export function RefreshControls({ autoIntervalMs = 15_000, defaultAuto = false, 
     </div>
   );
 }
-

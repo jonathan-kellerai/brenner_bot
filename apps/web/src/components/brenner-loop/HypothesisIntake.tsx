@@ -23,6 +23,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import type { HypothesisCard } from "@/lib/brenner-loop/hypothesis";
 import { createHypothesisCard, generateHypothesisCardId } from "@/lib/brenner-loop/hypothesis";
+import { upsertAssumptionLedger } from "@/lib/brenner-loop/storage";
+import { generateAssumptionId, type AssumptionCriticality } from "@/lib/schemas/assumption";
 
 // ============================================================================
 // Types
@@ -44,6 +46,9 @@ export interface HypothesisIntakeProps {
   /** Initial values for editing (optional) */
   initialValues?: Partial<IntakeFormData>;
 
+  /** Optional callback with structured assumption ladder details */
+  onAssumptionsCaptured?: (assumptions: AssumptionDraft[]) => void;
+
   /** Who is creating this hypothesis */
   createdBy?: string;
 
@@ -59,10 +64,19 @@ interface IntakeFormData {
   predictionsIfTrue: string[];
   predictionsIfFalse: string[];
   impossibleIfTrue: string[];
+  assumptions: string[];
+  assumptionDetails: AssumptionDraft[];
   confidence: number;
 }
 
-type IntakeStep = 1 | 2 | 3 | 4 | 5 | 6;
+export interface AssumptionDraft {
+  id: string;
+  statement: string;
+  criticality: AssumptionCriticality;
+  dependsOn: string[];
+}
+
+type IntakeStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 // ============================================================================
 // Constants
@@ -74,7 +88,8 @@ const STEPS: { number: IntakeStep; title: string; description: string }[] = [
   { number: 3, title: "Predictions If True", description: "What would we observe if you're right?" },
   { number: 4, title: "Predictions If False", description: "What would we observe if you're wrong?" },
   { number: 5, title: "Falsification Conditions", description: "What would prove you wrong?" },
-  { number: 6, title: "Initial Confidence", description: "How confident are you?" },
+  { number: 6, title: "Assumptions", description: "What are you assuming is true?" },
+  { number: 7, title: "Initial Confidence", description: "How confident are you?" },
 ];
 
 /**
@@ -103,6 +118,10 @@ const BRENNER_QUOTES: Record<IntakeStep, { quote: string; context: string }> = {
     context: "This is the most important step. If you can't specify what would prove you wrong, your hypothesis isn't testable yet.",
   },
   6: {
+    quote: "Exclusion is always a tremendously good thing in science.",
+    context: "Hidden assumptions are where bad hypotheses hide. Make them explicit.",
+  },
+  7: {
     quote: "High confidence should mean you've already thought about how you could be wrong.",
     context: "Be honest with yourself. Overconfidence is the enemy of good science.",
   },
@@ -117,6 +136,94 @@ const MECHANISM_TYPES = [
   { id: "threshold", label: "Threshold Effect", description: "Effect only above/below threshold" },
   { id: "other", label: "Other", description: "Describe your own mechanism" },
 ];
+
+const ASSUMPTION_CRITICALITY_OPTIONS: { value: AssumptionCriticality; label: string; hint: string }[] = [
+  { value: "foundational", label: "Foundational", hint: "If wrong, hypothesis fails outright" },
+  { value: "important", label: "Important", hint: "If wrong, hypothesis is weakened or narrowed" },
+  { value: "minor", label: "Minor", hint: "If wrong, hypothesis needs small adjustment" },
+];
+
+const deriveAssumptionStatements = (assumptions: AssumptionDraft[]): string[] =>
+  assumptions
+    .map((assumption) => assumption.statement.trim())
+    .filter((statement) => statement.length > 0);
+
+const buildAssumptionDraftsFromStatements = (
+  sessionId: string,
+  statements: string[]
+): AssumptionDraft[] => {
+  const drafts: AssumptionDraft[] = [];
+  for (const statement of statements) {
+    const id = generateAssumptionId(sessionId, drafts.map((assumption) => assumption.id));
+    drafts.push({
+      id,
+      statement,
+      criticality: "important",
+      dependsOn: [],
+    });
+  }
+  return drafts;
+};
+
+const persistAssumptionsToLedger = (
+  sessionId: string,
+  assumptions: AssumptionDraft[]
+): void => {
+  const now = new Date().toISOString();
+  const entries = assumptions.map((assumption) => ({
+    id: assumption.id,
+    statement: assumption.statement,
+    criticality: assumption.criticality,
+    dependsOn: assumption.dependsOn,
+    createdAt: now,
+    updatedAt: now,
+  }));
+
+  upsertAssumptionLedger(sessionId, entries);
+};
+
+const computeAssumptionCascadePreview = (
+  assumptions: AssumptionDraft[],
+  rootAssumptionId: string
+): { affectedAssumptionIds: string[]; byCriticality: Record<AssumptionCriticality, number> } => {
+  const assumptionById = new Map(assumptions.map((assumption) => [assumption.id, assumption]));
+  const dependents = new Map<string, string[]>();
+
+  for (const assumption of assumptions) {
+    for (const dependency of assumption.dependsOn) {
+      const existing = dependents.get(dependency) ?? [];
+      existing.push(assumption.id);
+      dependents.set(dependency, existing);
+    }
+  }
+
+  const visited = new Set<string>();
+  const queue = [...(dependents.get(rootAssumptionId) ?? [])];
+
+  for (let index = 0; index < queue.length; index++) {
+    const current = queue[index];
+    if (!current || current === rootAssumptionId || visited.has(current)) continue;
+    visited.add(current);
+    const next = dependents.get(current);
+    if (next && next.length > 0) {
+      queue.push(...next);
+    }
+  }
+
+  const byCriticality: Record<AssumptionCriticality, number> = {
+    foundational: 0,
+    important: 0,
+    minor: 0,
+  };
+
+  for (const id of visited) {
+    const assumption = assumptionById.get(id);
+    if (!assumption) continue;
+    byCriticality[assumption.criticality] += 1;
+  }
+
+  return { affectedAssumptionIds: Array.from(visited), byCriticality };
+};
 
 // ============================================================================
 // Icons
@@ -370,6 +477,279 @@ function ListInput({
 }
 
 // ============================================================================
+// Assumption Ladder Input Component
+// ============================================================================
+
+interface AssumptionLadderInputProps {
+  sessionId: string;
+  assumptions: AssumptionDraft[];
+  onChange: (assumptions: AssumptionDraft[]) => void;
+}
+
+interface AssumptionDependencyMapProps {
+  assumptions: AssumptionDraft[];
+}
+
+function AssumptionDependencyMap({ assumptions }: AssumptionDependencyMapProps) {
+  const dependents = new Map<string, string[]>();
+
+  for (const assumption of assumptions) {
+    for (const dependency of assumption.dependsOn) {
+      const existing = dependents.get(dependency) ?? [];
+      existing.push(assumption.id);
+      dependents.set(dependency, existing);
+    }
+  }
+
+  if (assumptions.length <= 1) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-4 text-sm text-muted-foreground">
+        Add at least two assumptions to visualize dependency links.
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-muted/20 p-4 space-y-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Dependency map
+      </div>
+      <div className="space-y-3">
+        {assumptions.map((assumption) => {
+          const upstream = assumption.dependsOn;
+          const downstream = dependents.get(assumption.id) ?? [];
+          const statementLabel = assumption.statement.trim() || "Untitled assumption";
+
+          return (
+            <div key={assumption.id} className="rounded-md border border-border bg-background p-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-sm font-medium">{assumption.id}</div>
+                <span className="text-xs text-muted-foreground capitalize">
+                  {assumption.criticality}
+                </span>
+              </div>
+              <div className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                {statementLabel}
+              </div>
+              <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                <div className="text-xs">
+                  <span className="font-medium text-muted-foreground">Depends on:</span>{" "}
+                  {upstream.length === 0 ? (
+                    <span className="text-muted-foreground">None</span>
+                  ) : (
+                    <span className="text-foreground">{upstream.join(", ")}</span>
+                  )}
+                </div>
+                <div className="text-xs">
+                  <span className="font-medium text-muted-foreground">Enables:</span>{" "}
+                  {downstream.length === 0 ? (
+                    <span className="text-muted-foreground">None</span>
+                  ) : (
+                    <span className="text-foreground">{downstream.join(", ")}</span>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AssumptionLadderInput({
+  sessionId,
+  assumptions,
+  onChange,
+}: AssumptionLadderInputProps) {
+  const addAssumption = () => {
+    const id = generateAssumptionId(sessionId, assumptions.map((assumption) => assumption.id));
+    onChange([
+      ...assumptions,
+      {
+        id,
+        statement: "",
+        criticality: "important",
+        dependsOn: [],
+      },
+    ]);
+  };
+
+  const updateAssumption = (
+    id: string,
+    updater: (assumption: AssumptionDraft) => AssumptionDraft
+  ) => {
+    onChange(
+      assumptions.map((assumption) => (assumption.id === id ? updater(assumption) : assumption))
+    );
+  };
+
+  const removeAssumption = (id: string) => {
+    const filtered = assumptions.filter((assumption) => assumption.id !== id);
+    const cleaned = filtered.map((assumption) => ({
+      ...assumption,
+      dependsOn: assumption.dependsOn.filter((dependency) => dependency !== id),
+    }));
+    onChange(cleaned);
+  };
+
+  const toggleDependency = (assumptionId: string, dependencyId: string) => {
+    updateAssumption(assumptionId, (assumption) => {
+      const nextDependsOn = assumption.dependsOn.includes(dependencyId)
+        ? assumption.dependsOn.filter((dep) => dep !== dependencyId)
+        : [...assumption.dependsOn, dependencyId];
+      return { ...assumption, dependsOn: nextDependsOn };
+    });
+  };
+
+  if (assumptions.length === 0) {
+    return (
+      <div className="rounded-lg border border-dashed border-border bg-muted/30 p-6 text-center">
+        <p className="text-sm text-muted-foreground mb-4">
+          No assumptions captured yet. Add at least one load-bearing assumption.
+        </p>
+        <Button type="button" variant="outline" onClick={addAssumption}>
+          <PlusIcon className="size-4" />
+          <span className="ml-2">Add assumption</span>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-muted-foreground">
+          Use criticality to mark how load-bearing each assumption is. Dependencies reveal
+          cascade risk.
+        </p>
+        <Button type="button" variant="outline" size="sm" onClick={addAssumption}>
+          <PlusIcon className="size-4" />
+          <span className="ml-1">Add</span>
+        </Button>
+      </div>
+
+      <div className="space-y-4">
+        {assumptions.map((assumption, index) => {
+          const otherAssumptions = assumptions.filter((item) => item.id !== assumption.id);
+          const cascade = computeAssumptionCascadePreview(assumptions, assumption.id);
+          const hasCascade = cascade.affectedAssumptionIds.length > 0;
+          const criticalityHint = ASSUMPTION_CRITICALITY_OPTIONS.find(
+            (option) => option.value === assumption.criticality
+          )?.hint;
+
+          return (
+            <div
+              key={assumption.id}
+              className="rounded-lg border border-border bg-card p-4 space-y-4"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-2 flex-1">
+                  <div className="text-xs text-muted-foreground">
+                    Assumption {index + 1} · {assumption.id}
+                  </div>
+                  <Textarea
+                    value={assumption.statement}
+                    onChange={(e) =>
+                      updateAssumption(assumption.id, (current) => ({
+                        ...current,
+                        statement: e.target.value,
+                      }))
+                    }
+                    placeholder="Describe the assumption that must hold for this hypothesis."
+                    rows={2}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeAssumption(assumption.id)}
+                  className="text-muted-foreground hover:text-destructive h-8 w-8 p-0"
+                >
+                  <XMarkIcon className="size-4" />
+                </Button>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Criticality
+                  </label>
+                  <select
+                    value={assumption.criticality}
+                    onChange={(e) =>
+                      updateAssumption(assumption.id, (current) => ({
+                        ...current,
+                        criticality: e.target.value as AssumptionCriticality,
+                      }))
+                    }
+                    className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm"
+                  >
+                    {ASSUMPTION_CRITICALITY_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                  {criticalityHint && (
+                    <p className="text-xs text-muted-foreground">{criticalityHint}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                    Depends On
+                  </label>
+                  {otherAssumptions.length === 0 ? (
+                    <p className="text-xs text-muted-foreground italic">
+                      Add another assumption to define dependencies.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {otherAssumptions.map((candidate) => (
+                        <label key={candidate.id} className="flex items-start gap-2 text-sm">
+                          <input
+                            type="checkbox"
+                            checked={assumption.dependsOn.includes(candidate.id)}
+                            onChange={() => toggleDependency(assumption.id, candidate.id)}
+                            className="mt-0.5 h-4 w-4 rounded border-border"
+                          />
+                          <span className="flex-1">
+                            <span className="font-medium">{candidate.id}</span>
+                            <span className="block text-xs text-muted-foreground line-clamp-1">
+                              {candidate.statement || "Untitled assumption"}
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="text-xs text-muted-foreground">
+                {hasCascade ? (
+                  <>
+                    Cascade impact: {cascade.affectedAssumptionIds.length} downstream assumption(s)
+                    (foundational: {cascade.byCriticality.foundational}, important:{" "}
+                    {cascade.byCriticality.important}, minor: {cascade.byCriticality.minor}).
+                  </>
+                ) : (
+                  "Cascade impact: none (no downstream dependencies)."
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <AssumptionDependencyMap assumptions={assumptions} />
+    </div>
+  );
+}
+
+// ============================================================================
 // Confidence Slider Component
 // ============================================================================
 
@@ -456,6 +836,7 @@ function ConfidenceSlider({ value, onChange }: ConfidenceSliderProps) {
 // ============================================================================
 
 interface StepContentProps {
+  sessionId: string;
   formData: IntakeFormData;
   setFormData: React.Dispatch<React.SetStateAction<IntakeFormData>>;
   errors: Record<string, string>;
@@ -610,7 +991,46 @@ function Step5Content({ formData, setFormData, errors }: StepContentProps) {
   );
 }
 
-function Step6Content({ formData, setFormData }: StepContentProps) {
+function Step6Content({ formData, setFormData, errors, sessionId }: StepContentProps) {
+  const assumptionCount = deriveAssumptionStatements(formData.assumptionDetails).length;
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h3 className="text-sm font-medium mb-1">What assumptions does this hypothesis rest on?</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Capture the load-bearing assumptions. Set criticality and dependencies to surface cascade risk.
+        </p>
+      </div>
+
+      <AssumptionLadderInput
+        sessionId={sessionId}
+        assumptions={formData.assumptionDetails}
+        onChange={(assumptions) =>
+          setFormData((prev) => ({
+            ...prev,
+            assumptionDetails: assumptions,
+            assumptions: deriveAssumptionStatements(assumptions),
+          }))
+        }
+      />
+
+      {errors.assumptions && (
+        <p className="text-xs text-destructive">{errors.assumptions}</p>
+      )}
+
+      <p className="text-xs text-muted-foreground">
+        {assumptionCount === 0
+          ? "Add at least one assumption before moving on."
+          : `${assumptionCount} assumption${assumptionCount === 1 ? "" : "s"} captured so far.`}
+      </p>
+    </div>
+  );
+}
+
+function Step7Content({ formData, setFormData }: StepContentProps) {
+  const assumptionCount = deriveAssumptionStatements(formData.assumptionDetails).length;
+
   return (
     <div className="space-y-6">
       <div>
@@ -645,6 +1065,10 @@ function Step6Content({ formData, setFormData }: StepContentProps) {
             <span className="text-muted-foreground">Falsification conditions: </span>
             <span>{formData.impossibleIfTrue.length} item(s)</span>
           </div>
+          <div>
+            <span className="text-muted-foreground">Assumptions: </span>
+            <span>{assumptionCount} item(s)</span>
+          </div>
         </div>
       </div>
     </div>
@@ -663,7 +1087,44 @@ const INITIAL_FORM_DATA: IntakeFormData = {
   predictionsIfTrue: [],
   predictionsIfFalse: [],
   impossibleIfTrue: [],
+  assumptions: [],
+  assumptionDetails: [],
   confidence: 50,
+};
+
+const normalizeAssumptionDrafts = (
+  sessionId: string,
+  drafts: AssumptionDraft[]
+): AssumptionDraft[] => {
+  const usedIds = new Set<string>();
+  return drafts.map((draft) => {
+    const id = draft.id && !usedIds.has(draft.id)
+      ? draft.id
+      : generateAssumptionId(sessionId, Array.from(usedIds));
+    usedIds.add(id);
+    return {
+      id,
+      statement: draft.statement ?? "",
+      criticality: draft.criticality ?? "important",
+      dependsOn: draft.dependsOn ?? [],
+    };
+  });
+};
+
+const buildInitialFormData = (
+  sessionId: string,
+  initialValues?: Partial<IntakeFormData>
+): IntakeFormData => {
+  const seeded = { ...INITIAL_FORM_DATA, ...initialValues };
+  const assumptionDetails = initialValues?.assumptionDetails?.length
+    ? normalizeAssumptionDrafts(sessionId, initialValues.assumptionDetails)
+    : buildAssumptionDraftsFromStatements(sessionId, seeded.assumptions ?? []);
+
+  return {
+    ...seeded,
+    assumptionDetails,
+    assumptions: deriveAssumptionStatements(assumptionDetails),
+  };
 };
 
 export function HypothesisIntake({
@@ -672,14 +1133,14 @@ export function HypothesisIntake({
   onComplete,
   onCancel,
   initialValues,
+  onAssumptionsCaptured,
   createdBy,
   className,
 }: HypothesisIntakeProps) {
   const [currentStep, setCurrentStep] = React.useState<IntakeStep>(1);
-  const [formData, setFormData] = React.useState<IntakeFormData>({
-    ...INITIAL_FORM_DATA,
-    ...initialValues,
-  });
+  const [formData, setFormData] = React.useState<IntakeFormData>(() =>
+    buildInitialFormData(sessionId, initialValues)
+  );
   const [errors, setErrors] = React.useState<Record<string, string>>({});
   const [completedSteps, setCompletedSteps] = React.useState<Set<IntakeStep>>(new Set());
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -730,6 +1191,12 @@ export function HypothesisIntake({
         break;
 
       case 6:
+        if (deriveAssumptionStatements(formData.assumptionDetails).length === 0) {
+          newErrors.assumptions = "Add at least one explicit assumption";
+        }
+        break;
+
+      case 7:
         // Confidence is always valid (0-100 range enforced by slider)
         break;
     }
@@ -744,7 +1211,7 @@ export function HypothesisIntake({
 
     setCompletedSteps((prev) => new Set([...prev, currentStep]));
 
-    if (currentStep < 6) {
+    if (currentStep < 7) {
       setCurrentStep((prev) => (prev + 1) as IntakeStep);
     }
   };
@@ -765,6 +1232,13 @@ export function HypothesisIntake({
     try {
       // Generate hypothesis ID
       const id = generateHypothesisCardId(sessionId, sequence);
+      const assumptionDrafts = formData.assumptionDetails
+        .map((assumption) => ({
+          ...assumption,
+          statement: assumption.statement.trim(),
+        }))
+        .filter((assumption) => assumption.statement.length > 0);
+      const assumptions = assumptionDrafts.map((assumption) => assumption.statement);
 
       // Create the hypothesis card
       const hypothesis = createHypothesisCard({
@@ -775,10 +1249,20 @@ export function HypothesisIntake({
         predictionsIfTrue: formData.predictionsIfTrue,
         predictionsIfFalse: formData.predictionsIfFalse,
         impossibleIfTrue: formData.impossibleIfTrue,
+        assumptions,
         confidence: formData.confidence,
         createdBy,
         sessionId,
       });
+
+      if (assumptionDrafts.length > 0) {
+        try {
+          persistAssumptionsToLedger(sessionId, assumptionDrafts);
+        } catch (error) {
+          console.error("Failed to persist assumption ledger:", error);
+        }
+      }
+      onAssumptionsCaptured?.(assumptionDrafts);
 
       // Call completion handler
       onComplete(hypothesis);
@@ -794,7 +1278,7 @@ export function HypothesisIntake({
 
   // Get step content
   const renderStepContent = () => {
-    const props: StepContentProps = { formData, setFormData, errors };
+    const props: StepContentProps = { formData, setFormData, errors, sessionId };
 
     switch (currentStep) {
       case 1: return <Step1Content {...props} />;
@@ -803,17 +1287,19 @@ export function HypothesisIntake({
       case 4: return <Step4Content {...props} />;
       case 5: return <Step5Content {...props} />;
       case 6: return <Step6Content {...props} />;
+      case 7: return <Step7Content {...props} />;
     }
   };
 
-  const isLastStep = currentStep === 6;
+  const isLastStep = currentStep === 7;
   // Note: canProceed must match validation logic (use trim() for text fields)
   const canProceed = currentStep === 4 || // Step 4 is optional
     (currentStep === 1 && formData.statement.trim().length >= 10) ||
     (currentStep === 2 && formData.mechanism.trim().length >= 10) ||
     (currentStep === 3 && formData.predictionsIfTrue.length > 0) ||
     (currentStep === 5 && formData.impossibleIfTrue.length > 0) ||
-    currentStep === 6;
+    (currentStep === 6 && deriveAssumptionStatements(formData.assumptionDetails).length > 0) ||
+    currentStep === 7;
 
   return (
     <div className={cn("max-w-2xl mx-auto", className)}>
@@ -822,7 +1308,7 @@ export function HypothesisIntake({
         <h1 className="text-2xl font-bold text-center mb-6">Hypothesis Intake</h1>
         <ProgressIndicator
           currentStep={currentStep}
-          totalSteps={6}
+          totalSteps={7}
           completedSteps={completedSteps}
         />
       </div>

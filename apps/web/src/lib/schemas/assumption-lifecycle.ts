@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   type Assumption,
+  type AssumptionCriticality,
   type AssumptionStatus,
   AssumptionStatusSchema,
   getAffectedByFalsification,
@@ -167,6 +168,15 @@ export interface PropagationResult {
   timestamp: string;
 }
 
+/**
+ * Result of a dependency cascade analysis across assumptions.
+ */
+export interface AssumptionCascadeResult {
+  rootAssumptionId: string;
+  affectedAssumptionIds: string[];
+  byCriticality: Record<AssumptionCriticality, number>;
+}
+
 // ============================================================================
 // Transition Errors
 // ============================================================================
@@ -312,6 +322,57 @@ export function computeFalsificationPropagation(
     invalidatedTests: affected.tests,
     summary,
     timestamp: new Date().toISOString(),
+  };
+}
+
+/**
+ * Compute the downstream assumption cascade if a given assumption fails.
+ * This uses the dependsOn graph across assumptions.
+ */
+export function computeAssumptionCascade(
+  assumptions: Assumption[],
+  rootAssumptionId: string
+): AssumptionCascadeResult {
+  const assumptionById = new Map(assumptions.map((assumption) => [assumption.id, assumption]));
+  const dependents = new Map<string, string[]>();
+
+  for (const assumption of assumptions) {
+    for (const dependency of assumption.dependsOn ?? []) {
+      const existing = dependents.get(dependency) ?? [];
+      existing.push(assumption.id);
+      dependents.set(dependency, existing);
+    }
+  }
+
+  const visited = new Set<string>();
+  const queue = [...(dependents.get(rootAssumptionId) ?? [])];
+
+  for (let index = 0; index < queue.length; index++) {
+    const current = queue[index];
+    if (!current || current === rootAssumptionId || visited.has(current)) continue;
+    visited.add(current);
+    const next = dependents.get(current);
+    if (next && next.length > 0) {
+      queue.push(...next);
+    }
+  }
+
+  const byCriticality: Record<AssumptionCriticality, number> = {
+    foundational: 0,
+    important: 0,
+    minor: 0,
+  };
+
+  for (const id of visited) {
+    const assumption = assumptionById.get(id);
+    if (!assumption) continue;
+    byCriticality[assumption.criticality] += 1;
+  }
+
+  return {
+    rootAssumptionId,
+    affectedAssumptionIds: Array.from(visited),
+    byCriticality,
   };
 }
 

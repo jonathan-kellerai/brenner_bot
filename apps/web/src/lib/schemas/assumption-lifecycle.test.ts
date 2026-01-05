@@ -14,6 +14,7 @@ import {
   verifyAssumption,
   falsifyAssumption,
   computeFalsificationPropagation,
+  computeAssumptionCascade,
   AssumptionTransitionHistoryStore,
   type AssumptionTransition,
 } from "./assumption-lifecycle";
@@ -902,5 +903,43 @@ describe("Falsification Cascade (end-to-end)", () => {
       expect(propagation.timestamp).toBeDefined();
       expect(new Date(propagation.timestamp).getTime()).toBeLessThanOrEqual(Date.now());
     });
+  });
+});
+
+// ============================================================================
+// Dependency Cascade Tests
+// ============================================================================
+
+describe("computeAssumptionCascade", () => {
+  it("collects transitive dependents with criticality counts", () => {
+    const assumptions: Assumption[] = [
+      createTestAssumption({ id: "A-ROOT-001" }),
+      createTestAssumption({ id: "A-DEP-001", criticality: "foundational", dependsOn: ["A-ROOT-001"] }),
+      createTestAssumption({ id: "A-DEP-002", criticality: "important", dependsOn: ["A-ROOT-001"] }),
+      createTestAssumption({ id: "A-DEP-003", criticality: "minor", dependsOn: ["A-DEP-001"] }),
+    ];
+
+    const result = computeAssumptionCascade(assumptions, "A-ROOT-001");
+
+    expect(result.affectedAssumptionIds).toEqual(
+      expect.arrayContaining(["A-DEP-001", "A-DEP-002", "A-DEP-003"])
+    );
+    expect(result.byCriticality.foundational).toBe(1);
+    expect(result.byCriticality.important).toBe(1);
+    expect(result.byCriticality.minor).toBe(1);
+  });
+
+  it("returns empty cascade when no dependents exist", () => {
+    const assumptions: Assumption[] = [
+      createTestAssumption({ id: "A-ROOT-ONLY" }),
+      createTestAssumption({ id: "A-OTHER-001" }),
+    ];
+
+    const result = computeAssumptionCascade(assumptions, "A-ROOT-ONLY");
+
+    expect(result.affectedAssumptionIds).toEqual([]);
+    expect(result.byCriticality.foundational).toBe(0);
+    expect(result.byCriticality.important).toBe(0);
+    expect(result.byCriticality.minor).toBe(0);
   });
 });

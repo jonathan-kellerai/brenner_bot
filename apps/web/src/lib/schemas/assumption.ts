@@ -96,6 +96,17 @@ export const AssumptionStatusSchema = z.enum([
 
 export type AssumptionStatus = z.infer<typeof AssumptionStatusSchema>;
 
+/**
+ * How load-bearing this assumption is.
+ */
+export const AssumptionCriticalitySchema = z.enum([
+  "foundational",
+  "important",
+  "minor",
+]);
+
+export type AssumptionCriticality = z.infer<typeof AssumptionCriticalitySchema>;
+
 // ============================================================================
 // Sub-schemas
 // ============================================================================
@@ -216,9 +227,26 @@ export const AssumptionSchema = z
     type: AssumptionTypeSchema,
 
     /**
+     * How load-bearing this assumption is.
+     */
+    criticality: AssumptionCriticalitySchema.default("important"),
+
+    /**
      * Current lifecycle status.
      */
     status: AssumptionStatusSchema,
+
+    /**
+     * Other assumptions that must hold for this assumption to remain valid.
+     */
+    dependsOn: z
+      .array(
+        z.string().regex(
+          assumptionIdPattern,
+          "Invalid assumption ID format (expected A-{session}-{seq} or A{n})"
+        )
+      )
+      .default([]),
 
     // === LOAD TRACKING ===
 
@@ -444,7 +472,9 @@ export function createAssumption(
     type: AssumptionType;
     sessionId: string;
     load: AssumptionLoad;
+    criticality?: AssumptionCriticality;
     status?: AssumptionStatus;
+    dependsOn?: string[];
     testMethod?: string;
     calculation?: ScaleCalculation;
     anchors?: string[];
@@ -457,7 +487,9 @@ export function createAssumption(
     id: input.id,
     statement: input.statement,
     type: input.type,
+    criticality: input.criticality ?? "important",
     status: input.status ?? "unchecked",
+    dependsOn: input.dependsOn ?? [],
     load: input.load,
     testMethod: input.testMethod,
     calculation: input.calculation,
@@ -481,6 +513,8 @@ export function createScaleAssumption(
     sessionId: string;
     load: AssumptionLoad;
     calculation: ScaleCalculation;
+    criticality?: AssumptionCriticality;
+    dependsOn?: string[];
     testMethod?: string;
     anchors?: string[];
     recordedBy?: string;

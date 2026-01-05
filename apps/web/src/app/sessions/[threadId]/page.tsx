@@ -393,7 +393,7 @@ export default async function SessionDetailPage({
             <div className="text-sm text-muted-foreground font-mono">{threadId}</div>
           </div>
           <div className="flex flex-wrap items-center justify-end gap-3">
-            <RefreshControls />
+            <RefreshControls threadId={threadId} defaultAuto />
             <span className="text-xs text-muted-foreground font-mono">refreshed {now}</span>
             <Link href={`/sessions/${threadId}/evidence`} className="text-sm text-primary hover:underline">
               Evidence Pack

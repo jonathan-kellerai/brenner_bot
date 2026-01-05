@@ -3,6 +3,7 @@ import {
   AssumptionSchema,
   AssumptionTypeSchema,
   AssumptionStatusSchema,
+  AssumptionCriticalitySchema,
   AssumptionLoadSchema,
   ScaleCalculationSchema,
   warnMissingCalculation,
@@ -23,7 +24,9 @@ describe("AssumptionSchema", () => {
     id: "A-RS20251230-001",
     statement: "Diffusion is the dominant transport mechanism at this scale.",
     type: "scale_physics" as const,
+    criticality: "foundational" as const,
     status: "unchecked" as const,
+    dependsOn: ["A1"],
     load: {
       affectedHypotheses: ["H-RS20251230-001"],
       affectedTests: ["T-RS20251230-001"],
@@ -52,6 +55,8 @@ describe("AssumptionSchema", () => {
       expect(result.data.id).toBe("A-RS20251230-001");
       expect(result.data.type).toBe("scale_physics");
       expect(result.data.status).toBe("unchecked");
+      expect(result.data.criticality).toBe("foundational");
+      expect(result.data.dependsOn).toEqual(["A1"]);
     }
   });
 
@@ -124,6 +129,10 @@ describe("AssumptionSchema", () => {
     };
     const result = AssumptionSchema.safeParse(minimal);
     expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.criticality).toBe("important");
+      expect(result.data.dependsOn).toEqual([]);
+    }
   });
 
   it("requires load field", () => {
@@ -156,6 +165,12 @@ describe("AssumptionSchema", () => {
     const result = AssumptionSchema.safeParse(invalidLoad);
     expect(result.success).toBe(false);
   });
+
+  it("rejects invalid dependsOn IDs", () => {
+    const invalid = { ...validAssumption, dependsOn: ["bad-id"] };
+    const result = AssumptionSchema.safeParse(invalid);
+    expect(result.success).toBe(false);
+  });
 });
 
 describe("Enum schemas", () => {
@@ -173,6 +188,13 @@ describe("Enum schemas", () => {
     expect(AssumptionStatusSchema.safeParse("verified").success).toBe(true);
     expect(AssumptionStatusSchema.safeParse("falsified").success).toBe(true);
     expect(AssumptionStatusSchema.safeParse("invalid").success).toBe(false);
+  });
+
+  it("validates criticality types", () => {
+    expect(AssumptionCriticalitySchema.safeParse("foundational").success).toBe(true);
+    expect(AssumptionCriticalitySchema.safeParse("important").success).toBe(true);
+    expect(AssumptionCriticalitySchema.safeParse("minor").success).toBe(true);
+    expect(AssumptionCriticalitySchema.safeParse("critical").success).toBe(false);
   });
 });
 
@@ -264,7 +286,9 @@ describe("warnMissingCalculation", () => {
     id: "A-TEST-001",
     statement: "Test statement for assumption.",
     type: "scale_physics",
+    criticality: "important",
     status: "unchecked",
+    dependsOn: [],
     load: {
       affectedHypotheses: [],
       affectedTests: [],
@@ -345,7 +369,9 @@ describe("validateScaleAssumptionPresence", () => {
     id: "A-TEST-001",
     statement: "Test statement for assumption.",
     type: "background",
+    criticality: "important",
     status: "unchecked",
+    dependsOn: [],
     load: {
       affectedHypotheses: [],
       affectedTests: [],
@@ -419,7 +445,9 @@ describe("getAffectedByFalsification", () => {
       id: "A-TEST-001",
       statement: "Test assumption.",
       type: "background",
+      criticality: "important",
       status: "unchecked",
+      dependsOn: [],
       load: {
         affectedHypotheses: ["H-TEST-001", "H-TEST-002"],
         affectedTests: ["T-TEST-001"],
@@ -812,7 +840,9 @@ describe("validateScaleAssumptionPresence edge cases", () => {
     id: "A-TEST-001",
     statement: "Test statement for assumption.",
     type: "background",
+    criticality: "important",
     status: "unchecked",
+    dependsOn: [],
     load: {
       affectedHypotheses: [],
       affectedTests: [],
