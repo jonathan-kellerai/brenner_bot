@@ -8,7 +8,7 @@
  * @see brenner-loop/session-machine.ts
  */
 
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import {
   transition,
   getAvailableEvents,
@@ -27,7 +27,6 @@ import {
   hasPendingAgentRequests,
   hasAgentResponses,
   hasEvidence,
-  type SessionEvent,
 } from "./session-machine";
 import {
   CURRENT_SESSION_VERSION,
@@ -928,7 +927,7 @@ describe("Full Session Flow", () => {
   });
 
   it("supports revision cycle back to operators", () => {
-    let session = createTestSession({ phase: "revision" });
+    const session = createTestSession({ phase: "revision" });
 
     // revision -> level_split
     const result = transition(session, { type: "RESTART_OPERATORS" });

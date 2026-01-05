@@ -289,6 +289,16 @@ describe("operators/level-split", () => {
     expect(result.focusedHypothesisId).toBe(sub.id);
   });
 
+  it("adds implementation levels for tech domains (and omits population)", () => {
+    const hypothesis = makeHypothesis({ domain: ["technology"] });
+    const xLevels = generateXLevels(hypothesis);
+    const yLevels = generateYLevels(hypothesis);
+
+    expect(xLevels.some((l) => l.category === "implementation")).toBe(true);
+    expect(xLevels.some((l) => l.category === "population")).toBe(false);
+    expect(yLevels.some((l) => l.category === "population")).toBe(false);
+  });
+
   it("builds empty result when session has no selections", () => {
     const session = {
       userSelections: {},
@@ -301,6 +311,42 @@ describe("operators/level-split", () => {
     expect(result.selectedCombinations).toEqual([]);
     expect(result.subHypotheses).toEqual([]);
     expect(result.focusedHypothesisId).toBeNull();
+  });
+
+  it("validates matrix step when no combinations are selected", () => {
+    const hypothesis = makeHypothesis();
+    const session = createSession("level_split", hypothesis, LEVEL_SPLIT_STEPS);
+
+    const matrixStep = session.steps[2]?.config;
+    const validation = matrixStep?.validate?.(session);
+
+    expect(validation?.valid).toBe(false);
+    expect(validation?.errors).toContain("Select at least one X-Y combination");
+  });
+
+  it("tracks completion for generated sub-hypotheses and chosen focus", () => {
+    const hypothesis = makeHypothesis();
+    let session = createSession("level_split", hypothesis, LEVEL_SPLIT_STEPS);
+
+    const generateSubsStep = session.steps[3]?.config;
+    const focusStep = session.steps[4]?.config;
+
+    expect(generateSubsStep?.isComplete?.(session)).toBe(false);
+    expect(focusStep?.isComplete?.(session)).toBe(false);
+
+    session = sessionReducer(session, {
+      type: "SET_CONTENT",
+      key: LEVEL_SPLIT_STEP_IDS.GENERATE_SUB,
+      value: [{ id: "sub-1", statement: "Sub hypothesis statement", xLevelId: "x", yLevelId: "y" }],
+    });
+    expect(generateSubsStep?.isComplete?.(session)).toBe(true);
+
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: LEVEL_SPLIT_STEP_IDS.CHOOSE_FOCUS,
+      value: "sub-1",
+    });
+    expect(focusStep?.isComplete?.(session)).toBe(true);
   });
 
   it("validates step completion for level-split steps", () => {
@@ -442,11 +488,12 @@ describe("operators/exclusion-test", () => {
 
   it("covers all category colors", () => {
     expect(getCategoryColor("natural_experiment")).toBeTruthy();
+    expect(getCategoryColor("cross_context")).toBeTruthy();
     expect(getCategoryColor("mechanism_block")).toBeTruthy();
     expect(getCategoryColor("dose_response")).toBeTruthy();
-    expect(getCategoryColor("temporal_precedence")).toBeTruthy();
+    expect(getCategoryColor("temporal_sequence")).toBeTruthy();
     expect(getCategoryColor("specificity")).toBeTruthy();
-    expect(getCategoryColor("replication")).toBeTruthy();
+    expect(getCategoryColor("coherence")).toBeTruthy();
     expect(getCategoryColor("custom")).toBeTruthy();
   });
 
@@ -475,6 +522,80 @@ describe("operators/exclusion-test", () => {
     const multiSelected = tests.slice(0, 3).map((t) => ({ ...t, selected: true }));
     const protocols = generateProtocols(multiSelected);
     expect(protocols).toHaveLength(3);
+  });
+
+  it("exercises step gating and validation branches", () => {
+    const hypothesis = makeHypothesis({
+      statement: "Caffeine causes insomnia",
+      mechanism: "Adenosine receptor antagonism disrupts sleep drive",
+    });
+
+    let session = createSession("exclusion_test", hypothesis, EXCLUSION_TEST_STEPS);
+
+    // Informational step is always complete.
+    expect(session.steps[0]?.config.isComplete?.(session)).toBe(true);
+
+    // Tests not generated yet.
+    expect(session.steps[1]?.config.isComplete?.(session)).toBe(false);
+
+    const generatedTests = generateExclusionTests(hypothesis);
+    session = sessionReducer(session, {
+      type: "SET_CONTENT",
+      key: EXCLUSION_TEST_STEP_IDS.GENERATE_TESTS,
+      value: generatedTests,
+    });
+    expect(session.steps[1]?.config.isComplete?.(session)).toBe(true);
+
+    // No selection -> invalid.
+    const selectStep = session.steps[2]?.config;
+    expect(selectStep?.validate?.(session).valid).toBe(false);
+
+    // Select many tests -> warning branch.
+    const manySelected = generatedTests.slice(0, 6).map((t) => ({ ...t, selected: true }));
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: EXCLUSION_TEST_STEP_IDS.SELECT_TESTS,
+      value: manySelected,
+    });
+    const selectionValidation = selectStep?.validate?.(session);
+    expect(selectionValidation?.valid).toBe(true);
+    expect(selectionValidation?.warnings.length).toBeGreaterThan(0);
+
+    // Protocols step completion toggles via generated content.
+    const protocolStep = session.steps[3]?.config;
+    expect(protocolStep?.isComplete?.(session)).toBe(false);
+
+    const protocols = generateProtocols(manySelected);
+    session = sessionReducer(session, {
+      type: "SET_CONTENT",
+      key: EXCLUSION_TEST_STEP_IDS.GENERATE_PROTOCOLS,
+      value: protocols,
+    });
+    expect(protocolStep?.isComplete?.(session)).toBe(true);
+
+    // Recording requires explicit confirmation.
+    const recordStep = session.steps[4]?.config;
+    expect(recordStep?.validate?.(session).valid).toBe(false);
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: EXCLUSION_TEST_STEP_IDS.RECORD_TESTS,
+      value: true,
+    });
+    expect(recordStep?.validate?.(session).valid).toBe(true);
+  });
+
+  it("extracts hypothesis terms with and without causal phrasing", () => {
+    const hypothesis = makeHypothesis({ statement: "Caffeine causes insomnia", mechanism: "Adenosine blockade" });
+    const tests1 = generateExclusionTests(hypothesis);
+    expect(tests1.some((t) => t.name.includes("Caffeine"))).toBe(true);
+
+    const fallback = { ...hypothesis, statement: "Caffeine and insomnia are correlated" };
+    const tests2 = generateExclusionTests(fallback);
+    expect(tests2.some((t) => t.name.includes("Caffeine"))).toBe(true);
+
+    const missingMechanism = { ...hypothesis, mechanism: "" } as HypothesisCard;
+    const tests3 = generateExclusionTests(missingMechanism as never);
+    expect(JSON.stringify(tests3)).toContain("the proposed mechanism");
   });
 });
 
@@ -540,6 +661,42 @@ describe("operators/object-transpose", () => {
     expect(types.size).toBeGreaterThan(1);
   });
 
+  it("generates domain-specific third-variable alternatives", () => {
+    const hypothesis = makeHypothesis({ domain: ["psychology", "social", "health", "technology"] });
+    const thirdVars = generateThirdVariables(hypothesis);
+
+    expect(thirdVars.length).toBeGreaterThan(0);
+    expect(thirdVars.length).toBeLessThanOrEqual(4);
+    expect(thirdVars.every((alt) => alt.type === "third_variable")).toBe(true);
+  });
+
+  it("validates plausibility step and warns when some alternatives are unrated", () => {
+    const hypothesis = makeHypothesis();
+    const session = createSession("object_transpose", hypothesis, OBJECT_TRANSPOSE_STEPS);
+
+    const rateStep = session.steps[2]?.config;
+    expect(rateStep?.validate?.(session).valid).toBe(false);
+
+    const alternatives = generateAlternatives(hypothesis);
+    const ratings = [
+      { alternativeId: alternatives[0]?.id, plausibility: 3, evidenceDiscrimination: "poor", notes: "" },
+    ];
+
+    const partiallyRated = {
+      ...session,
+      generatedContent: {
+        [OBJECT_TRANSPOSE_STEP_IDS.GENERATE_ALTERNATIVES]: alternatives.slice(0, 2),
+      },
+      userSelections: {
+        [OBJECT_TRANSPOSE_STEP_IDS.RATE_PLAUSIBILITY]: ratings,
+      },
+    } as unknown as typeof session;
+
+    const validation = rateStep?.validate?.(partiallyRated);
+    expect(validation?.valid).toBe(true);
+    expect(validation?.warnings.length).toBeGreaterThan(0);
+  });
+
   it("generates discriminating tests for rated alternatives", () => {
     const hypothesis = makeHypothesis();
     const alternatives = generateAlternatives(hypothesis);
@@ -564,6 +721,18 @@ describe("operators/object-transpose", () => {
 
   it("handles empty alternatives for discriminating tests", () => {
     const tests = generateDiscriminatingTests([], []);
+    expect(tests).toEqual([]);
+  });
+
+  it("skips alternatives with no discriminating test template", () => {
+    const alternatives = [
+      { id: "alt-other", type: "other", name: "Other", description: "Other", implications: [] },
+    ] as never;
+    const ratings = [
+      { alternativeId: "alt-other", plausibility: 4, evidenceDiscrimination: "poor", notes: "" },
+    ] as never;
+
+    const tests = generateDiscriminatingTests(alternatives, ratings);
     expect(tests).toEqual([]);
   });
 });
@@ -604,6 +773,12 @@ describe("operators/scale-check", () => {
     const result = buildScaleCheckResult(session);
     expect(result.overallPlausibility).toBe("implausible");
     expect(result.summaryNotes).toBe("summary");
+  });
+
+  it("approximates sample sizes for different power levels", () => {
+    expect(approximateSampleSize(0)).toBe(Infinity);
+    expect(approximateSampleSize(0.3)).toBeGreaterThan(0);
+    expect(approximateSampleSize(0.3, 0.9)).toBeGreaterThan(approximateSampleSize(0.3, 0.8));
   });
 
   it("classifies effect sizes for all effect types (r, d, OR, RR, percentage)", () => {
@@ -689,6 +864,18 @@ describe("operators/scale-check", () => {
     expect(comparison.warnings.some((w) => w.includes("exceeds typical maximum"))).toBe(true);
   });
 
+  it("marks small effects as below typical and skips domain threshold for OR/RR types", () => {
+    const psych = getDomainContext(makeHypothesis({ domain: ["psychology"] }));
+    const below = generateContextComparison({ type: "r", value: 0.05, direction: "increase" }, psych);
+    expect(below.relativeToNorm).toBe("below_typical");
+    expect(below.benchmarksWithComparisons.some((b) => b.comparison === "smaller")).toBe(true);
+
+    const med = getDomainContext(makeHypothesis({ domain: ["medicine"] }));
+    const orResult = generateContextComparison({ type: "OR", value: 0.9, direction: "change" }, med);
+    expect(orResult.relativeToNorm).toBe("below_typical");
+    expect(orResult.warnings.some((w) => w.includes("exceeds typical maximum"))).toBe(false);
+  });
+
   it("gets domain context for different domains", () => {
     expect(getDomainContext(makeHypothesis({ domain: ["medicine"] })).domain).toBe("Medicine");
     expect(getDomainContext(makeHypothesis({ domain: ["education"] })).domain).toBe("Education");
@@ -767,5 +954,62 @@ describe("operators/scale-check", () => {
     const result = buildScaleCheckResult(emptySession);
     expect(result.effectSize.type).toBe("estimate");
     expect(result.summaryNotes).toBe("");
+  });
+
+  it("covers step completion + validation for quantify and population steps", () => {
+    const hypothesis = makeHypothesis();
+    let session = createSession("scale_check", hypothesis, SCALE_CHECK_STEPS);
+
+    const quantifyStep = session.steps[0]?.config;
+    expect(quantifyStep?.validate?.(session).valid).toBe(false);
+    expect(quantifyStep?.isComplete?.(session)).toBe(false);
+
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: SCALE_CHECK_STEP_IDS.QUANTIFY,
+      value: { type: "r", value: 0.15, direction: "increase" },
+    });
+    expect(quantifyStep?.validate?.(session).valid).toBe(true);
+    expect(quantifyStep?.isComplete?.(session)).toBe(true);
+
+    const contextStep = session.steps[1]?.config;
+    expect(contextStep?.isComplete?.(session)).toBe(false);
+    session = sessionReducer(session, {
+      type: "SET_CONTENT",
+      key: SCALE_CHECK_STEP_IDS.CONTEXTUALIZE,
+      value: generateContextComparison({ type: "r", value: 0.05, direction: "increase" }, getDomainContext(hypothesis)),
+    });
+    expect(contextStep?.isComplete?.(session)).toBe(true);
+
+    const precisionStep = session.steps[2]?.config;
+    expect(precisionStep?.isComplete?.(session)).toBe(false);
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: SCALE_CHECK_STEP_IDS.PRECISION,
+      value: { isDetectable: true, powerNotes: "ok", warnings: [] },
+    });
+    expect(precisionStep?.isComplete?.(session)).toBe(true);
+
+    const practicalStep = session.steps[3]?.config;
+    expect(practicalStep?.isComplete?.(session)).toBe(false);
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: SCALE_CHECK_STEP_IDS.PRACTICAL,
+      value: { isPracticallyMeaningful: true, stakeholders: ["users"], reasoning: "matters" },
+    });
+    expect(practicalStep?.isComplete?.(session)).toBe(true);
+
+    const populationStep = session.steps[4]?.config;
+    expect(populationStep?.validate?.(session).valid).toBe(false);
+
+    const considerations = generatePopulationConsiderations();
+    considerations[0] = { ...considerations[0], addressed: true, notes: "Checked" };
+    session = sessionReducer(session, {
+      type: "SET_SELECTION",
+      key: SCALE_CHECK_STEP_IDS.POPULATION,
+      value: considerations,
+    });
+    expect(populationStep?.validate?.(session).valid).toBe(true);
+    expect(populationStep?.isComplete?.(session)).toBe(true);
   });
 });

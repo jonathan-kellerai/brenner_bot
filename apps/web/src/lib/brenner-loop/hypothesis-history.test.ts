@@ -25,8 +25,6 @@ import {
   isAncestor,
   EVOLUTION_TRIGGER_LABELS,
   type EvolutionTrigger,
-  type HypothesisHistoryStore,
-  type HypothesisVersion,
 } from "./hypothesis-history";
 import { createHypothesisCard, generateHypothesisCardId } from "./hypothesis";
 import type { HypothesisCard } from "./hypothesis";
@@ -121,7 +119,7 @@ describe("addRootHypothesis", () => {
   });
 
   it("adds multiple root hypotheses", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h1 = makeHypothesis("SESSION-1", 1);
     const h2 = makeHypothesis("SESSION-1", 2);
 
@@ -216,7 +214,7 @@ describe("getAncestors", () => {
   });
 
   it("returns ancestors from child to root", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolve 1");
@@ -245,7 +243,7 @@ describe("getDescendants", () => {
   });
 
   it("returns all descendants breadth-first", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolve 1");
@@ -269,7 +267,7 @@ describe("getRoot", () => {
   });
 
   it("returns the root ancestor", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolve 1");
@@ -292,7 +290,7 @@ describe("getLeaves", () => {
   });
 
   it("returns leaves for all roots when versionId is omitted", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h1 = makeHypothesis("SESSION-1", 1);
     const h2 = makeHypothesis("SESSION-1", 2);
 
@@ -309,7 +307,7 @@ describe("getLeaves", () => {
   });
 
   it("returns all leaf descendants", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Branch A");
@@ -327,7 +325,7 @@ describe("getLeaves", () => {
 
 describe("findCommonAncestor", () => {
   it("returns undefined for unrelated hypotheses", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h1 = makeHypothesis("SESSION-1", 1);
     const h2 = makeHypothesis("SESSION-1", 2);
     const { store: s1, version: v1 } = addRootHypothesis(store, h1, "First");
@@ -338,7 +336,7 @@ describe("findCommonAncestor", () => {
   });
 
   it("finds common ancestor for related hypotheses", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Branch A");
@@ -355,10 +353,10 @@ describe("findCommonAncestor", () => {
 
 describe("diffHypotheses", () => {
   it("identifies changes between versions", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1, { statement: "Original hypothesis statement" });
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
-    const { store: s2, version: v2 } = evolveHypothesis(
+    const { version: v2 } = evolveHypothesis(
       s1,
       v1.id,
       { statement: "Changed hypothesis statement", mechanism: "New mechanism for testing" },
@@ -386,7 +384,7 @@ describe("diffHypotheses", () => {
 
 describe("generateEvolutionGraph", () => {
   it("generates a graph from the store", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolved");
@@ -410,11 +408,11 @@ describe("generateEvolutionGraph", () => {
 
 describe("generateLineageGraph", () => {
   it("generates a lineage graph for a specific hypothesis", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolved");
-    const { store: s3, version: v3 } = evolveHypothesis(s2, v2.id, {}, "manual", "Further");
+    const { store: s3 } = evolveHypothesis(s2, v2.id, {}, "manual", "Further");
 
     const graph = generateLineageGraph(s3, v2.id);
 
@@ -429,7 +427,7 @@ describe("generateLineageGraph", () => {
 
 describe("getEvolutionStats", () => {
   it("calculates stats for the store", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2 } = evolveHypothesis(s1, v1.id, {}, "evidence", "Evolved");
@@ -457,7 +455,7 @@ describe("getEvolutionStats", () => {
 
 describe("findByTrigger", () => {
   it("finds versions by trigger type", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "evidence", "By evidence");
@@ -474,7 +472,7 @@ describe("findByTrigger", () => {
 
 describe("findByTimeRange", () => {
   it("finds versions within a time range", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
 
@@ -488,7 +486,7 @@ describe("findByTimeRange", () => {
   });
 
   it("returns empty array when no versions in range", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1 } = addRootHypothesis(store, h, "Initial");
 
@@ -506,7 +504,7 @@ describe("findByTimeRange", () => {
 
 describe("isAncestor", () => {
   it("returns true for actual ancestor", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolved");
@@ -515,7 +513,7 @@ describe("isAncestor", () => {
   });
 
   it("returns false for non-ancestor", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
     const { store: s2, version: v2 } = evolveHypothesis(s1, v1.id, {}, "manual", "Evolved");
@@ -525,7 +523,7 @@ describe("isAncestor", () => {
   });
 
   it("returns false for same version", () => {
-    let store = createHistoryStore();
+    const store = createHistoryStore();
     const h = makeHypothesis("SESSION-1", 1);
     const { store: s1, version: v1 } = addRootHypothesis(store, h, "Initial");
 
