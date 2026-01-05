@@ -707,10 +707,10 @@ export function getPhaseName(phase: SessionPhase): string {
   const names: Record<SessionPhase, string> = {
     intake: "Hypothesis Intake",
     sharpening: "Hypothesis Sharpening",
-    level_split: "Level Split (Σ)",
-    exclusion_test: "Exclusion Test (⊘)",
-    object_transpose: "Object Transpose (⟳)",
-    scale_check: "Scale Check (⊙)",
+    level_split: "Level Split (⊘)",
+    exclusion_test: "Exclusion Test (✂)",
+    object_transpose: "Object Transpose (⟂)",
+    scale_check: "Scale Check (⊞)",
     agent_dispatch: "Agent Dispatch",
     synthesis: "Synthesis",
     evidence_gathering: "Evidence Gathering",
@@ -745,10 +745,10 @@ export function getPhaseDescription(phase: SessionPhase): string {
  */
 export function getPhaseSymbol(phase: SessionPhase): string | null {
   const symbols: Partial<Record<SessionPhase, string>> = {
-    level_split: "Σ",
-    exclusion_test: "⊘",
-    object_transpose: "⟳",
-    scale_check: "⊙",
+    level_split: "⊘",
+    exclusion_test: "✂",
+    object_transpose: "⟂",
+    scale_check: "⊞",
   };
   return symbols[phase] ?? null;
 }

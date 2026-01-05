@@ -58,10 +58,10 @@ function getShortLabel(phase: SessionPhase): string {
   const labels: Record<SessionPhase, string> = {
     intake: "Intake",
     sharpening: "Sharpen",
-    level_split: "Σ Split",
-    exclusion_test: "⊘ Exclude",
-    object_transpose: "⟳ Transpose",
-    scale_check: "⊙ Scale",
+    level_split: "⊘ Split",
+    exclusion_test: "✂ Exclude",
+    object_transpose: "⟂ Transpose",
+    scale_check: "⊞ Scale",
     agent_dispatch: "Agents",
     synthesis: "Synthesis",
     evidence_gathering: "Evidence",
@@ -124,42 +124,43 @@ export function PhaseTimeline({
 
   const handleKeyDown = React.useCallback(
     (event: React.KeyboardEvent<HTMLButtonElement>, phase: SessionPhase) => {
-      switch (event.key) {
-        case "ArrowRight":
-        case "ArrowDown": {
-          event.preventDefault();
-          moveFocus(1);
-          return;
-        }
-        case "ArrowLeft":
-        case "ArrowUp": {
-          event.preventDefault();
-          moveFocus(-1);
-          return;
-        }
-        case "Home": {
-          event.preventDefault();
-          const first = focusablePhases[0];
-          if (!first) return;
-          setFocusedPhase(first);
-          buttonRefs.current[first]?.focus();
-          return;
-        }
-        case "End": {
-          event.preventDefault();
-          const last = focusablePhases.at(-1);
-          if (!last) return;
-          setFocusedPhase(last);
-          buttonRefs.current[last]?.focus();
-          return;
-        }
-        case "Enter":
-        case " ": {
-          if (!isClickable(phase)) return;
-          event.preventDefault();
-          onPhaseClick(phase);
-          return;
-        }
+      const { key } = event;
+
+      if (key === "ArrowRight" || key === "ArrowDown") {
+        event.preventDefault();
+        moveFocus(1);
+        return;
+      }
+
+      if (key === "ArrowLeft" || key === "ArrowUp") {
+        event.preventDefault();
+        moveFocus(-1);
+        return;
+      }
+
+      if (key === "Home") {
+        event.preventDefault();
+        const first = focusablePhases[0];
+        if (!first) return;
+        setFocusedPhase(first);
+        buttonRefs.current[first]?.focus();
+        return;
+      }
+
+      if (key === "End") {
+        event.preventDefault();
+        const last = focusablePhases.at(-1);
+        if (!last) return;
+        setFocusedPhase(last);
+        buttonRefs.current[last]?.focus();
+        return;
+      }
+
+      if (key === "Enter" || key === " ") {
+        if (!isClickable(phase)) return;
+        event.preventDefault();
+        onPhaseClick(phase);
+        return;
       }
     },
     [focusablePhases, isClickable, moveFocus, onPhaseClick]

@@ -93,7 +93,7 @@ const PHASE_CONFIG: Record<SessionPhase, PhaseConfig> = {
   level_split: {
     name: "Level Split",
     shortName: "Levels",
-    symbol: "Σ",
+    symbol: "⊘",
     description: "Identify different levels of explanation that might be conflated.",
     quote: {
       text: "The confusion of levels is the most profound error in biology.",
@@ -103,7 +103,7 @@ const PHASE_CONFIG: Record<SessionPhase, PhaseConfig> = {
   exclusion_test: {
     name: "Exclusion Test",
     shortName: "Exclude",
-    symbol: "⊘",
+    symbol: "✂",
     description: "Design tests that could definitively rule out your hypothesis.",
     quote: {
       text: "Not merely unlikely—impossible if the alternative is true.",
@@ -113,7 +113,7 @@ const PHASE_CONFIG: Record<SessionPhase, PhaseConfig> = {
   object_transpose: {
     name: "Object Transpose",
     shortName: "Transpose",
-    symbol: "⟳",
+    symbol: "⟂",
     description: "Consider alternative experimental systems or reference frames.",
     quote: {
       text: "Change the object. Use a different experimental system where the problem is cleaner.",
@@ -123,7 +123,7 @@ const PHASE_CONFIG: Record<SessionPhase, PhaseConfig> = {
   scale_check: {
     name: "Scale Check",
     shortName: "Scale",
-    symbol: "⊙",
+    symbol: "⊞",
     description: "Verify physical and mathematical plausibility.",
     quote: {
       text: "Before you start, do your sums.",
