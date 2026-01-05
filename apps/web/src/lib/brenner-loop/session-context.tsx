@@ -584,15 +584,13 @@ export function SessionProvider({
       // Don't allow removing the primary hypothesis
       if (id === state.session.primaryHypothesisId) return;
 
-      const { [id]: removed, ...remainingCards } = state.session.hypothesisCards;
-      void removed;
-
+      // Don't remove the card - keep it for audit trails
+      // Only move from alternativeHypothesisIds to archivedHypothesisIds
       const updatedSession: Session = {
         ...state.session,
         alternativeHypothesisIds: state.session.alternativeHypothesisIds.filter(
           (hid) => hid !== id
         ),
-        hypothesisCards: remainingCards,
         archivedHypothesisIds: [...state.session.archivedHypothesisIds, id],
         updatedAt: new Date().toISOString(),
       };
