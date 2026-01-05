@@ -51,12 +51,12 @@ describe("POST /api/experiments", () => {
         })
       );
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(404);
       const json = await response.json();
       expect(json).toMatchObject({
         success: false,
         code: "AUTH_ERROR",
-        error: "Lab mode disabled",
+        error: "Not found",
       });
     });
   });
@@ -277,7 +277,12 @@ describe("POST /api/experiments", () => {
       expect(existsSync(json.resultFile)).toBe(true);
 
       // Verify file contents match response
-      const fileContents = JSON.parse(readFileSync(json.resultFile, "utf-8"));
+      let fileContents: { result_id?: string };
+      try {
+        fileContents = JSON.parse(readFileSync(json.resultFile, "utf-8")) as { result_id?: string };
+      } catch (err) {
+        throw new Error(`Failed to parse result file JSON: ${String(err)}`);
+      }
       expect(fileContents.result_id).toBe(json.result.result_id);
     });
 

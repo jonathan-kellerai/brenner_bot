@@ -130,8 +130,8 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
 
   if (!authResult.authorized) {
     return NextResponse.json(
-      { success: false, error: authResult.reason, code: "AUTH_ERROR" },
-      { status: 401 }
+      { success: false, error: "Not found", code: "AUTH_ERROR" },
+      { status: 404 }
     );
   }
 

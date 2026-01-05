@@ -68,7 +68,7 @@ export async function GET(request: NextRequest): Promise<Response> {
   const auth = checkOrchestrationAuth(reqHeaders, reqCookies);
 
   if (!auth.authorized) {
-    return new Response(auth.reason, { status: 401 });
+    return new Response("Not found", { status: 404 });
   }
 
   const url = new URL(request.url);
@@ -93,6 +93,9 @@ export async function GET(request: NextRequest): Promise<Response> {
   let lastSeenMessageId: number | null = cursor;
   let started = false;
   let inFlight = false;
+
+  let intervalId: ReturnType<typeof setInterval> | null = null;
+  let abortHandler: (() => void) | null = null;
 
   const stream = new ReadableStream<Uint8Array>({
     start(controller) {
@@ -190,20 +193,29 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
       };
 
-      const intervalId = setInterval(() => {
+      intervalId = setInterval(() => {
         void pollOnce();
       }, pollIntervalMs);
 
-      const abortHandler = () => {
-        clearInterval(intervalId);
+      abortHandler = () => {
+        if (intervalId) clearInterval(intervalId);
         try {
           controller.close();
         } catch {}
+        if (abortHandler) {
+          request.signal.removeEventListener("abort", abortHandler);
+        }
       };
 
       request.signal.addEventListener("abort", abortHandler, { once: true });
 
       void pollOnce();
+    },
+    cancel() {
+      if (intervalId) clearInterval(intervalId);
+      if (abortHandler) {
+        request.signal.removeEventListener("abort", abortHandler);
+      }
     },
   });
 
