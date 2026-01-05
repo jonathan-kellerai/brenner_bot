@@ -129,6 +129,9 @@ class SearchEngine {
         error instanceof Error ? error : new Error("Failed to load search index");
       this.miniSearch = null;
       throw this.loadError;
+    } finally {
+      // Allow retry after transient failures (and avoid holding onto a settled promise).
+      this.loadPromise = null;
     }
   }
 

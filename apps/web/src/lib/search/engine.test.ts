@@ -17,6 +17,15 @@ import {
 } from "./engine";
 import type { SearchResult, SearchOptions, SearchScope } from "./types";
 
+function parseSearchIndexJson(indexContent: string): unknown {
+  try {
+    return JSON.parse(indexContent) as unknown;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to parse public/search/index.json: ${message}`);
+  }
+}
+
 // ============================================================================
 // Test Setup
 // ============================================================================
@@ -187,6 +196,33 @@ describe("loadSearchIndex error handling", () => {
     expect(searchEngine.hasError).toBe(false);
     expect(searchEngine.errorMessage).toBeNull();
   });
+
+  it("allows retry after transient fetch failure", async () => {
+    const { readFile } = await import("node:fs/promises");
+    const { resolve } = await import("node:path");
+    const indexContent = await readFile(
+      resolve(process.cwd(), "public/search/index.json"),
+      "utf8"
+    );
+    const indexData = parseSearchIndexJson(indexContent);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValueOnce(new Error("Temporary network error"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => indexData,
+      } as Response);
+
+    await expect(loadSearchIndex()).rejects.toThrow(/temporary network error/i);
+    expect(searchEngine.isLoaded).toBe(false);
+    expect(searchEngine.hasError).toBe(true);
+
+    await loadSearchIndex();
+    expect(searchEngine.isLoaded).toBe(true);
+    expect(searchEngine.hasError).toBe(false);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
 });
 
 // ============================================================================
@@ -307,7 +343,7 @@ describe("loadSearchIndex with real index", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -329,7 +365,7 @@ describe("loadSearchIndex with real index", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -363,7 +399,7 @@ describe("loadSearchIndex with real index", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -389,7 +425,7 @@ describe("loadSearchIndex with real index", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -410,7 +446,7 @@ describe("loadSearchIndex with real index", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -441,7 +477,7 @@ describe("snippet generation", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
@@ -480,7 +516,7 @@ describe("URL generation", () => {
       resolve(process.cwd(), "public/search/index.json"),
       "utf8"
     );
-    const indexData = JSON.parse(indexContent);
+    const indexData = parseSearchIndexJson(indexContent);
 
     vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
       ok: true,
