@@ -398,6 +398,9 @@ export default async function SessionDetailPage({
             <Link href={`/sessions/${threadId}/evidence`} className="text-sm text-primary hover:underline">
               Evidence Pack
             </Link>
+            <Link href={`/sessions/${threadId}/test-queue`} className="text-sm text-primary hover:underline">
+              Test Queue
+            </Link>
             <Link href="/sessions/new" className="text-sm text-primary hover:underline">
               New Session
             </Link>

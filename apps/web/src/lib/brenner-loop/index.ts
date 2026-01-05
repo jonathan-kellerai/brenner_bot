@@ -686,3 +686,29 @@ export {
   formatFalsificationDate,
   summarizeFalsification,
 } from "./graveyard";
+
+// ============================================================================
+// Test Queue (bead njjo.5)
+// ============================================================================
+
+export type {
+  TestQueueStatus,
+  TestQueuePriority,
+  TestQueueSource,
+  TestQueueItem,
+  TestQueueStats,
+} from "./test-queue";
+
+export {
+  loadTestQueue,
+  saveTestQueue,
+  clearTestQueue,
+  priorityFromPower,
+  isPredictionsLocked,
+  getTestQueueStats,
+  generateQueueItemId,
+  addExclusionTestsToQueue,
+  addManualQueueItem,
+  updateQueueItem,
+  lockQueueItemPredictions,
+} from "./test-queue";
