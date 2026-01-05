@@ -1705,7 +1705,7 @@ export function lintArtifact(artifact: Artifact): LintReport {
 
   function checkReferences(item: { id: string; references?: unknown }): void {
     const references = item.references;
-    if (!references) return;
+    if (references === null || references === undefined) return;
 
     if (!Array.isArray(references)) {
       pushViolation(violations, {

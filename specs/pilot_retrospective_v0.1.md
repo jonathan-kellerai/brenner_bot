@@ -17,7 +17,7 @@
 - The “triangulated kernel” framing (axioms + objective + operator algebra) is a good invariant backbone; it makes the session feel like a *method* rather than a vibe.
 
 ### B) Structured deltas as the “mechanics layer”
-- When agents actually used fenced ```delta JSON blocks, the system produced deterministic compilation and linting.
+- When agents actually used fenced `delta` code blocks, the system produced deterministic compilation and linting.
 - Round 2 shows the intended happy path: multi-agent discourse → deltas → compile → lint (0 errors) → UI review.
 
 ### C) Evidence anchors + explicit inference labeling
@@ -62,4 +62,3 @@ Created from this retrospective (all `discovered-from:brenner_bot-5so.10.3`):
 - `brenner_bot-a3z4` — Bug: compile should surface missing delta code fences (inline deltas)
 - `brenner_bot-1fvd` — Spec: delta formatting failure modes + remediation template
 - `brenner_bot-evjo` — Feature: CLI session diagnose delta parsing failures
-
