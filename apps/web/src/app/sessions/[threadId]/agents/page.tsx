@@ -545,6 +545,8 @@ export default function AgentsPage() {
     const url = new URL("/api/realtime", window.location.origin);
     url.searchParams.set("threadId", threadId);
     url.searchParams.set("pollIntervalMs", "2000");
+    // Start from 0 so the first thread_update includes existing messages too.
+    url.searchParams.set("cursor", "0");
 
     const eventSource = new EventSource(url.toString());
 
