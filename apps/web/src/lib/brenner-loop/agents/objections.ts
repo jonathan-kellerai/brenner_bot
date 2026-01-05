@@ -71,7 +71,7 @@ function looksLikeHeading(line: string): boolean {
 }
 
 function isKeyObjectionHeading(line: string): boolean {
-  return /^#{2,6}\s+key objection\s*$/i.test(line.trim());
+  return /^#{2,6}\s+key objection\b/i.test(line.trim());
 }
 
 function isFenceLine(line: string): boolean {
@@ -122,7 +122,7 @@ function classifyObjectionType(text: string): ObjectionType {
   if (lower.includes("no evidence") || lower.includes("unsupported") || lower.includes("needs evidence")) {
     return "missing_evidence";
   }
-  if (lower.includes("doesn't follow") || lower.includes("non sequitur") || lower.includes("logic")) {
+  if (lower.includes("doesn't follow") || lower.includes("non sequitur") || /\blogic(?:al)?\b/.test(lower)) {
     return "logic_error";
   }
   if (lower.includes("alternative explanation") || lower.includes("another explanation") || lower.includes("could instead")) {
@@ -134,13 +134,14 @@ function classifyObjectionType(text: string): ObjectionType {
 
 function classifySeverity(text: string): ObjectionSeverity {
   const lower = text.toLowerCase();
+  const deniesRuleOut = lower.includes("doesn't rule out") || lower.includes("does not rule out");
 
   if (
     lower.includes("fatal") ||
     lower.includes("deal-breaker") ||
     lower.includes("cannot be true") ||
     lower.includes("impossible") ||
-    lower.includes("rules out")
+    (!deniesRuleOut && lower.includes("rules out"))
   ) {
     return "fatal";
   }

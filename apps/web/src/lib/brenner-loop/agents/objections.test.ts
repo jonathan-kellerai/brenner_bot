@@ -60,6 +60,11 @@ describe("extractKeyObjectionBlocks", () => {
       ),
     ]);
   });
+
+  it("accepts Key Objection headings with trailing punctuation", () => {
+    const md = ["### Key Objection:", "Colon headings should still parse.", "", "### Next", "ignored"].join("\n");
+    expect(extractKeyObjectionBlocks(md)).toEqual(["Colon headings should still parse."]);
+  });
 });
 
 describe("extractTribunalObjections", () => {
@@ -110,5 +115,36 @@ describe("extractTribunalObjections", () => {
 
     expect(extractTribunalObjections(messages)).toEqual([]);
   });
-});
 
+  it("does not misclassify 'biological' as a logic error", () => {
+    const messages = [
+      {
+        id: 2,
+        thread_id: "TRIBUNAL-SESSION-abc",
+        subject: "TRIBUNAL[devils_advocate]: HYP-1",
+        created_ts: "2026-01-01T00:00:00.000Z",
+        body_md: ["### Key Objection", "The biological mechanism is underspecified."].join("\n"),
+      },
+    ];
+
+    const objections = extractTribunalObjections(messages);
+    expect(objections).toHaveLength(1);
+    expect(objections[0]!.type).not.toBe("logic_error");
+  });
+
+  it("does not treat 'does not rule out' as a fatal severity marker", () => {
+    const messages = [
+      {
+        id: 3,
+        thread_id: "TRIBUNAL-SESSION-abc",
+        subject: "TRIBUNAL[devils_advocate]: HYP-1",
+        created_ts: "2026-01-01T00:00:00.000Z",
+        body_md: ["### Key Objection", "This does not rule out the hypothesis; it highlights uncertainty."].join("\n"),
+      },
+    ];
+
+    const objections = extractTribunalObjections(messages);
+    expect(objections).toHaveLength(1);
+    expect(objections[0]!.severity).not.toBe("fatal");
+  });
+});
