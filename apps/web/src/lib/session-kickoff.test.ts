@@ -67,6 +67,11 @@ describe("session-kickoff", () => {
           hypothesis_generator: ["⊞ Scale-Check", "🎭 Potency-Check"],
           test_designer: [],
           adversarial_critic: [],
+          devils_advocate: [],
+          experiment_designer: [],
+          statistician: [],
+          brenner_channeler: [],
+          synthesis: [],
         },
       });
 
@@ -266,6 +271,11 @@ describe("session-kickoff", () => {
           hypothesis_generator: ["⊘ Level-Split"],
           test_designer: ["✂ Exclusion-Test"],
           adversarial_critic: [],
+          devils_advocate: [],
+          experiment_designer: [],
+          statistician: [],
+          brenner_channeler: [],
+          synthesis: [],
         },
       });
 

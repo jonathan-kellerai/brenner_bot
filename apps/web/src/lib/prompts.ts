@@ -51,6 +51,11 @@ const ROLE_LABELS: Record<keyof OperatorSelection, string> = {
   hypothesis_generator: "Hypothesis Generator (Codex / GPT)",
   test_designer: "Test Designer (Opus / Claude)",
   adversarial_critic: "Adversarial Critic (Gemini)",
+  devils_advocate: "Devil's Advocate",
+  experiment_designer: "Experiment Designer",
+  statistician: "Statistician",
+  brenner_channeler: "Brenner Channeler",
+  synthesis: "Synthesis",
 };
 
 export async function composePrompt(input: ComposePromptInput): Promise<string> {

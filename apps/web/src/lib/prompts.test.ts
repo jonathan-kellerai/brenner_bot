@@ -246,6 +246,11 @@ describe("composePrompt", () => {
         hypothesis_generator: ["O1", "O2"],
         test_designer: ["O3"],
         adversarial_critic: ["O4", "O5"],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       };
 
       const input: ComposePromptInput = {
@@ -264,6 +269,11 @@ describe("composePrompt", () => {
         hypothesis_generator: ["LevelSplit", "ThirdAlternative"],
         test_designer: [],
         adversarial_critic: [],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       };
 
       const input: ComposePromptInput = {
@@ -282,6 +292,11 @@ describe("composePrompt", () => {
         hypothesis_generator: [],
         test_designer: ["ExclusionTest"],
         adversarial_critic: [],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       };
 
       const input: ComposePromptInput = {
@@ -300,6 +315,11 @@ describe("composePrompt", () => {
         hypothesis_generator: [],
         test_designer: [],
         adversarial_critic: ["Recode", "ReversalTest"],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       };
 
       const input: ComposePromptInput = {
@@ -318,6 +338,11 @@ describe("composePrompt", () => {
         hypothesis_generator: ["O1"],
         test_designer: [], // empty
         adversarial_critic: ["O2"],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       };
 
       const input: ComposePromptInput = {
@@ -338,6 +363,11 @@ describe("composePrompt", () => {
         hypothesis_generator: ["O1"],
         test_designer: [],
         adversarial_critic: [],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       };
 
       const input: ComposePromptInput = {
@@ -413,6 +443,11 @@ describe("type exports", () => {
       hypothesis_generator: ["op1"],
       test_designer: ["op2"],
       adversarial_critic: ["op3"],
+      devils_advocate: [],
+      experiment_designer: [],
+      statistician: [],
+      brenner_channeler: [],
+      synthesis: [],
     };
 
     expect(selection.hypothesis_generator).toEqual(["op1"]);
@@ -431,6 +466,11 @@ describe("type exports", () => {
         hypothesis_generator: [],
         test_designer: [],
         adversarial_critic: [],
+        devils_advocate: [],
+        experiment_designer: [],
+        statistician: [],
+        brenner_channeler: [],
+        synthesis: [],
       },
     };
 
