@@ -54,6 +54,7 @@ import {
 // ============================================================================
 
 function createMockHypothesis(overrides: Partial<HypothesisCard> = {}): HypothesisCard {
+  const now = new Date();
   return {
     id: "HC-test-001-v1",
     version: 1,
@@ -79,14 +80,14 @@ function createMockHypothesis(overrides: Partial<HypothesisCard> = {}): Hypothes
         addressedAt: undefined,
       },
     ],
-    backgroundAssumptions: ["Social media usage is measurable and quantifiable"],
-    confidenceHistory: [{ confidence: 50, timestamp: new Date(), reason: "Initial hypothesis" }],
-    currentConfidence: 50,
+    assumptions: ["Social media usage is measurable and quantifiable"],
+    confidence: 50,
     tags: ["social-media", "mental-health", "teenagers"],
-    createdAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
     createdBy: "test-user",
     ...overrides,
-  } as HypothesisCard;
+  };
 }
 
 function createMockPaper(overrides: Partial<PaperResult> = {}): PaperResult {

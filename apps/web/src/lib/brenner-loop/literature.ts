@@ -439,7 +439,7 @@ export function calculateRelevance(
     hypothesis.mechanism,
     hypothesis.domain.join(" "),
     hypothesis.confounds.map((c) => c.description).join(" "),
-    (hypothesis.backgroundAssumptions ?? []).join(" "),
+    (hypothesis.assumptions ?? []).join(" "),
     (hypothesis.tags ?? []).join(" "),
     hypothesis.notes ?? "",
   ].join(" ");
