@@ -710,10 +710,10 @@ export default function Home() {
             {/* Operator preview */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               {[
-                { symbol: "Σ", name: "Level Split" },
-                { symbol: "⊘", name: "Exclusion Test" },
-                { symbol: "⟳", name: "Object Transpose" },
-                { symbol: "⊙", name: "Scale Check" },
+                { symbol: "⊘", name: "Level-Split" },
+                { symbol: "✂", name: "Exclusion-Test" },
+                { symbol: "⟂", name: "Object-Transpose" },
+                { symbol: "⊞", name: "Scale-Check" },
               ].map((op) => (
                 <div key={op.symbol} className="flex flex-col items-center gap-2 p-3 sm:p-4 rounded-xl bg-background/60 border border-border/50">
                   <span className="text-xl sm:text-2xl font-bold text-primary">{op.symbol}</span>
@@ -1015,10 +1015,10 @@ brenner session compile --thread-id RS-20260105`}</code>
                 </div>
                 <div className="mt-4 space-y-2 text-xs text-muted-foreground">
                   <div className="rounded-lg border border-border/70 bg-background px-3 py-2">
-                    Selection bias detected — how will you ensure random sampling?
+                    Selection bias detected - how will you ensure random sampling?
                   </div>
                   <div className="rounded-lg border border-border/70 bg-background px-3 py-2">
-                    Reverse causation possible — can you establish temporal order?
+                    Reverse causation possible - can you establish temporal order?
                   </div>
                 </div>
               </div>
@@ -1145,7 +1145,7 @@ brenner session compile --thread-id RS-20260105`}</code>
                   <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Offline</span>
                 </div>
                 <div className="mt-4 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs text-muted-foreground">
-                  Query: “morphogen gradient cell fate”
+                  Query: "morphogen gradient cell fate"
                 </div>
                 <div className="mt-4 space-y-3">
                   {similarityMatches.map((match) => {
@@ -1165,7 +1165,7 @@ brenner session compile --thread-id RS-20260105`}</code>
                   })}
                 </div>
                 <p className="mt-3 text-[11px] text-muted-foreground">
-                  Runs entirely client-side — your hypotheses never leave your machine.
+                  Runs entirely client-side - your hypotheses never leave your machine.
                 </p>
               </div>
 
