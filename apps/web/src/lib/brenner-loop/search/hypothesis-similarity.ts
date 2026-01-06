@@ -152,11 +152,22 @@ export function embedHypothesis(hypothesis: IndexedHypothesis): number[] {
 
 /**
  * Convert a HypothesisCard to IndexedHypothesis for similarity search.
+ *
+ * Handles both fresh HypothesisCard objects (where createdAt is a Date)
+ * and deserialized objects from JSON (where createdAt is an ISO string).
  */
 export function cardToIndexed(
   card: HypothesisCard,
   sessionId?: string
 ): IndexedHypothesis {
+  // Handle both Date objects and ISO strings (from JSON deserialization)
+  let createdAtStr: string | undefined;
+  if (card.createdAt instanceof Date) {
+    createdAtStr = card.createdAt.toISOString();
+  } else if (typeof card.createdAt === "string") {
+    createdAtStr = card.createdAt;
+  }
+
   return {
     id: card.id,
     sessionId: sessionId ?? card.sessionId ?? "unknown",
@@ -165,7 +176,7 @@ export function cardToIndexed(
     domain: card.domain,
     confidence: card.confidence,
     version: card.version,
-    createdAt: card.createdAt?.toISOString(),
+    createdAt: createdAtStr,
   };
 }
 

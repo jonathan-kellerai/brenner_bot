@@ -40,7 +40,8 @@ export {
 
 // Quote matching
 export {
-  fuzzyMatch,
-  findBestQuoteMatch,
-  type MatchResult,
+  embeddingEntryToQuote,
+  buildQuoteQueryText,
+  filterQuoteEntriesByTags,
+  findSimilarQuotes,
 } from "./quote-matcher";

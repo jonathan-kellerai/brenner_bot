@@ -201,6 +201,53 @@ describe("cardToIndexed", () => {
 
     expect(indexed.sessionId).toBe("RS-NEW");
   });
+
+  it("handles createdAt as ISO string (from JSON deserialization)", () => {
+    // Simulate a HypothesisCard that was deserialized from JSON
+    // where Date fields become ISO strings
+    const jsonDeserialized = {
+      id: "HC-RS-001-v1",
+      version: 1,
+      statement: "Test statement",
+      mechanism: "Test mechanism",
+      domain: ["psychology"],
+      predictionsIfTrue: ["prediction"],
+      predictionsIfFalse: ["counter"],
+      impossibleIfTrue: ["falsifier"],
+      confounds: [],
+      assumptions: [],
+      confidence: 60,
+      createdAt: "2026-01-01T00:00:00.000Z", // ISO string, not Date
+      updatedAt: "2026-01-01T00:00:00.000Z",
+      sessionId: "RS-001",
+    } as unknown as HypothesisCard;
+
+    const indexed = cardToIndexed(jsonDeserialized);
+
+    expect(indexed.createdAt).toBe("2026-01-01T00:00:00.000Z");
+  });
+
+  it("handles missing createdAt", () => {
+    const card = {
+      id: "HC-RS-001-v1",
+      version: 1,
+      statement: "Test",
+      mechanism: "Test",
+      domain: [],
+      predictionsIfTrue: [],
+      predictionsIfFalse: [],
+      impossibleIfTrue: ["x"],
+      confounds: [],
+      assumptions: [],
+      confidence: 50,
+      updatedAt: new Date(),
+      sessionId: "RS-001",
+    } as unknown as HypothesisCard;
+
+    const indexed = cardToIndexed(card);
+
+    expect(indexed.createdAt).toBeUndefined();
+  });
 });
 
 // ============================================================================
