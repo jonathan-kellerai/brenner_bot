@@ -22,6 +22,7 @@ import {
   Microscope,
   Code,
   Zap,
+  Atom,
   Settings,
   ChevronRight,
   Check,
@@ -66,7 +67,7 @@ function renderIcon(iconName: string, className?: string): React.ReactNode {
     case "Zap":
       return <Zap {...props} />;
     case "Atom":
-      return <Zap {...props} />; // Zap as fallback for Atom
+      return <Atom {...props} />;
     default:
       return <Settings {...props} />;
   }

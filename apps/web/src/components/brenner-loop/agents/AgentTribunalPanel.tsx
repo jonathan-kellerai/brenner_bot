@@ -239,9 +239,7 @@ export function AgentTribunalPanel({
 }: AgentTribunalPanelProps) {
   const cards = React.useMemo(() => deriveCardsFromMessages({ messages, roles }), [messages, roles]);
   const objections = React.useMemo(() => extractTribunalObjections(messages), [messages]);
-  const [objectionStatuses, setObjectionStatuses] = React.useState<Record<string, ObjectionStatus>>(() =>
-    threadId ? loadObjectionStatuses(threadId) : Object.create(null)
-  );
+  const [objectionStatuses, setObjectionStatuses] = React.useState<Record<string, ObjectionStatus>>({});
 
   React.useEffect(() => {
     setObjectionStatuses(threadId ? loadObjectionStatuses(threadId) : Object.create(null));

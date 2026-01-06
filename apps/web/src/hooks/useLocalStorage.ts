@@ -39,32 +39,19 @@ export function useLocalStorage<T>(
   // Track latest value for use in cleanup (avoids stale closure bug)
   const latestValueRef: MutableRefObject<T | null> = useRef<T | null>(null);
 
-  // Initialize state with value from localStorage or initial value
-  const [storedValue, setStoredValue] = useState<T>(() => {
-    if (typeof window === "undefined") {
-      return initialValue;
-    }
+  // Initialize state with initialValue to avoid hydration mismatch
+  const [storedValue, setStoredValue] = useState<T>(initialValue);
 
+  // Read from localStorage on mount
+  useEffect(() => {
     try {
       const item = window.localStorage.getItem(key);
-      return item ? (JSON.parse(item) as T) : initialValue;
+      if (item) {
+        setStoredValue(JSON.parse(item) as T);
+      }
     } catch (error) {
       console.warn(`Error reading localStorage key "${key}":`, error);
-      return initialValue;
     }
-  });
-
-  useEffect(() => {
-    queueMicrotask(() => {
-      try {
-        const item = window.localStorage.getItem(key);
-        if (item) {
-          setStoredValue(JSON.parse(item) as T);
-        }
-      } catch (error) {
-        console.warn(`Error reading localStorage key "${key}" on hydration:`, error);
-      }
-    });
   }, [key]);
 
   // Setter with debounced persistence

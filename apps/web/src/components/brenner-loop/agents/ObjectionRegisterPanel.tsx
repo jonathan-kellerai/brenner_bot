@@ -249,7 +249,7 @@ export interface ObjectionRegisterPanelProps {
 export function ObjectionRegisterPanel({ threadId, messages, className }: ObjectionRegisterPanelProps) {
   const objections = React.useMemo(() => extractTribunalObjections(messages).sort(sortObjections), [messages]);
 
-  const [statusById, setStatusById] = React.useState<Record<string, ObjectionStatus>>(() => loadStatuses(threadId));
+  const [statusById, setStatusById] = React.useState<Record<string, ObjectionStatus>>({});
 
   React.useEffect(() => {
     saveObjectionSnapshot(threadId, objections);

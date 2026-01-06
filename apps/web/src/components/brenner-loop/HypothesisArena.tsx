@@ -478,17 +478,39 @@ export function HypothesisArena({
 
   const [showGraveyard, setShowGraveyard] = React.useState(false);
 
-  // Create handler for cell clicks that opens a result picker dialog
-  // For now, we just support recording "supports" - a full implementation would open a modal
+  // Cycle through result types: pending -> supports -> challenges -> eliminates -> neutral -> supports...
   const handleCellClick = React.useCallback(
     (testId: string, hypothesisId: string) => {
-      if (onRecordResult) {
-        // In a full implementation, this would open a modal to select the result type
-        // For now, we'll use a simple confirm pattern
-        onRecordResult(testId, hypothesisId, "supports");
+      if (!onRecordResult) return;
+
+      // Find current result from matrix
+      const row = matrix.rows.find((r) => r.hypothesisId === hypothesisId);
+      const current = row?.testResults[testId] || "pending";
+
+      let next: TestResultType;
+      switch (current) {
+        case "pending":
+          next = "supports";
+          break;
+        case "supports":
+          next = "challenges";
+          break;
+        case "challenges":
+          next = "eliminates";
+          break;
+        case "eliminates":
+          next = "neutral";
+          break;
+        case "neutral":
+          next = "supports";
+          break;
+        default:
+          next = "supports";
       }
+
+      onRecordResult(testId, hypothesisId, next);
     },
-    [onRecordResult]
+    [onRecordResult, matrix]
   );
 
   return (
