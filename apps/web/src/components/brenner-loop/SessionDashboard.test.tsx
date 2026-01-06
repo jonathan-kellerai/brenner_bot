@@ -243,4 +243,22 @@ describe("SessionDashboard PhaseContent rendering", () => {
 
     expect(screen.getByTestId("level-split-session")).toBeInTheDocument();
   });
+
+  it("renders sharpening editor during sharpening phase", async () => {
+    mocks.phase = "sharpening";
+
+    const { SessionDashboard } = await import("./SessionDashboard");
+    render(<SessionDashboard />);
+
+    expect(screen.getByTestId("hypothesis-sharpening-editor")).toBeInTheDocument();
+  });
+
+  it("renders revision editor during revision phase", async () => {
+    mocks.phase = "revision";
+
+    const { SessionDashboard } = await import("./SessionDashboard");
+    render(<SessionDashboard />);
+
+    expect(screen.getByTestId("hypothesis-revision-editor")).toBeInTheDocument();
+  });
 });

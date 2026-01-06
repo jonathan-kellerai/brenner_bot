@@ -16,6 +16,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogBody,
@@ -56,6 +59,7 @@ import {
   exportSession,
   type Session,
   type SessionPhase,
+  type HypothesisCard as HypothesisCardModel,
   type LevelIdentification,
   type LevelSplitResult as SessionLevelSplitResult,
   type ExclusionTestResult as SessionExclusionTestResult,
@@ -510,6 +514,163 @@ function toSessionScaleCheckResult(args: {
   };
 }
 
+function splitLines(value: string): string[] {
+  return value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line) => line.length > 0);
+}
+
+function joinLines(values: string[] | undefined): string {
+  if (!values || values.length === 0) return "";
+  return values.join("\n");
+}
+
+function clampConfidence(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function HypothesisEditorPanel({
+  mode,
+  hypothesis,
+  onSave,
+}: {
+  mode: "sharpening" | "revision";
+  hypothesis: HypothesisCardModel | null;
+  onSave: (updates: Partial<HypothesisCardModel>) => void;
+}) {
+  const [statement, setStatement] = React.useState(hypothesis?.statement ?? "");
+  const [mechanism, setMechanism] = React.useState(hypothesis?.mechanism ?? "");
+  const [predictionsIfTrue, setPredictionsIfTrue] = React.useState(joinLines(hypothesis?.predictionsIfTrue));
+  const [predictionsIfFalse, setPredictionsIfFalse] = React.useState(joinLines(hypothesis?.predictionsIfFalse));
+  const [falsifiers, setFalsifiers] = React.useState(joinLines(hypothesis?.impossibleIfTrue));
+  const [assumptions, setAssumptions] = React.useState(joinLines(hypothesis?.assumptions));
+  const [confidence, setConfidence] = React.useState<number>(hypothesis?.confidence ?? 0);
+
+  React.useEffect(() => {
+    setStatement(hypothesis?.statement ?? "");
+    setMechanism(hypothesis?.mechanism ?? "");
+    setPredictionsIfTrue(joinLines(hypothesis?.predictionsIfTrue));
+    setPredictionsIfFalse(joinLines(hypothesis?.predictionsIfFalse));
+    setFalsifiers(joinLines(hypothesis?.impossibleIfTrue));
+    setAssumptions(joinLines(hypothesis?.assumptions));
+    setConfidence(hypothesis?.confidence ?? 0);
+  }, [hypothesis?.id, mode]);
+
+  const handleSave = React.useCallback(() => {
+    onSave({
+      statement: statement.trim(),
+      mechanism: mechanism.trim(),
+      predictionsIfTrue: splitLines(predictionsIfTrue),
+      predictionsIfFalse: splitLines(predictionsIfFalse),
+      impossibleIfTrue: splitLines(falsifiers),
+      assumptions: splitLines(assumptions),
+      confidence: clampConfidence(confidence),
+    });
+  }, [assumptions, confidence, falsifiers, mechanism, onSave, predictionsIfFalse, predictionsIfTrue, statement]);
+
+  if (!hypothesis) {
+    return <p className="text-sm text-muted-foreground">No hypothesis loaded.</p>;
+  }
+
+  return (
+    <div className="space-y-6" data-testid={`hypothesis-${mode}-editor`}>
+      <div className="space-y-2 text-sm text-muted-foreground">
+        {mode === "sharpening" ? (
+          <p>Sharpen the hypothesis by tightening mechanisms, predictions, and falsifiers.</p>
+        ) : (
+          <p>Revise the hypothesis in light of evidence and agent feedback.</p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${mode}-statement`}>Statement</Label>
+        <Textarea
+          id={`${mode}-statement`}
+          value={statement}
+          onChange={(e) => setStatement(e.target.value)}
+          placeholder="State the hypothesis in a single crisp sentence."
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${mode}-mechanism`}>Mechanism</Label>
+        <Textarea
+          id={`${mode}-mechanism`}
+          value={mechanism}
+          onChange={(e) => setMechanism(e.target.value)}
+          placeholder="What causal mechanism generates the effect?"
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor={`${mode}-pred-true`}>Predictions if true (one per line)</Label>
+          <Textarea
+            id={`${mode}-pred-true`}
+            value={predictionsIfTrue}
+            onChange={(e) => setPredictionsIfTrue(e.target.value)}
+            placeholder={"If true, we should observe...\n(one prediction per line)"}
+            className="min-h-[140px]"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor={`${mode}-pred-false`}>Predictions if false (one per line)</Label>
+          <Textarea
+            id={`${mode}-pred-false`}
+            value={predictionsIfFalse}
+            onChange={(e) => setPredictionsIfFalse(e.target.value)}
+            placeholder={"If false, we should observe...\n(one prediction per line)"}
+            className="min-h-[140px]"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${mode}-falsifiers`}>Would falsify (one per line)</Label>
+        <Textarea
+          id={`${mode}-falsifiers`}
+          value={falsifiers}
+          onChange={(e) => setFalsifiers(e.target.value)}
+          placeholder={"What observation would make the hypothesis impossible?\n(one falsifier per line)"}
+          className="min-h-[120px]"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor={`${mode}-assumptions`}>Explicit assumptions (one per line)</Label>
+        <Textarea
+          id={`${mode}-assumptions`}
+          value={assumptions}
+          onChange={(e) => setAssumptions(e.target.value)}
+          placeholder={"What must be true for this hypothesis to even make sense?\n(one assumption per line)"}
+          className="min-h-[120px]"
+        />
+      </div>
+
+      <div className="flex items-end justify-between gap-4 flex-wrap">
+        <div className="space-y-2">
+          <Label htmlFor={`${mode}-confidence`}>Confidence (0–100)</Label>
+          <Input
+            id={`${mode}-confidence`}
+            type="number"
+            min={0}
+            max={100}
+            value={confidence}
+            onChange={(e) => setConfidence(Number.parseInt(e.target.value || "0", 10))}
+            className="w-28"
+          />
+        </div>
+
+        <Button type="button" onClick={handleSave} data-testid={`hypothesis-${mode}-save`}>
+          {mode === "revision" ? "Save revision" : "Save sharpening"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function PhaseContent({ phase, className }: PhaseContentProps) {
   const config = PHASE_CONFIG[phase];
   const {
@@ -583,11 +744,11 @@ function PhaseContent({ phase, className }: PhaseContentProps) {
         ) : null}
 
         {phase === "sharpening" ? (
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>
-              Use this phase to tighten predictions and sharpen falsifiers. (Full sharpening UI coming soon.)
-            </p>
-          </div>
+          <HypothesisEditorPanel
+            mode="sharpening"
+            hypothesis={primaryHypothesis}
+            onSave={updateHypothesis}
+          />
         ) : null}
 
         {phase === "level_split" ? (
@@ -704,9 +865,11 @@ function PhaseContent({ phase, className }: PhaseContentProps) {
         ) : null}
 
         {phase === "revision" ? (
-          <div className="space-y-2 text-sm text-muted-foreground">
-            <p>Revision tools are coming soon. Use the hypothesis edit shortcut (<kbd className="kbd">E</kbd>) for now.</p>
-          </div>
+          <HypothesisEditorPanel
+            mode="revision"
+            hypothesis={primaryHypothesis}
+            onSave={updateHypothesis}
+          />
         ) : null}
 
         {phase === "complete" ? (
