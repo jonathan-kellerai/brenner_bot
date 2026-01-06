@@ -237,6 +237,11 @@ export class HypothesisStorage {
     // Extract session ID from hypothesis ID format: H-{sessionId}-{seq}
     const match = id.match(/^H-(.+)-\d{3}$/);
     if (!match) {
+      const simpleMatch = id.match(/^H\d+$/);
+      if (simpleMatch) {
+        const allHypotheses = await this.getAllHypotheses();
+        return allHypotheses.find((h) => h.id === id) ?? null;
+      }
       return null;
     }
 

@@ -188,6 +188,15 @@ describe("Individual Hypothesis Operations", () => {
     expect(found?.id).toBe("H-TEST-001");
   });
 
+  test("getHypothesisById returns hypothesis for simple ID format", async () => {
+    const hypothesis = createTestHypothesisData({ id: "H42" });
+    await storage.saveSessionHypotheses("TEST", [hypothesis]);
+
+    const found = await storage.getHypothesisById("H42");
+    expect(found).not.toBeNull();
+    expect(found?.id).toBe("H42");
+  });
+
   test("getHypothesisById returns null for invalid ID format", async () => {
     const found = await storage.getHypothesisById("invalid-id");
     expect(found).toBeNull();

@@ -16,13 +16,14 @@ import { z } from "zod";
 // ============================================================================
 
 /**
- * Hypothesis ID format: H-{session_id}-{sequence}
- * Examples: H-RS20251230-001, H-CELL-FATE-001-002
+ * Hypothesis ID format: H-{session_id}-{sequence} OR simple H{n}
+ * Examples: H-RS20251230-001, H1, H42
  *
  * The session_id portion allows alphanumeric with dashes.
  * The sequence is a 3-digit zero-padded number.
+ * Simple format matches artifact-merge generation.
  */
-const hypothesisIdPattern = /^H-[A-Za-z0-9][\w-]*-\d{3}$/;
+const hypothesisIdPattern = /^H-[A-Za-z0-9][\w-]*-\d{3}$|^H\d+$/;
 
 /**
  * Assumption ID format: A-{session_id}-{sequence} or simple A{n}
