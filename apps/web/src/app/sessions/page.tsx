@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import Link from "next/link";
 import { cookies, headers } from "next/headers";
 import { FirstRunOnboarding, RefreshControls } from "@/components/sessions";
+import { DemoSessionsView } from "@/components/sessions/DemoSessionsView";
 import { SessionList } from "@/components/brenner-loop";
 import { AgentMailClient, type AgentMailMessage } from "@/lib/agentMail";
 import { isLabModeEnabled, checkOrchestrationAuth } from "@/lib/auth";
@@ -328,16 +329,17 @@ function ThreadCard({ thread, index }: { thread: ThreadSummary; index: number })
 
 export default async function SessionsListPage() {
   const labModeEnabled = isLabModeEnabled();
+  const isDemoMode = !labModeEnabled;
 
   // Check auth (only relevant if lab mode is enabled)
   const reqHeaders = await headers();
   const reqCookies = await cookies();
   const pageAuth = labModeEnabled ? checkOrchestrationAuth(reqHeaders, reqCookies) : null;
 
+  // Only set labLockedReason for auth failures when lab mode IS enabled
+  // (when lab mode is disabled, we show demo mode instead of locked state)
   let labLockedReason: string | null = null;
-  if (!labModeEnabled) {
-    labLockedReason = "Lab mode is disabled. Set BRENNER_LAB_MODE=1 to enable orchestration.";
-  } else if (pageAuth && !pageAuth.authorized) {
+  if (labModeEnabled && pageAuth && !pageAuth.authorized) {
     labLockedReason = pageAuth.reason;
   }
 
@@ -346,10 +348,11 @@ export default async function SessionsListPage() {
   const agentName = process.env.BRENNER_AGENT_NAME ?? "human";
 
   // Fetch inbox (all messages for this project/agent)
+  // Skip fetching when in demo mode - we'll show demo sessions instead
   const threads: ThreadSummary[] = [];
   let loadError: string | null = null;
 
-  if (!labLockedReason) {
+  if (!isDemoMode && !labLockedReason) {
     try {
       const client = new AgentMailClient();
       const inbox = await client.readInbox({ projectKey, agentName, includeBodies: false });
@@ -395,9 +398,17 @@ export default async function SessionsListPage() {
       {/* Header */}
       <header className="flex items-center justify-between gap-4 animate-fade-in-up">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Sessions</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Sessions
+            {isDemoMode && (
+              <span className="ml-2 text-sm font-medium text-amber-600 dark:text-amber-400">(Demo)</span>
+            )}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Browse and monitor <Jargon term="brenner-loop">Brenner Loop</Jargon> research sessions
+            {isDemoMode
+              ? "Example sessions showing the Brenner Loop research workflow"
+              : <>Browse and monitor <Jargon term="brenner-loop">Brenner Loop</Jargon> research sessions</>
+            }
           </p>
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
@@ -428,7 +439,9 @@ export default async function SessionsListPage() {
       )}
 
       {/* Content */}
-      {labLockedReason ? (
+      {isDemoMode ? (
+        <DemoSessionsView />
+      ) : labLockedReason ? (
         <LockedState reason={labLockedReason} />
       ) : !loadError && threads.length === 0 ? (
         <EmptyState />
