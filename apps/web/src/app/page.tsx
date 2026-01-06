@@ -1145,7 +1145,7 @@ brenner session compile --thread-id RS-20260105`}</code>
                   <span className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Offline</span>
                 </div>
                 <div className="mt-4 rounded-lg border border-border/70 bg-card px-3 py-2 text-xs text-muted-foreground">
-                  Query: "morphogen gradient cell fate"
+                  Query: &quot;morphogen gradient cell fate&quot;
                 </div>
                 <div className="mt-4 space-y-3">
                   {similarityMatches.map((match) => {
