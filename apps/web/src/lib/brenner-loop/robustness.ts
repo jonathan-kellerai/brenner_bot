@@ -13,7 +13,7 @@
  */
 
 import type { HypothesisCard } from "./hypothesis";
-import type { DiscriminativePower, EvidenceResult } from "./evidence";
+import type { EvidenceResult } from "./evidence";
 
 // ============================================================================
 // Types

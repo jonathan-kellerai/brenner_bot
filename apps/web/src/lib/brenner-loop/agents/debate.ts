@@ -14,7 +14,7 @@
 
 import type { HypothesisCard } from "../hypothesis";
 import type { TribunalAgentRole } from "./index";
-import type { OperatorResults, TribunalAgentResponse } from "./dispatch";
+import type { OperatorResults } from "./dispatch";
 import { formatHypothesisForPrompt, formatOperatorResultsForPrompt } from "./dispatch";
 import { getPersona } from "./agent-personas";
 
@@ -540,7 +540,6 @@ export function addUserInjection(
  * Analyze a debate round to extract key elements
  */
 export function analyzeRound(round: DebateRound): RoundAnalysis {
-  const content = round.content.toLowerCase();
   const analysis: RoundAnalysis = {
     newPointsMade: [],
     objectionsRaised: [],
