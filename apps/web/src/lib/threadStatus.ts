@@ -454,6 +454,7 @@ export function computeThreadStatus(
       : 0;
 
   // Count DELTAs and CRITIQUEs in current round (after the boundary)
+  const allowCritiques = latestCompiled !== null;
   let deltasInCurrentRound = 0;
   let critiquesInCurrentRound = 0;
 
@@ -464,7 +465,7 @@ export function computeThreadStatus(
       const msgType = parseSubjectType(msg.subject).type;
       if (msgType === "delta") {
         deltasInCurrentRound++;
-      } else if (msgType === "critique") {
+      } else if (msgType === "critique" && allowCritiques) {
         critiquesInCurrentRound++;
       }
     }
@@ -702,11 +703,13 @@ export function getMessagesInCurrentRound(messages: AgentMailMessage[]): AgentMa
 
   // Find the boundary: latest COMPILED or KICKOFF (or epoch)
   let boundaryTime = 0;
+  let hasCompiled = false;
 
   // First, find the latest COMPILED
   for (const msg of sortedMessages) {
     if (parseSubjectType(msg.subject).type === "compiled") {
       boundaryTime = new Date(msg.created_ts).getTime();
+      hasCompiled = true;
     }
   }
 
@@ -726,7 +729,8 @@ export function getMessagesInCurrentRound(messages: AgentMailMessage[]): AgentMa
     if (msgTime <= boundaryTime) return false;
 
     const msgType = parseSubjectType(msg.subject).type;
-    return msgType === "delta" || msgType === "critique";
+    if (msgType === "delta") return true;
+    return hasCompiled && msgType === "critique";
   });
 }
 

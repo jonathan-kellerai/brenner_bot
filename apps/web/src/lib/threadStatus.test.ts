@@ -919,6 +919,7 @@ describe("round tracking", () => {
       createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
       createMessage({ subject: "DELTA[gpt]: Hypotheses", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
       createMessage({ subject: "DELTA[opus]: Tests", from: "ClaudeAgent", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "CRITIQUE: Premature critique", from: "GeminiAgent", created_ts: "2025-01-01T03:00:00Z" }),
     ];
 
     const status = computeThreadStatus(messages);
@@ -974,6 +975,7 @@ describe("getMessagesInCurrentRound", () => {
       createMessage({ subject: "KICKOFF: Test", from: "Operator", created_ts: "2025-01-01T00:00:00Z" }),
       createMessage({ subject: "DELTA[gpt]: Hypotheses", from: "CodexAgent", created_ts: "2025-01-01T01:00:00Z" }),
       createMessage({ subject: "DELTA[opus]: Tests", from: "ClaudeAgent", created_ts: "2025-01-01T02:00:00Z" }),
+      createMessage({ subject: "CRITIQUE: Premature critique", from: "GeminiAgent", created_ts: "2025-01-01T03:00:00Z" }),
     ];
 
     const currentRound = getMessagesInCurrentRound(messages);
