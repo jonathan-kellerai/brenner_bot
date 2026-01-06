@@ -18,6 +18,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useRef,
   type ReactNode,
 } from "react";
 
@@ -59,6 +60,7 @@ export type ConceptId =
   | "phase_synthesis"
   | "phase_evidence_gathering"
   | "phase_revision"
+  | "phase_complete"
   // Core concepts
   | "hypothesis_card"
   | "falsification"
@@ -747,6 +749,7 @@ interface CoachState {
 
 type CoachAction =
   | { type: "UPDATE_SETTINGS"; updates: Partial<CoachSettings> }
+  | { type: "TOGGLE_COACH" }
   | { type: "RESET_SETTINGS" }
   | { type: "MARK_CONCEPT_SEEN"; conceptId: ConceptId }
   | { type: "MARK_CONCEPTS_SEEN"; conceptIds: ConceptId[] }
@@ -764,6 +767,12 @@ function coachReducer(state: CoachState, action: CoachAction): CoachState {
       return {
         ...state,
         settings: { ...state.settings, ...action.updates },
+      };
+
+    case "TOGGLE_COACH":
+      return {
+        ...state,
+        settings: { ...state.settings, enabled: !state.settings.enabled },
       };
 
     case "RESET_SETTINGS":
@@ -878,11 +887,31 @@ function serializeProgress(progress: LearningProgress): string {
 }
 
 function deserializeProgress(json: string): LearningProgress {
-  const data = JSON.parse(json);
+  const data = JSON.parse(json) as Record<string, unknown>;
+
+  // Validate and extract fields with type safety
+  const seenConcepts = Array.isArray(data.seenConcepts)
+    ? new Set(data.seenConcepts as ConceptId[])
+    : new Set<ConceptId>();
+  const operatorsUsed = Array.isArray(data.operatorsUsed)
+    ? new Set(data.operatorsUsed as string[])
+    : new Set<string>();
+
   return {
-    ...data,
-    seenConcepts: new Set(data.seenConcepts ?? []),
-    operatorsUsed: new Set(data.operatorsUsed ?? []),
+    seenConcepts,
+    operatorsUsed,
+    sessionsCompleted:
+      typeof data.sessionsCompleted === "number" ? data.sessionsCompleted : 0,
+    hypothesesFormulated:
+      typeof data.hypothesesFormulated === "number" ? data.hypothesesFormulated : 0,
+    mistakesCaught:
+      typeof data.mistakesCaught === "number" ? data.mistakesCaught : 0,
+    checkpointsPassed:
+      typeof data.checkpointsPassed === "number" ? data.checkpointsPassed : 0,
+    firstSessionDate:
+      typeof data.firstSessionDate === "string" ? data.firstSessionDate : undefined,
+    lastSessionDate:
+      typeof data.lastSessionDate === "string" ? data.lastSessionDate : undefined,
   };
 }
 
@@ -914,6 +943,10 @@ export function CoachProvider({ children }: CoachProviderProps): React.ReactElem
     progress: DEFAULT_PROGRESS,
   });
 
+  // Track whether initial hydration from localStorage is complete
+  // to prevent premature persistence of default values
+  const hydrated = useRef(false);
+
   // -------------------------------------------------------------------------
   // Hydration from localStorage
   // -------------------------------------------------------------------------
@@ -935,6 +968,9 @@ export function CoachProvider({ children }: CoachProviderProps): React.ReactElem
       dispatch({ type: "HYDRATE", settings, progress });
     } catch (error) {
       console.error("Failed to load coach state from localStorage:", error);
+    } finally {
+      // Mark hydration complete even on error to allow future persistence
+      hydrated.current = true;
     }
   }, []);
 
@@ -944,6 +980,8 @@ export function CoachProvider({ children }: CoachProviderProps): React.ReactElem
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    // Skip persistence until hydration is complete to avoid overwriting saved data
+    if (!hydrated.current) return;
 
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(state.settings));
@@ -987,8 +1025,8 @@ export function CoachProvider({ children }: CoachProviderProps): React.ReactElem
   }, []);
 
   const toggleCoach = useCallback((): void => {
-    dispatch({ type: "UPDATE_SETTINGS", updates: { enabled: !state.settings.enabled } });
-  }, [state.settings.enabled]);
+    dispatch({ type: "TOGGLE_COACH" });
+  }, []);
 
   const setLevel = useCallback((level: CoachLevel): void => {
     dispatch({ type: "UPDATE_SETTINGS", updates: { level } });

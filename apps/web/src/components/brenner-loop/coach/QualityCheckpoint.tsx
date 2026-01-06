@@ -103,7 +103,7 @@ export function QualityCheckpoint({
   onBypass,
   className,
 }: QualityCheckpointProps): React.ReactElement | null {
-  const { isCoachActive, settings, recordCheckpointPassed, recordMistakeCaught } =
+  const { isCoachActive, recordCheckpointPassed, recordMistakeCaught } =
     useCoach();
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
