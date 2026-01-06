@@ -332,6 +332,29 @@ function mergeArrayField(existing: unknown, incoming: unknown): string[] {
   return Array.from(combined).filter((v): v is string => typeof v === "string");
 }
 
+/** Merge reference arrays by deduping on value equality */
+function mergeReferenceArray(existing: unknown, incoming: unknown): Reference[] {
+  const existingArr = (Array.isArray(existing) ? existing : []) as Reference[];
+  const incomingArr = (Array.isArray(incoming) ? incoming : []) as Reference[];
+  
+  const merged = [...existingArr];
+  
+  for (const inc of incomingArr) {
+    // Check if reference already exists
+    const exists = merged.some(ex => 
+      ex.session === inc.session && 
+      ex.item === inc.item && 
+      ex.relation === inc.relation
+    );
+    
+    if (!exists) {
+      merged.push(inc);
+    }
+  }
+  
+  return merged;
+}
+
 /** Calculate total score for a test */
 function calculateTotalScore(score?: TestScore): number {
   if (!score) return 0;
@@ -507,6 +530,8 @@ function applyEdit(
     if (isRecord(payload)) {
       const rt = artifact.sections.research_thread;
       const rtRecord = rt as unknown as Record<string, unknown>;
+      const shouldReplace = (payload as Record<string, unknown>).replace === true;
+
       for (const [key, value] of Object.entries(payload)) {
         if (SYSTEM_ITEM_FIELDS.has(key)) continue;
         if (isForbiddenPayloadKey(key)) {
@@ -517,7 +542,7 @@ function applyEdit(
           });
           continue;
         }
-        if (key === "anchors" && !(payload as Record<string, unknown>).replace) {
+        if (key === "anchors" && !shouldReplace) {
           rtRecord[key] = mergeArrayField(rtRecord[key], value);
         } else if (key !== "replace") {
           rtRecord[key] = value;
@@ -579,6 +604,12 @@ function applyEdit(
         !shouldReplace
       ) {
         itemRecord[key] = mergeArrayField(itemRecord[key], value);
+      } else if (
+        Array.isArray(value) &&
+        key === "references" &&
+        !shouldReplace
+      ) {
+        itemRecord[key] = mergeReferenceArray(itemRecord[key], value);
       } else {
         itemRecord[key] = value;
       }
