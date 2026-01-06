@@ -279,6 +279,16 @@ describe("confidence", () => {
     expect(getStarRating(5)).toContain("★");
     expect(getAsymmetryExplanation()).toContain("twice the impact");
   });
+
+  it("throws on invalid discriminativePower", () => {
+    expect(() =>
+      computeConfidenceUpdate(50, { discriminativePower: 0 as never }, "supports")
+    ).toThrow("Invalid discriminativePower");
+
+    expect(() =>
+      computeConfidenceUpdate(50, { discriminativePower: 6 as never }, "challenges")
+    ).toThrow("Invalid discriminativePower");
+  });
 });
 
 describe("hypothesis-arena", () => {

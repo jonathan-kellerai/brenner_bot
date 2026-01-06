@@ -168,6 +168,9 @@ export function computeConfidenceUpdate(
   if (currentConfidence < 0 || currentConfidence > 100) {
     throw new Error(`Invalid currentConfidence: must be between 0 and 100 (got ${currentConfidence})`);
   }
+  if (!isDiscriminativePower(test.discriminativePower)) {
+    throw new Error(`Invalid discriminativePower: must be 1-5 (got ${test.discriminativePower})`);
+  }
 
   // Normalize power to 0.2-1.0 range
   const power = test.discriminativePower / 5;

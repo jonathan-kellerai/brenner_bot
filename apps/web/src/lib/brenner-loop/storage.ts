@@ -629,13 +629,14 @@ function saveIndex(index: StorageIndex): void {
  */
 function createSummary(session: Session): SessionSummary {
   // Get hypothesis preview (first 100 chars)
+  // Use optional chaining for hypothesisCards to handle malformed/recovered sessions
   const hypothesisPreview =
-    session.hypothesisCards[session.primaryHypothesisId]?.statement ||
+    session.hypothesisCards?.[session.primaryHypothesisId]?.statement ||
     "(No hypothesis)";
 
   // Get confidence from primary hypothesis
   const confidence =
-    session.hypothesisCards[session.primaryHypothesisId]?.confidence ?? 50;
+    session.hypothesisCards?.[session.primaryHypothesisId]?.confidence ?? 50;
 
   return {
     id: session.id,
