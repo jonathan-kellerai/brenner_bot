@@ -30,6 +30,7 @@ export type CommandType =
   | "record_evidence"
   | "update_prediction"
   | "phase_transition"
+  | "apply_operator"
   | "update_notes"
   | "add_tag"
   | "remove_tag";
@@ -102,6 +103,22 @@ export interface PhaseTransitionData {
 }
 
 /**
+ * Operator application command data
+ */
+type OperatorApplicationKey = keyof Session["operatorApplications"];
+type OperatorPhase = Extract<
+  SessionPhase,
+  "level_split" | "exclusion_test" | "object_transpose" | "scale_check"
+>;
+
+export interface ApplyOperatorData {
+  operatorType: OperatorApplicationKey | OperatorPhase;
+  result: unknown;
+  newPhase?: SessionPhase;
+  previousPhase?: SessionPhase;
+}
+
+/**
  * Notes update command data
  */
 export interface NotesUpdateData {
@@ -146,6 +163,33 @@ export function isPhaseCommand(
   cmd: SessionCommand
 ): cmd is SessionCommand<PhaseTransitionData> {
   return cmd.type === "phase_transition";
+}
+
+export function isOperatorCommand(
+  cmd: SessionCommand
+): cmd is SessionCommand<ApplyOperatorData> {
+  return cmd.type === "apply_operator";
+}
+
+function normalizeOperatorApplicationKey(
+  value: ApplyOperatorData["operatorType"]
+): OperatorApplicationKey | null {
+  switch (value) {
+    case "levelSplit":
+    case "level_split":
+      return "levelSplit";
+    case "exclusionTest":
+    case "exclusion_test":
+      return "exclusionTest";
+    case "objectTranspose":
+    case "object_transpose":
+      return "objectTranspose";
+    case "scaleCheck":
+    case "scale_check":
+      return "scaleCheck";
+    default:
+      return null;
+  }
 }
 
 // ============================================================================
@@ -331,6 +375,25 @@ export function createPhaseCommand(
 }
 
 /**
+ * Create an apply operator command
+ */
+export function createApplyOperatorCommand(
+  operatorType: ApplyOperatorData["operatorType"],
+  result: unknown,
+  previousPhase?: SessionPhase,
+  newPhase?: SessionPhase
+): SessionCommand<ApplyOperatorData> {
+  return {
+    id: generateCommandId(),
+    type: "apply_operator",
+    timestamp: new Date().toISOString(),
+    description: `Apply operator: ${operatorType}`,
+    executeData: { operatorType, result, newPhase },
+    undoData: { operatorType, result, previousPhase },
+  };
+}
+
+/**
  * Create a notes update command
  */
 export function createNotesCommand(
@@ -480,6 +543,26 @@ export function applyCommand(
       };
     }
 
+    case "apply_operator": {
+      const data = command.executeData as ApplyOperatorData;
+      const operatorKey = normalizeOperatorApplicationKey(data.operatorType);
+      if (!operatorKey) return session;
+      const apps = { ...session.operatorApplications };
+
+      // Add result to appropriate array
+      // Note: We use type assertion because Typescript can't verify
+      // the result matches the array type dynamically
+      apps[operatorKey] = [...apps[operatorKey], data.result as never];
+
+      return {
+        ...session,
+        updatedAt,
+        operatorApplications: apps,
+        // Update phase if specified
+        ...(data.newPhase ? { phase: data.newPhase } : {}),
+      };
+    }
+
     case "update_notes": {
       const data = command.executeData as NotesUpdateData;
 
@@ -619,6 +702,25 @@ export function reverseCommand(
         ...session,
         updatedAt,
         phase: data.phase,
+      };
+    }
+
+    case "apply_operator": {
+      const data = command.undoData as ApplyOperatorData;
+      const operatorKey = normalizeOperatorApplicationKey(data.operatorType);
+      if (!operatorKey) return session;
+      const apps = { ...session.operatorApplications };
+
+      // Remove the added result (last one)
+      // This assumes simple stack push/pop behavior which is typical for operators
+      apps[operatorKey] = apps[operatorKey].slice(0, -1);
+
+      return {
+        ...session,
+        updatedAt,
+        operatorApplications: apps,
+        // Revert phase if specified
+        ...(data.previousPhase ? { phase: data.previousPhase } : {}),
       };
     }
 
