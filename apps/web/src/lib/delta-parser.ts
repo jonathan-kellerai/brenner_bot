@@ -383,7 +383,7 @@ function parseDeltaBlock(jsonStr: string): ParsedDelta {
       const sanitized = sanitizeJson(jsonStr);
       const parsed = JSON.parse(sanitized);
       return validateDelta(parsed, jsonStr); // Use original raw for debugging
-    } catch (e2) {
+    } catch {
       const error = e instanceof Error ? e.message : "Unknown JSON parse error";
       return { valid: false, error: `Invalid JSON: ${error}`, raw: jsonStr };
     }
