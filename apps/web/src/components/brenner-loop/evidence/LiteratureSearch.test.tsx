@@ -27,6 +27,7 @@ vi.mock("framer-motion", () => ({
  * Create a mock HypothesisCard for testing
  */
 function createMockHypothesis(overrides: Partial<HypothesisCard> = {}): HypothesisCard {
+  const now = new Date();
   return {
     id: "HC-test-001-v1",
     version: 1,
@@ -45,14 +46,14 @@ function createMockHypothesis(overrides: Partial<HypothesisCard> = {}): Hypothes
       "Teens using social media extensively show improved mental health outcomes",
     ],
     confounds: [],
-    backgroundAssumptions: ["Social media usage is measurable and quantifiable"],
-    confidenceHistory: [{ confidence: 50, timestamp: new Date(), reason: "Initial hypothesis" }],
-    currentConfidence: 50,
+    assumptions: ["Social media usage is measurable and quantifiable"],
+    confidence: 50,
     tags: ["social-media", "mental-health", "teenagers"],
-    createdAt: new Date(),
+    createdAt: now,
+    updatedAt: now,
     createdBy: "test-user",
     ...overrides,
-  } as HypothesisCard;
+  };
 }
 
 describe("LiteratureSearch", () => {
