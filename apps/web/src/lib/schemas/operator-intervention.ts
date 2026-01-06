@@ -23,7 +23,7 @@ import { z } from "zod";
  * Intervention ID format: INT-{session_id}-{sequence}
  * @example "INT-RS20251230-001"
  */
-const interventionIdPattern = /^INT-[A-Za-z0-9][\w-]*-\d{3}$/;
+const interventionIdPattern = /^INT-[A-Za-z0-9][\w.-]*-\d{3}$|^INT\d+$/;
 
 // ============================================================================
 // Enums

@@ -587,7 +587,7 @@ export function createEmptySessionRecord(sessionId: string): SessionRecord {
 export async function computeContentHash(content: string): Promise<string> {
   const crypto = globalThis.crypto;
   if (!crypto || !crypto.subtle) {
-    throw new Error("Secure hashing unavailable: crypto.subtle is required for session replay verification.");
+    throw new Error("Secure hashing unavailable: crypto.subtle is required for session replay verification. Ensure you are running in a secure context (HTTPS/localhost) or Node/Bun environment.");
   }
 
   const encoder = new TextEncoder();

@@ -23,17 +23,17 @@ import { z } from "zod";
  * The sequence is a 3-digit zero-padded number.
  * Simple format matches artifact-merge generation.
  */
-const hypothesisIdPattern = /^H-[A-Za-z0-9][\w-]*-\d{3}$|^H\d+$/;
+const hypothesisIdPattern = /^H-[A-Za-z0-9][\w.-]*-\d{3}$|^H\d+$/;
 
 /**
  * Assumption ID format: A-{session_id}-{sequence} or simple A{n}
  */
-const assumptionIdPattern = /^A-[A-Za-z0-9][\w-]*-\d{3}$|^A\d+$/;
+const assumptionIdPattern = /^A-[A-Za-z0-9][\w.-]*-\d{3}$|^A\d+$/;
 
 /**
  * Anomaly ID format: X-{session_id}-{sequence} or simple X{n}
  */
-const anomalyIdPattern = /^X-[A-Za-z0-9][\w-]*-\d{3}$|^X\d+$/;
+const anomalyIdPattern = /^X-[A-Za-z0-9][\w.-]*-\d{3}$|^X\d+$/;
 
 /**
  * Transcript anchor format: §n or §n-m for ranges

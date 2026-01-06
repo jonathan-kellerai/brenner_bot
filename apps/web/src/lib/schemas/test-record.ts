@@ -18,10 +18,10 @@ import { z } from "zod";
 // ID Patterns
 // ============================================================================
 
-const testIdPattern = /^T-[A-Za-z0-9][\w-]*-\d{3}$/;
-const hypothesisIdPattern = /^H-[A-Za-z0-9][\w-]*-\d{3}$/;
-const predictionIdPattern = /^P-[A-Za-z0-9][\w-]*-\d{3}$/;
-const assumptionIdPattern = /^A-[A-Za-z0-9][\w-]*-\d{3}$|^A\d+$/;
+const testIdPattern = /^T-[A-Za-z0-9][\w.-]*-\d{3}$|^T\d+$/;
+const hypothesisIdPattern = /^H-[A-Za-z0-9][\w.-]*-\d{3}$|^H\d+$/;
+const predictionIdPattern = /^P-[A-Za-z0-9][\w.-]*-\d{3}$|^P\d+$/;
+const assumptionIdPattern = /^A-[A-Za-z0-9][\w.-]*-\d{3}$|^A\d+$/;
 const anchorPattern = /^§\d+(-\d+)?$/;
 
 // ============================================================================
