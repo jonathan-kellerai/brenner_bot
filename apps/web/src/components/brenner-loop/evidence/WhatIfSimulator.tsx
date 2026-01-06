@@ -85,21 +85,27 @@ type SimulatorView = "single" | "scenario" | "comparison";
 // Constants
 // ============================================================================
 
-const RESULT_CONFIG: Record<EvidenceResult, { icon: typeof TrendingUp; label: string; color: string }> = {
+const RESULT_CONFIG: Record<
+  EvidenceResult,
+  { icon: typeof TrendingUp; label: string; color: string; hoverColor: string }
+> = {
   supports: {
     icon: TrendingUp,
     label: "Supports",
     color: "text-green-600",
+    hoverColor: "hover:text-green-600",
   },
   challenges: {
     icon: TrendingDown,
     label: "Challenges",
     color: "text-red-600",
+    hoverColor: "hover:text-red-600",
   },
   inconclusive: {
     icon: Minus,
     label: "Inconclusive",
     color: "text-amber-600",
+    hoverColor: "hover:text-amber-600",
   },
 };
 
@@ -492,7 +498,7 @@ function ScenarioBuilderView({
                                 onClick={() => handleAddTest(test, result)}
                                 className={cn(
                                   "p-1.5 rounded text-muted-foreground hover:bg-muted transition-colors",
-                                  `hover:${rc.color}`
+                                  rc.hoverColor
                                 )}
                               >
                                 <Plus className="size-4" />
