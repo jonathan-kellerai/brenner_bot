@@ -15,6 +15,7 @@
 
 import { embedText, cosineSimilarity, EMBEDDING_DIMENSION } from "./embeddings";
 import type { HypothesisCard } from "../hypothesis";
+import type { Hypothesis } from "../../schemas/hypothesis";
 
 // ============================================================================
 // Types
@@ -501,8 +502,6 @@ export function getSimilarityStats(hypotheses: IndexedHypothesis[]): {
 // ============================================================================
 // Storage Integration
 // ============================================================================
-
-import type { Hypothesis } from "../../schemas/hypothesis";
 
 /**
  * Confidence level to numeric mapping for IndexedHypothesis.
