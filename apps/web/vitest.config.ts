@@ -13,6 +13,13 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   // Avoid writing cache files into `node_modules/.vite` (some cache files are tracked in this repo).
   cacheDir: "./.vitest-cache",
+
+  // Force Vite to inline zod during SSR to fix module resolution issues
+  // Zod 3.25+ uses complex conditional exports that can break Vite SSR imports
+  ssr: {
+    noExternal: ["zod"],
+  },
+
   test: {
     // Use happy-dom for React component testing (faster than jsdom)
     // Node environment is auto-selected for non-tsx files
