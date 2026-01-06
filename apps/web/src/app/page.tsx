@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FeatureCard } from "@/components/ui/card";
+import { CopyButton } from "@/components/ui/copy-button";
 import { Jargon } from "@/components/jargon";
 import { WhatIsThis } from "@/components/onboarding/WhatIsThis";
 import { HeroBackground } from "@/components/ui/animated-element";
@@ -162,7 +163,7 @@ export default function Home() {
   const labModeEnabled = labModeValue === "1" || labModeValue === "true";
 
   return (
-    <div className="space-y-12 sm:space-y-16 lg:space-y-24 pb-24 sm:pb-0">
+    <div className="space-y-12 sm:space-y-16 lg:space-y-24 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:pb-0">
       {/* Hero Section */}
       <HeroBackground
         showOrbs
@@ -171,46 +172,123 @@ export default function Home() {
         primaryOrbClass="bg-primary/25 dark:bg-primary/30"
         accentOrbClass="bg-accent/20 dark:bg-accent/25"
       >
-        <div className="py-10 sm:py-12 lg:py-20 text-center space-y-4 sm:space-y-6 px-4 sm:px-6">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium animate-fade-in">
-            <span className="relative flex size-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-              <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
-            </span>
-            Research in progress
-          </div>
+        <div className="py-10 sm:py-12 lg:py-20 px-4 sm:px-6">
+          <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
+            <div className="space-y-6 text-center lg:text-left">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-xs sm:text-sm font-medium animate-fade-in">
+                <span className="relative flex size-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                  <span className="relative inline-flex rounded-full size-2 bg-primary"></span>
+                </span>
+                Brenner Lab Mode
+              </div>
 
-          <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold tracking-tight animate-fade-in-up stagger-1">
-            <span className="text-gradient-primary">BrennerBot</span>
-          </h1>
+              <div className="space-y-3">
+                <p className="text-xs uppercase tracking-[0.4em] text-muted-foreground">Research Orchestration</p>
+                <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold tracking-tight animate-fade-in-up stagger-1">
+                  Three AI Minds. One Rigorous Method. Zero Blind Spots.
+                </h1>
+              </div>
 
-          <p className="max-w-2xl mx-auto text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed animate-fade-in-up stagger-2">
-            Operationalizing Sydney Brenner&apos;s scientific methodology through multi-agent collaboration.
-            Extract wisdom from the master, apply it to your domain.
-          </p>
+              <p className="max-w-2xl mx-auto lg:mx-0 text-base sm:text-lg lg:text-xl text-muted-foreground leading-relaxed animate-fade-in-up stagger-2">
+                Coordinate Claude, GPT, and Gemini in structured debates. Run 11-phase research sessions that produce
+                hypothesis slates, discriminative tests, and evidence trails. Prevent hindsight bias, unfalsifiable
+                claims, and sloppy reasoning in one command.
+              </p>
 
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 sm:gap-4 pt-4 px-4 sm:px-0 animate-fade-in-up stagger-3">
-            <Link
-              href="/corpus/transcript"
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
-            >
-              Read the Transcript
-              <ArrowRightIcon />
-            </Link>
-            <Link
-              href="/corpus"
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
-            >
-              Explore Corpus
-              <ArrowRightIcon />
-            </Link>
-            <Link
-              href="/distillations"
-              className="group inline-flex items-center justify-center gap-2 px-6 py-3.5 sm:py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
-            >
-              Read Distillations
-              <ArrowRightIcon />
-            </Link>
+              <div className="grid gap-4 sm:gap-5 sm:grid-cols-[1.1fr_0.9fr] items-start">
+                <div
+                  id="install"
+                  className="rounded-2xl border border-border/70 bg-background/80 px-4 py-4 sm:px-5 sm:py-5 shadow-sm"
+                >
+                  <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                    <span>Quick Install</span>
+                    <CopyButton
+                      text="curl -fsSL https://brennerbot.org/install.sh | bash"
+                      variant="ghost"
+                      size="sm"
+                      label="Copy install command"
+                      showPreview={false}
+                    />
+                  </div>
+                  <code className="mt-3 block rounded-xl bg-muted/60 px-3 py-2 text-xs sm:text-sm font-mono text-foreground">
+                    curl -fsSL https://brennerbot.org/install.sh | bash
+                  </code>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    Options: <span className="text-foreground">--easy-mode</span>, <span className="text-foreground">--verify</span>,{" "}
+                    <span className="text-foreground">--system</span>
+                  </p>
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <Link
+                    href="/tutorial"
+                    className="group inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl bg-primary text-primary-foreground font-medium shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
+                  >
+                    Get Started
+                    <ArrowRightIcon />
+                  </Link>
+                  <Link
+                    href="/method"
+                    className="group inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
+                  >
+                    Read the Method
+                    <ArrowRightIcon />
+                  </Link>
+                  <Link
+                    href="/distillations"
+                    className="group inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl border border-border bg-card text-foreground font-medium shadow-sm hover:shadow-md hover:border-primary/30 hover:-translate-y-0.5 transition-all active:scale-[0.98] touch-manipulation"
+                  >
+                    View Distillations
+                    <ArrowRightIcon />
+                  </Link>
+                  <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    <span className="rounded-full border border-border/70 bg-background px-3 py-1">Locked predictions</span>
+                    <span className="rounded-full border border-border/70 bg-background px-3 py-1">Structured debates</span>
+                    <span className="rounded-full border border-border/70 bg-background px-3 py-1">Auditable artifacts</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -top-6 -left-4 size-20 rounded-full bg-primary/20 blur-2xl" />
+              <div className="absolute -bottom-8 right-2 size-24 rounded-full bg-accent/20 blur-2xl" />
+              <div className="relative rounded-3xl border border-border/70 bg-card/80 p-5 sm:p-6 shadow-lg">
+                <div className="flex items-center justify-between text-xs uppercase tracking-[0.2em] text-muted-foreground">
+                  <span>Agent Constellation</span>
+                  <span>11-phase loop</span>
+                </div>
+                <div className="mt-5 space-y-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm font-medium">
+                      <span className="text-foreground">Hypothesis Generator</span>
+                      <span className="text-muted-foreground">GPT</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm font-medium">
+                      <span className="text-foreground">Test Designer</span>
+                      <span className="text-muted-foreground">Claude</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-background px-4 py-3 text-sm font-medium">
+                      <span className="text-foreground">Adversarial Critic</span>
+                      <span className="text-muted-foreground">Gemini</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-center">
+                    <FlowArrowIcon />
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-gradient-to-br from-primary/10 via-background to-accent/10 px-4 py-4">
+                    <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Unified Artifact</p>
+                    <p className="mt-2 text-sm text-foreground">
+                      Hypothesis slate • Discriminative tests • Evidence ledger
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-border/70 bg-muted/40 px-4 py-3 text-xs text-muted-foreground">
+                    Threaded Agent Mail → deterministic merge → human approval gate
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </HeroBackground>
@@ -569,10 +647,10 @@ export default function Home() {
       </section>
 
       {/* Mobile Sticky CTA */}
-      <div className="sm:hidden fixed bottom-4 left-4 right-4 z-40">
+      <div className="sm:hidden fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-4 right-4 z-40">
         <Link
           href="/tutorial"
-          className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.99]"
+          className="group inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-6 py-4 text-base font-semibold text-primary-foreground shadow-lg shadow-primary/25 transition-all active:scale-[0.99] touch-manipulation"
         >
           Start the Tutorial
           <ArrowRightIcon />
