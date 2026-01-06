@@ -27,7 +27,6 @@ import {
   Copy,
   Check,
   ChevronRight,
-  Star,
   Calendar,
   Users,
   Quote,
@@ -41,12 +40,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import type { HypothesisCard } from "@/lib/brenner-loop/hypothesis";
 import type { EvidenceResult, DiscriminativePower } from "@/lib/brenner-loop/evidence";
@@ -63,11 +56,8 @@ import {
   getRelevanceColor,
   summarizePaper,
   getPaperAgeCategory,
-  RELEVANCE_THRESHOLDS,
-  LITERATURE_SOURCE_LABELS,
   type PaperResult,
   type SuggestedSearches,
-  type LiteratureSource,
 } from "@/lib/brenner-loop/literature";
 
 // ============================================================================
@@ -82,9 +72,20 @@ export interface LiteratureSearchProps {
   /** Current confidence level */
   currentConfidence: number;
   /** Callback when user wants to record paper as evidence */
-  onRecordEvidence?: (paper: PaperResult, result: EvidenceResult, interpretation: string) => void;
+  onRecordEvidence?: (payload: RecordLiteratureEvidencePayload) => void;
   /** Additional CSS classes */
   className?: string;
+}
+
+export interface RecordLiteratureEvidencePayload {
+  sessionId: string;
+  hypothesisId: string;
+  confidenceBefore: number;
+  paper: PaperResult;
+  result: EvidenceResult;
+  keyFinding: string;
+  interpretation: string;
+  discriminativePower: DiscriminativePower;
 }
 
 type SearchTab = "suggested" | "manual" | "import";
@@ -620,7 +621,16 @@ export function LiteratureSearch({
   const handleRecordEvidence = () => {
     if (!recording || !recording.result) return;
 
-    onRecordEvidence?.(recording.paper, recording.result, recording.interpretation);
+    onRecordEvidence?.({
+      sessionId,
+      hypothesisId: hypothesis.id,
+      confidenceBefore: currentConfidence,
+      paper: recording.paper,
+      result: recording.result,
+      keyFinding: recording.keyFinding,
+      interpretation: recording.interpretation,
+      discriminativePower: recording.discriminativePower,
+    });
 
     // Reset state
     setSelectedPaper(null);
