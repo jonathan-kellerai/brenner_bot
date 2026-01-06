@@ -61,6 +61,11 @@ function hasCloudflareAccessHeaders(request: NextRequest): boolean {
 export function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
+  // Check if this is the public site - allow demo content without auth
+  const host = request.headers.get("host") || request.headers.get("x-forwarded-host") || "";
+  const isPublicHost = host.includes("brennerbot.org");
+  const isPageRoute = !pathname.startsWith("/api/");
+
   // Protect orchestration routes (sessions, API endpoints that trigger Agent Mail)
   // Fail-closed: deny access unless explicitly enabled
   const isOrchestrationPath =
@@ -69,6 +74,11 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/api/experiments");
 
   if (isOrchestrationPath) {
+    // Allow public site page routes through - they show demo content
+    if (isPublicHost && isPageRoute) {
+      return NextResponse.next();
+    }
+
     // Check 1: Lab mode must be enabled
     if (!isLabModeEnabled()) {
       return new NextResponse("Not found", { status: 404 });
