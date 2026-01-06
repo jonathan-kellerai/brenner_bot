@@ -6,6 +6,7 @@ import {
   type AssumptionType,
   AssumptionSchema,
 } from "../schemas/assumption";
+import { withFileLock } from "./file-lock";
 
 /**
  * Assumption Storage Layer
@@ -123,44 +124,6 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
-// In-process Locking
-// ============================================================================
-
-const ASSUMPTION_STORAGE_LOCKS = new Map<string, Promise<void>>();
-
-async function withAssumptionStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = ASSUMPTION_STORAGE_LOCKS.get(key) ?? Promise.resolve();
-  const safePrev = prev.catch(() => {});
-
-  let result: T | undefined;
-  let didThrow = false;
-  let error: unknown;
-
-  const next = safePrev.then(async () => {
-    try {
-      result = await fn();
-    } catch (err) {
-      didThrow = true;
-      error = err;
-    }
-  });
-
-  ASSUMPTION_STORAGE_LOCKS.set(key, next);
-
-  await next;
-
-  if (ASSUMPTION_STORAGE_LOCKS.get(key) === next) {
-    ASSUMPTION_STORAGE_LOCKS.delete(key);
-  }
-
-  if (didThrow) {
-    throw error;
-  }
-
-  return result as T;
-}
-
-// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -175,10 +138,6 @@ export class AssumptionStorage {
   constructor(config: AssumptionStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
-  }
-
-  private lockKey(): string {
-    return `assumption-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -228,7 +187,7 @@ export class AssumptionStorage {
    * Save assumptions for a specific session.
    */
   async saveSessionAssumptions(sessionId: string, assumptions: Assumption[]): Promise<void> {
-    await withAssumptionStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "assumptions", async () => {
       await this.saveSessionAssumptionsUnlocked(sessionId, assumptions);
     });
   }
@@ -276,17 +235,6 @@ export class AssumptionStorage {
    */
   async getAssumptionById(id: string): Promise<Assumption | null> {
     // Try complex format first: A-{sessionId}-{seq}
-    //
-    // Regex explanation: /^A-(.+)-\d{3}$/
-    // - `^A-`     : Must start with "A-"
-    // - `(.+)`    : Greedy capture of session ID (one or more chars)
-    // - `-\d{3}$` : Must end with "-" followed by exactly 3 digits
-    //
-    // The greedy `(.+)` works correctly because `\d{3}$` anchors to the END,
-    // so the greedy match captures everything between "A-" and the LAST "-\d{3}".
-    // Example: "A-RS-2025-001-042" → sessionId = "RS-2025-001", seq = "042"
-    //
-    // This handles session IDs that contain hyphens and/or digits.
     const complexMatch = id.match(/^A-(.+)-\d{3}$/);
     if (complexMatch) {
       const sessionId = complexMatch[1];
@@ -310,7 +258,7 @@ export class AssumptionStorage {
    * Create or update an assumption.
    */
   async saveAssumption(assumption: Assumption): Promise<void> {
-    await withAssumptionStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "assumptions", async () => {
       const assumptions = await this.loadSessionAssumptions(assumption.sessionId);
       const existingIndex = assumptions.findIndex((a) => a.id === assumption.id);
 
@@ -328,7 +276,7 @@ export class AssumptionStorage {
    * Delete an assumption by ID.
    */
   async deleteAssumption(id: string): Promise<boolean> {
-    return await withAssumptionStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "assumptions", async () => {
       const assumption = await this.getAssumptionById(id);
       if (!assumption) {
         return false;
@@ -354,7 +302,7 @@ export class AssumptionStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<AssumptionIndex> {
-    return await withAssumptionStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "assumptions", async () => {
       return await this.rebuildIndexUnlocked();
     });
   }

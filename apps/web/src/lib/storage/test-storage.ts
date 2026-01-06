@@ -5,6 +5,7 @@ import {
   type TestStatus,
   TestRecordSchema,
 } from "../schemas/test-record";
+import { withFileLock } from "./file-lock";
 
 /**
  * Test Storage Layer
@@ -126,44 +127,6 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
-// In-process Locking
-// ============================================================================
-
-const TEST_STORAGE_LOCKS = new Map<string, Promise<void>>();
-
-async function withTestStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = TEST_STORAGE_LOCKS.get(key) ?? Promise.resolve();
-  const safePrev = prev.catch(() => {});
-
-  let result: T | undefined;
-  let didThrow = false;
-  let error: unknown;
-
-  const next = safePrev.then(async () => {
-    try {
-      result = await fn();
-    } catch (err) {
-      didThrow = true;
-      error = err;
-    }
-  });
-
-  TEST_STORAGE_LOCKS.set(key, next);
-
-  await next;
-
-  if (TEST_STORAGE_LOCKS.get(key) === next) {
-    TEST_STORAGE_LOCKS.delete(key);
-  }
-
-  if (didThrow) {
-    throw error;
-  }
-
-  return result as T;
-}
-
-// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -178,10 +141,6 @@ export class TestStorage {
   constructor(config: TestStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
-  }
-
-  private lockKey(): string {
-    return `test-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -231,7 +190,7 @@ export class TestStorage {
    * Save tests for a specific session.
    */
   async saveSessionTests(sessionId: string, tests: TestRecord[]): Promise<void> {
-    await withTestStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "tests", async () => {
       await this.saveSessionTestsUnlocked(sessionId, tests);
     });
   }
@@ -289,7 +248,7 @@ export class TestStorage {
    * Create or update a test.
    */
   async saveTest(test: TestRecord): Promise<void> {
-    await withTestStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "tests", async () => {
       const tests = await this.loadSessionTests(test.designedInSession);
       const existingIndex = tests.findIndex((t) => t.id === test.id);
 
@@ -307,7 +266,7 @@ export class TestStorage {
    * Delete a test by ID.
    */
   async deleteTest(id: string): Promise<boolean> {
-    return await withTestStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "tests", async () => {
       const test = await this.getTestById(id);
       if (!test) {
         return false;
@@ -333,7 +292,7 @@ export class TestStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<TestIndex> {
-    return await withTestStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "tests", async () => {
       return await this.rebuildIndexUnlocked();
     });
   }

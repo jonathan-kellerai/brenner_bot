@@ -81,5 +81,135 @@ describe("computePersonalAnalytics", () => {
     expect(analytics.completionRate).toBe(0);
     expect(analytics.insights[0]).toMatch(/No local Brenner Loop sessions/i);
   });
+
+  it("counts hypothesis outcomes: falsified, robust, abandoned", () => {
+    const now = new Date("2026-01-05T12:00:00.000Z");
+
+    // Session with falsified hypothesis (confidence < 20)
+    const sessionFalsified = sessionWithPrimaryHypothesis(
+      "SESSION-FALSIFIED",
+      "2026-01-04T10:00:00.000Z",
+      "complete"
+    );
+    sessionFalsified.hypothesisCards[sessionFalsified.primaryHypothesisId].confidence = 10;
+
+    // Session with robust hypothesis (confidence > 80 and complete)
+    const sessionRobust = sessionWithPrimaryHypothesis(
+      "SESSION-ROBUST",
+      "2026-01-04T11:00:00.000Z",
+      "complete"
+    );
+    sessionRobust.hypothesisCards[sessionRobust.primaryHypothesisId].confidence = 90;
+
+    // Session with abandoned hypothesis
+    const sessionAbandoned = sessionWithPrimaryHypothesis(
+      "SESSION-ABANDONED",
+      "2026-01-04T12:00:00.000Z",
+      "intake"
+    );
+    const abandonedHypothesis = createTestHypothesis("SESSION-ABANDONED", 2, { confidence: 50 });
+    sessionAbandoned.hypothesisCards[abandonedHypothesis.id] = abandonedHypothesis;
+    sessionAbandoned.archivedHypothesisIds = [abandonedHypothesis.id];
+
+    // Session with in-progress hypothesis (confidence 50, not complete)
+    const sessionInProgress = sessionWithPrimaryHypothesis(
+      "SESSION-INPROGRESS",
+      "2026-01-04T13:00:00.000Z",
+      "intake"
+    );
+
+    const analytics = computePersonalAnalytics({
+      sessions: [sessionFalsified, sessionRobust, sessionAbandoned, sessionInProgress],
+      now,
+    });
+
+    expect(analytics.hypothesesFalsified).toBe(1); // Only the low-confidence one
+    expect(analytics.hypothesesRobust).toBe(1); // Only high-confidence in completed session
+    expect(analytics.hypothesesAbandoned).toBe(1); // Archived hypothesis
+  });
+
+  it("counts revisions after evidence", () => {
+    const now = new Date("2026-01-05T12:00:00.000Z");
+
+    const session = sessionWithPrimaryHypothesis("SESSION-REVISIONS", "2026-01-04T10:00:00.000Z", "revision");
+    session.hypothesisEvolution = [
+      {
+        fromVersionId: "HC-SESSION-REVISIONS-001-v1",
+        toVersionId: "HC-SESSION-REVISIONS-001-v2",
+        reason: "Evidence showed mechanism was different",
+        trigger: "evidence",
+        timestamp: "2026-01-04T11:00:00.000Z",
+      },
+      {
+        fromVersionId: "HC-SESSION-REVISIONS-001-v2",
+        toVersionId: "HC-SESSION-REVISIONS-001-v3",
+        reason: "Refined after scale check",
+        trigger: "level_split",
+        timestamp: "2026-01-04T12:00:00.000Z",
+      },
+      {
+        fromVersionId: "HC-SESSION-REVISIONS-001-v3",
+        toVersionId: "HC-SESSION-REVISIONS-001-v4",
+        reason: "Updated after new evidence",
+        trigger: "evidence",
+        timestamp: "2026-01-04T13:00:00.000Z",
+      },
+    ];
+
+    const analytics = computePersonalAnalytics({ sessions: [session], now });
+
+    expect(analytics.revisionsAfterEvidence).toBe(2); // Two evidence-triggered evolutions
+  });
+
+  it("uses externally provided objection stats", () => {
+    const now = new Date("2026-01-05T12:00:00.000Z");
+    const session = sessionWithPrimaryHypothesis("SESSION-OBJECTIONS", "2026-01-04T10:00:00.000Z", "synthesis");
+
+    const analytics = computePersonalAnalytics({
+      sessions: [session],
+      now,
+      objectionStats: { addressed: 5, accepted: 2 },
+    });
+
+    expect(analytics.objectionsAddressed).toBe(5);
+    expect(analytics.objectionsAccepted).toBe(2);
+  });
+
+  it("defaults objection stats to zero when not provided", () => {
+    const now = new Date("2026-01-05T12:00:00.000Z");
+    const session = sessionWithPrimaryHypothesis("SESSION-NO-OBJECTIONS", "2026-01-04T10:00:00.000Z", "intake");
+
+    const analytics = computePersonalAnalytics({ sessions: [session], now });
+
+    expect(analytics.objectionsAddressed).toBe(0);
+    expect(analytics.objectionsAccepted).toBe(0);
+  });
+
+  it("includes hypothesis-related achievements", () => {
+    const now = new Date("2026-01-05T12:00:00.000Z");
+
+    // Create sessions with enough falsified and robust hypotheses to unlock achievements
+    const sessions: Session[] = [];
+    for (let i = 0; i < 5; i++) {
+      const session = sessionWithPrimaryHypothesis(`SESSION-FALSIFIED-${i}`, "2026-01-04T10:00:00.000Z", "complete");
+      session.hypothesisCards[session.primaryHypothesisId].confidence = 10;
+      sessions.push(session);
+    }
+    for (let i = 0; i < 3; i++) {
+      const session = sessionWithPrimaryHypothesis(`SESSION-ROBUST-${i}`, "2026-01-04T10:00:00.000Z", "complete");
+      session.hypothesisCards[session.primaryHypothesisId].confidence = 90;
+      sessions.push(session);
+    }
+
+    const analytics = computePersonalAnalytics({ sessions, now });
+
+    const hypothesisHunter = analytics.achievements.find((a) => a.id === "hypothesis-hunter");
+    const robustThinker = analytics.achievements.find((a) => a.id === "robust-thinker");
+
+    expect(hypothesisHunter).toBeDefined();
+    expect(hypothesisHunter?.unlocked).toBe(true);
+    expect(robustThinker).toBeDefined();
+    expect(robustThinker?.unlocked).toBe(true);
+  });
 });
 

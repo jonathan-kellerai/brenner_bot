@@ -8,6 +8,8 @@
  */
 
 import type { ObjectionSeverity, ObjectionType } from "../agents/objections";
+import type { ExternalCitation } from "./citations";
+import { buildCitationIndex, renderCitationIndexSection } from "./citations";
 
 // ============================================================================
 // Types
@@ -34,6 +36,7 @@ export interface ResearchBriefMetadata {
   testsIdentified?: number;
   testsCompleted?: number;
   brennerCitations?: string[];
+  externalCitations?: ExternalCitation[];
 }
 
 export interface HypothesisStatement {
@@ -215,6 +218,12 @@ export const renderResearchBriefTemplate = (input: ResearchBriefTemplateInput = 
   lines.push("## Recommended Next Steps");
   lines.push(formatOrderedList(input.recommendedNextSteps));
 
+  lines.push("");
+  lines.push(...renderCitationIndexSection(buildCitationIndex({
+    brennerCitations: metadata.brennerCitations,
+    externalCitations: metadata.externalCitations,
+  })));
+
   return lines.join("\n");
 };
 
@@ -255,6 +264,7 @@ const normalizeMetadata = (metadata?: Partial<ResearchBriefMetadata>): Normalize
     testsIdentified: typeof metadata?.testsIdentified === "number" ? metadata.testsIdentified : 0,
     testsCompleted: typeof metadata?.testsCompleted === "number" ? metadata.testsCompleted : 0,
     brennerCitations: metadata?.brennerCitations ?? [],
+    externalCitations: metadata?.externalCitations ?? [],
   };
 };
 

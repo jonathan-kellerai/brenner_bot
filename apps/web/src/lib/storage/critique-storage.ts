@@ -7,6 +7,7 @@ import {
   type CritiqueTargetType,
   CritiqueSchema,
 } from "../schemas/critique";
+import { withFileLock } from "./file-lock";
 
 /**
  * Critique Storage Layer
@@ -125,44 +126,6 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
-// In-process Locking
-// ============================================================================
-
-const CRITIQUE_STORAGE_LOCKS = new Map<string, Promise<void>>();
-
-async function withCritiqueStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = CRITIQUE_STORAGE_LOCKS.get(key) ?? Promise.resolve();
-  const safePrev = prev.catch(() => {});
-
-  let result: T | undefined;
-  let didThrow = false;
-  let error: unknown;
-
-  const next = safePrev.then(async () => {
-    try {
-      result = await fn();
-    } catch (err) {
-      didThrow = true;
-      error = err;
-    }
-  });
-
-  CRITIQUE_STORAGE_LOCKS.set(key, next);
-
-  await next;
-
-  if (CRITIQUE_STORAGE_LOCKS.get(key) === next) {
-    CRITIQUE_STORAGE_LOCKS.delete(key);
-  }
-
-  if (didThrow) {
-    throw error;
-  }
-
-  return result as T;
-}
-
-// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -177,10 +140,6 @@ export class CritiqueStorage {
   constructor(config: CritiqueStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
-  }
-
-  private lockKey(): string {
-    return `critique-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -230,7 +189,7 @@ export class CritiqueStorage {
    * Save critiques for a specific session.
    */
   async saveSessionCritiques(sessionId: string, critiques: Critique[]): Promise<void> {
-    await withCritiqueStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "critiques", async () => {
       await this.saveSessionCritiquesUnlocked(sessionId, critiques);
     });
   }
@@ -288,7 +247,7 @@ export class CritiqueStorage {
    * Create or update a critique.
    */
   async saveCritique(critique: Critique): Promise<void> {
-    await withCritiqueStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "critiques", async () => {
       const critiques = await this.loadSessionCritiques(critique.sessionId);
       const existingIndex = critiques.findIndex((c) => c.id === critique.id);
 
@@ -306,7 +265,7 @@ export class CritiqueStorage {
    * Delete a critique by ID.
    */
   async deleteCritique(id: string): Promise<boolean> {
-    return await withCritiqueStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "critiques", async () => {
       const critique = await this.getCritiqueById(id);
       if (!critique) {
         return false;
@@ -332,7 +291,7 @@ export class CritiqueStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<CritiqueIndex> {
-    return await withCritiqueStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "critiques", async () => {
       return await this.rebuildIndexUnlocked();
     });
   }

@@ -1,5 +1,5 @@
 import * as React from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import type { AgentMailMessage } from "@/lib/agentMail";
@@ -17,10 +17,10 @@ describe("AgentTribunalPanel", () => {
     render(<AgentTribunalPanel messages={[]} />);
 
     expect(screen.getByText(/agent tribunal/i)).toBeInTheDocument();
-    expect(screen.getByText(/devil's advocate/i)).toBeInTheDocument();
-    expect(screen.getByText(/experiment designer/i)).toBeInTheDocument();
-    expect(screen.getByText(/statistician/i)).toBeInTheDocument();
-    expect(screen.getByText(/brenner channeler/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/devil's advocate/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/experiment designer/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/statistician/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/brenner channeler/i).length).toBeGreaterThan(0);
   });
 
   it("shows response preview and opens modal for a completed role", async () => {
@@ -45,9 +45,10 @@ describe("AgentTribunalPanel", () => {
 
     render(<AgentTribunalPanel messages={[dispatch, reply]} roles={["devils_advocate"]} />);
 
-    expect(screen.getByText(/here is the/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/here is the/i).length).toBeGreaterThan(0);
 
-    await user.click(screen.getByRole("button", { name: /expand full response/i }));
+    const expandButtons = screen.getAllByRole("button", { name: /expand full response/i });
+    await user.click(expandButtons[0]);
 
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveTextContent(/here is the\s+analysis/i);
@@ -108,13 +109,15 @@ describe("AgentTribunalPanel", () => {
     expect(screen.getByText(/completion blocked/i)).toBeInTheDocument();
     expect(screen.getByText(/blocked: 1 objection/i)).toBeInTheDocument();
 
-    localStorage.setItem(
-      "brenner-objection-register:TRIBUNAL-SESSION-abc",
-      JSON.stringify({ "123:0": "addressed" })
-    );
-    window.dispatchEvent(
-      new CustomEvent("brenner-objection-register-updated", { detail: { threadId: "TRIBUNAL-SESSION-abc" } })
-    );
+    act(() => {
+      localStorage.setItem(
+        "brenner-objection-register:TRIBUNAL-SESSION-abc",
+        JSON.stringify({ "123:0": "addressed" })
+      );
+      window.dispatchEvent(
+        new CustomEvent("brenner-objection-register-updated", { detail: { threadId: "TRIBUNAL-SESSION-abc" } })
+      );
+    });
 
     await waitFor(() => {
       expect(screen.queryByText(/completion blocked/i)).not.toBeInTheDocument();

@@ -10,11 +10,17 @@ import { z } from "zod";
 // Thread ID format: alphanumeric with optional dashes (e.g., FEAT-123, RS-20251230-topic)
 const threadIdPattern = /^[A-Za-z0-9][\w-]*$/;
 
-/** The three canonical roles in the Brenner Protocol */
+/** The canonical roles in the Brenner Protocol */
 export const AGENT_ROLE_VALUES = [
   "hypothesis_generator",
   "test_designer",
   "adversarial_critic",
+  // Tribunal Roles
+  "devils_advocate",
+  "experiment_designer",
+  "statistician",
+  "brenner_channeler",
+  "synthesis",
 ] as const;
 
 export type AgentRole = (typeof AGENT_ROLE_VALUES)[number];
@@ -24,6 +30,11 @@ export const AGENT_ROLE_LABELS: Record<AgentRole, string> = {
   hypothesis_generator: "Hypothesis Generator",
   test_designer: "Test Designer",
   adversarial_critic: "Adversarial Critic",
+  devils_advocate: "Devil's Advocate",
+  experiment_designer: "Experiment Designer",
+  statistician: "Statistician",
+  brenner_channeler: "Brenner Channeler",
+  synthesis: "Synthesis",
 };
 
 /** Operator selection per agent role (used by kickoff prompt builder) */
@@ -31,6 +42,11 @@ export const operatorSelectionSchema = z.object({
   hypothesis_generator: z.array(z.string()).default([]),
   test_designer: z.array(z.string()).default([]),
   adversarial_critic: z.array(z.string()).default([]),
+  devils_advocate: z.array(z.string()).default([]),
+  experiment_designer: z.array(z.string()).default([]),
+  statistician: z.array(z.string()).default([]),
+  brenner_channeler: z.array(z.string()).default([]),
+  synthesis: z.array(z.string()).default([]),
 });
 
 export type OperatorSelection = z.infer<typeof operatorSelectionSchema>;

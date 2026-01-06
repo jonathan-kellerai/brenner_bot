@@ -5,6 +5,7 @@ import {
   type QuarantineStatus,
   AnomalySchema,
 } from "../schemas/anomaly";
+import { withFileLock } from "./file-lock";
 
 /**
  * Anomaly Storage Layer
@@ -121,44 +122,6 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
-// In-process Locking
-// ============================================================================
-
-const ANOMALY_STORAGE_LOCKS = new Map<string, Promise<void>>();
-
-async function withAnomalyStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = ANOMALY_STORAGE_LOCKS.get(key) ?? Promise.resolve();
-  const safePrev = prev.catch(() => {});
-
-  let result: T | undefined;
-  let didThrow = false;
-  let error: unknown;
-
-  const next = safePrev.then(async () => {
-    try {
-      result = await fn();
-    } catch (err) {
-      didThrow = true;
-      error = err;
-    }
-  });
-
-  ANOMALY_STORAGE_LOCKS.set(key, next);
-
-  await next;
-
-  if (ANOMALY_STORAGE_LOCKS.get(key) === next) {
-    ANOMALY_STORAGE_LOCKS.delete(key);
-  }
-
-  if (didThrow) {
-    throw error;
-  }
-
-  return result as T;
-}
-
-// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -173,10 +136,6 @@ export class AnomalyStorage {
   constructor(config: AnomalyStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
-  }
-
-  private lockKey(): string {
-    return `anomaly-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -226,7 +185,7 @@ export class AnomalyStorage {
    * Save anomalies for a specific session.
    */
   async saveSessionAnomalies(sessionId: string, anomalies: Anomaly[]): Promise<void> {
-    await withAnomalyStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "anomalies", async () => {
       await this.saveSessionAnomaliesUnlocked(sessionId, anomalies);
     });
   }
@@ -284,7 +243,7 @@ export class AnomalyStorage {
    * Create or update an anomaly.
    */
   async saveAnomaly(anomaly: Anomaly): Promise<void> {
-    await withAnomalyStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "anomalies", async () => {
       const anomalies = await this.loadSessionAnomalies(anomaly.sessionId);
       const existingIndex = anomalies.findIndex((a) => a.id === anomaly.id);
 
@@ -302,7 +261,7 @@ export class AnomalyStorage {
    * Delete an anomaly by ID.
    */
   async deleteAnomaly(id: string): Promise<boolean> {
-    return await withAnomalyStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "anomalies", async () => {
       const anomaly = await this.getAnomalyById(id);
       if (!anomaly) {
         return false;
@@ -328,7 +287,7 @@ export class AnomalyStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<AnomalyIndex> {
-    return await withAnomalyStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "anomalies", async () => {
       return await this.rebuildIndexUnlocked();
     });
   }

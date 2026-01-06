@@ -7,7 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { OPERATOR_METADATA, type OperatorType } from "@/lib/brenner-loop/operators";
 import { cn } from "@/lib/utils";
-import { computePersonalAnalytics, sessionStorage, type PersonalAnalytics, type Session } from "@/lib/brenner-loop";
+import {
+  computePersonalAnalytics,
+  sessionStorage,
+  loadObjectionStatsFromStorage,
+  findThreadIdsForSession,
+  type PersonalAnalytics,
+  type Session,
+} from "@/lib/brenner-loop";
 
 function formatPercent(value: number): string {
   if (!Number.isFinite(value)) return "0%";
@@ -87,7 +94,12 @@ export default function PersonalAnalyticsPage() {
         const summaries = await sessionStorage.list();
         const maybeSessions = await Promise.all(summaries.map((s) => sessionStorage.load(s.id)));
         const sessions = maybeSessions.filter((s): s is Session => s !== null);
-        const analytics = computePersonalAnalytics({ sessions });
+
+        // Load objection stats from localStorage
+        const threadIds = sessions.flatMap((s) => findThreadIdsForSession(s.id));
+        const objectionStats = loadObjectionStatsFromStorage(threadIds);
+
+        const analytics = computePersonalAnalytics({ sessions, objectionStats });
         if (!cancelled) setState({ status: "ready", analytics });
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
@@ -307,6 +319,73 @@ export default function PersonalAnalyticsPage() {
                 <OperatorRow key={op} operatorType={op} usedCount={count} sessionsTotal={sessionsTotal} />
               ))
             )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Hypothesis Outcomes & Learning Metrics */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-base">Hypothesis Outcomes</CardTitle>
+            <p className="text-sm text-muted-foreground">Track how your hypotheses fare through testing.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 rounded-lg bg-muted/30 border border-border">
+                <div className="text-2xl font-semibold text-destructive">
+                  {analytics.hypothesesFalsified}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Falsified</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/30 border border-border">
+                <div className="text-2xl font-semibold text-success">
+                  {analytics.hypothesesRobust}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Robust</div>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/30 border border-border">
+                <div className="text-2xl font-semibold text-muted-foreground">
+                  {analytics.hypothesesAbandoned}
+                </div>
+                <div className="text-xs text-muted-foreground mt-1">Abandoned</div>
+              </div>
+            </div>
+            {(analytics.hypothesesFalsified > 0 || analytics.hypothesesRobust > 0) && (
+              <div className="text-xs text-muted-foreground">
+                Falsified = confidence &lt; 20% | Robust = confidence &gt; 80% in completed sessions
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="space-y-1">
+            <CardTitle className="text-base">Learning Metrics</CardTitle>
+            <p className="text-sm text-muted-foreground">How you respond to evidence and objections.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+              <div>
+                <div className="text-sm font-medium">Revisions After Evidence</div>
+                <div className="text-xs text-muted-foreground">Hypotheses updated based on evidence</div>
+              </div>
+              <div className="text-xl font-semibold">{analytics.revisionsAfterEvidence}</div>
+            </div>
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+              <div>
+                <div className="text-sm font-medium">Objections Addressed</div>
+                <div className="text-xs text-muted-foreground">Tribunal objections you resolved</div>
+              </div>
+              <div className="text-xl font-semibold">{analytics.objectionsAddressed}</div>
+            </div>
+            <div className="flex items-center justify-between gap-3 p-3 rounded-lg bg-muted/30 border border-border">
+              <div>
+                <div className="text-sm font-medium">Objections Accepted</div>
+                <div className="text-xs text-muted-foreground">Objections you incorporated</div>
+              </div>
+              <div className="text-xl font-semibold">{analytics.objectionsAccepted}</div>
+            </div>
           </CardContent>
         </Card>
       </div>

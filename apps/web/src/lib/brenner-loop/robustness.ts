@@ -13,11 +13,25 @@
  */
 
 import type { HypothesisCard } from "./hypothesis";
-import type { EvidenceEntry, DiscriminativePower } from "./evidence";
+import type { DiscriminativePower, EvidenceResult } from "./evidence";
 
 // ============================================================================
 // Types
 // ============================================================================
+
+/**
+ * Flexible evidence input that supports both:
+ * - FullEvidenceEntry (from evidence.ts)
+ * - EvidenceEntry (from types.ts)
+ */
+export interface RobustnessEvidenceInput {
+  id?: string;
+  result?: EvidenceResult;
+  test?: { discriminativePower: number };
+  testId?: string;
+  hypothesisVersion?: string;
+  matchedHypothesisId?: string;
+}
 
 /**
  * Interpretation of a hypothesis's robustness based on testing history.
@@ -265,9 +279,13 @@ export function computeFalsifiabilityScore(hypothesis: HypothesisCard): number {
  * - 1-star test: 1 point
  *
  * @param evidence - Array of evidence entries for this hypothesis
+ * @param testLookup - Optional lookup for test power (testId -> power)
  * @returns Object with weighted survival ratio and related stats
  */
-function computeWeightedSurvival(evidence: EvidenceEntry[]): {
+function computeWeightedSurvival(
+  evidence: RobustnessEvidenceInput[],
+  testLookup?: Record<string, { discriminativePower: number }>
+): {
   weightedSurvival: number;
   testsAttempted: number;
   testsSurvived: number;
@@ -296,7 +314,14 @@ function computeWeightedSurvival(evidence: EvidenceEntry[]): {
   let testsInconclusive = 0;
 
   for (const entry of evidence) {
-    const power: number = entry.test.discriminativePower as DiscriminativePower;
+    // Determine power: embedded test object > lookup > default (1)
+    let power = 1;
+    if (entry.test?.discriminativePower) {
+      power = entry.test.discriminativePower;
+    } else if (entry.testId && testLookup && testLookup[entry.testId]) {
+      power = testLookup[entry.testId].discriminativePower;
+    }
+
     testsAttempted++;
     totalPower += power;
 
@@ -418,6 +443,7 @@ function getTestPowerLabel(avgPower: number): string {
  * @param hypothesis - The hypothesis card to evaluate
  * @param evidenceLedger - All evidence entries (will be filtered to this hypothesis version)
  * @param config - Optional configuration overrides
+ * @param testLookup - Optional lookup for test power (testId -> { discriminativePower: number })
  * @returns Complete RobustnessScore with components and interpretation
  *
  * @example
@@ -426,18 +452,19 @@ function getTestPowerLabel(avgPower: number): string {
  */
 export function computeRobustness(
   hypothesis: HypothesisCard,
-  evidenceLedger: EvidenceEntry[],
-  config: Partial<RobustnessConfig> = {}
+  evidenceLedger: RobustnessEvidenceInput[],
+  config: Partial<RobustnessConfig> = {},
+  testLookup?: Record<string, { discriminativePower: number }>
 ): RobustnessScore {
   const cfg: RobustnessConfig = { ...DEFAULT_ROBUSTNESS_CONFIG, ...config };
 
   // Filter evidence to this hypothesis version
   const relevantEvidence = evidenceLedger.filter(
-    (e) => e.hypothesisVersion === hypothesis.id
+    (e) => e.hypothesisVersion === hypothesis.id || e.matchedHypothesisId === hypothesis.id
   );
 
   // Compute component scores
-  const survival = computeWeightedSurvival(relevantEvidence);
+  const survival = computeWeightedSurvival(relevantEvidence, testLookup);
   const falsifiabilityScore = computeFalsifiabilityScore(hypothesis);
   const specificityScore = computeSpecificityScore(hypothesis.predictionsIfTrue || []);
 

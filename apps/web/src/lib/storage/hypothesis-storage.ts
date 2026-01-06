@@ -7,6 +7,7 @@ import {
   type HypothesisConfidence,
   HypothesisSchema,
 } from "../schemas/hypothesis";
+import { withFileLock } from "./file-lock";
 
 /**
  * Hypothesis Storage Layer
@@ -45,6 +46,7 @@ export interface SessionHypothesisFile {
   updatedAt: string;
   hypotheses: Hypothesis[];
 }
+
 
 /**
  * Index entry for quick lookups.
@@ -126,44 +128,6 @@ async function ensureStorageStructure(baseDir: string): Promise<void> {
 }
 
 // ============================================================================
-// In-process Locking
-// ============================================================================
-
-const HYPOTHESIS_STORAGE_LOCKS = new Map<string, Promise<void>>();
-
-async function withHypothesisStorageLock<T>(key: string, fn: () => Promise<T>): Promise<T> {
-  const prev = HYPOTHESIS_STORAGE_LOCKS.get(key) ?? Promise.resolve();
-  const safePrev = prev.catch(() => {});
-
-  let result: T | undefined;
-  let didThrow = false;
-  let error: unknown;
-
-  const next = safePrev.then(async () => {
-    try {
-      result = await fn();
-    } catch (err) {
-      didThrow = true;
-      error = err;
-    }
-  });
-
-  HYPOTHESIS_STORAGE_LOCKS.set(key, next);
-
-  await next;
-
-  if (HYPOTHESIS_STORAGE_LOCKS.get(key) === next) {
-    HYPOTHESIS_STORAGE_LOCKS.delete(key);
-  }
-
-  if (didThrow) {
-    throw error;
-  }
-
-  return result as T;
-}
-
-// ============================================================================
 // Storage Class
 // ============================================================================
 
@@ -178,10 +142,6 @@ export class HypothesisStorage {
   constructor(config: HypothesisStorageConfig = {}) {
     this.baseDir = config.baseDir ?? process.cwd();
     this.autoRebuildIndex = config.autoRebuildIndex ?? true;
-  }
-
-  private lockKey(): string {
-    return `hypothesis-storage:${this.baseDir}`;
   }
 
   // ============================================================================
@@ -231,7 +191,7 @@ export class HypothesisStorage {
    * Save hypotheses for a specific session.
    */
   async saveSessionHypotheses(sessionId: string, hypotheses: Hypothesis[]): Promise<void> {
-    await withHypothesisStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "hypotheses", async () => {
       await this.saveSessionHypothesesUnlocked(sessionId, hypotheses);
     });
   }
@@ -275,17 +235,6 @@ export class HypothesisStorage {
    */
   async getHypothesisById(id: string): Promise<Hypothesis | null> {
     // Extract session ID from hypothesis ID format: H-{sessionId}-{seq}
-    //
-    // Regex explanation: /^H-(.+)-\d{3}$/
-    // - `^H-`     : Must start with "H-"
-    // - `(.+)`    : Greedy capture of session ID (one or more chars)
-    // - `-\d{3}$` : Must end with "-" followed by exactly 3 digits
-    //
-    // The greedy `(.+)` works correctly because `\d{3}$` anchors to the END,
-    // so the greedy match captures everything between "H-" and the LAST "-\d{3}".
-    // Example: "H-RS-2025-001-042" → sessionId = "RS-2025-001", seq = "042"
-    //
-    // This handles session IDs that contain hyphens and/or digits.
     const match = id.match(/^H-(.+)-\d{3}$/);
     if (!match) {
       return null;
@@ -300,7 +249,7 @@ export class HypothesisStorage {
    * Create or update a hypothesis.
    */
   async saveHypothesis(hypothesis: Hypothesis): Promise<void> {
-    await withHypothesisStorageLock(this.lockKey(), async () => {
+    await withFileLock(this.baseDir, "hypotheses", async () => {
       const hypotheses = await this.loadSessionHypotheses(hypothesis.sessionId);
       const existingIndex = hypotheses.findIndex((h) => h.id === hypothesis.id);
 
@@ -318,7 +267,7 @@ export class HypothesisStorage {
    * Delete a hypothesis by ID.
    */
   async deleteHypothesis(id: string): Promise<boolean> {
-    return await withHypothesisStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "hypotheses", async () => {
       const hypothesis = await this.getHypothesisById(id);
       if (!hypothesis) {
         return false;
@@ -344,7 +293,7 @@ export class HypothesisStorage {
    * Rebuild the cross-session index.
    */
   async rebuildIndex(): Promise<HypothesisIndex> {
-    return await withHypothesisStorageLock(this.lockKey(), async () => {
+    return await withFileLock(this.baseDir, "hypotheses", async () => {
       return await this.rebuildIndexUnlocked();
     });
   }

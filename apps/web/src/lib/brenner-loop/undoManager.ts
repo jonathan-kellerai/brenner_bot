@@ -195,6 +195,8 @@ export function createUndoStack(maxHistory = 50): UndoStack {
  * Generate a unique command ID
  */
 export function generateCommandId(): CommandId {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `CMD-${uuid}`;
   return `CMD-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 }
 

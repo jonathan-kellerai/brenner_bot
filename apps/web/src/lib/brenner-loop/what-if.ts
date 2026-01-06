@@ -241,7 +241,10 @@ export function createScenario(input: {
   startingConfidence: number;
   assumedTests?: AssumedTestResult[];
 }): WhatIfScenario {
-  const id = `WIF-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+  const uuid = globalThis.crypto?.randomUUID?.();
+  const id = uuid
+    ? `WIF-${uuid}`
+    : `WIF-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
   const scenario: WhatIfScenario = {
     id,

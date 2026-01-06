@@ -444,6 +444,8 @@ const TEST_TEMPLATES: TestTemplate[] = [
  * Generate a unique test ID
  */
 export function generateTestId(): string {
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `ET-${uuid}`;
   const timestamp = Date.now().toString(36);
   const random = Math.random().toString(36).slice(2, 6);
   return `ET-${timestamp}-${random}`;

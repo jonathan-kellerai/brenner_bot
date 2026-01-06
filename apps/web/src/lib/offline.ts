@@ -40,9 +40,8 @@ function isQueueItem(value: unknown): value is OfflineQueueItem {
 }
 
 function createQueueId(): string {
-  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
-    return crypto.randomUUID();
-  }
+  const uuid = globalThis.crypto?.randomUUID?.();
+  if (uuid) return `offline-${uuid}`;
   return `offline-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 

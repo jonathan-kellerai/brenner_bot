@@ -1,6 +1,10 @@
 import type { OperatorType } from "./operators/framework";
 import { calculateFalsifiabilityScore, calculateSpecificityScore } from "./hypothesis";
-import type { Session } from "./types";
+import type { HypothesisCard, Session } from "./types";
+
+// Threshold constants for hypothesis outcome classification
+const FALSIFIED_CONFIDENCE_THRESHOLD = 20;
+const ROBUST_CONFIDENCE_THRESHOLD = 80;
 
 export interface TrendPoint {
   /** YYYY-MM-DD (UTC) */
@@ -119,6 +123,81 @@ function countOperatorUsage(session: Session, distribution: Record<OperatorType,
   if (Array.isArray(apps.scaleCheck) && apps.scaleCheck.length > 0) distribution.scale_check += 1;
 }
 
+/**
+ * Classify a hypothesis as falsified, robust, or in-progress based on confidence.
+ * - Falsified: confidence < 20 (very speculative, essentially ruled out)
+ * - Robust: confidence > 80 (strong support, passed discriminative tests)
+ * - In-progress: everything else
+ */
+function classifyHypothesisOutcome(card: HypothesisCard): "falsified" | "robust" | "in_progress" {
+  const confidence = card.confidence ?? 50;
+  if (confidence < FALSIFIED_CONFIDENCE_THRESHOLD) return "falsified";
+  if (confidence > ROBUST_CONFIDENCE_THRESHOLD) return "robust";
+  return "in_progress";
+}
+
+/**
+ * Count hypothesis outcomes across all sessions.
+ * - Abandoned: hypotheses in archivedHypothesisIds
+ * - Falsified: hypotheses with confidence < 20
+ * - Robust: hypotheses with confidence > 80 in completed sessions
+ */
+function countHypothesisOutcomes(sessions: Session[]): {
+  falsified: number;
+  robust: number;
+  abandoned: number;
+} {
+  let falsified = 0;
+  let robust = 0;
+  let abandoned = 0;
+
+  for (const session of sessions) {
+    // Count abandoned hypotheses (archived)
+    abandoned += session.archivedHypothesisIds?.length ?? 0;
+
+    // Classify active hypotheses by confidence
+    const cards = session.hypothesisCards;
+    if (!cards || typeof cards !== "object") continue;
+
+    for (const cardId of Object.keys(cards)) {
+      const card = cards[cardId];
+      if (!card) continue;
+
+      // Skip archived hypotheses (already counted as abandoned)
+      if (session.archivedHypothesisIds?.includes(cardId)) continue;
+
+      const outcome = classifyHypothesisOutcome(card);
+      if (outcome === "falsified") {
+        falsified += 1;
+      } else if (outcome === "robust" && session.phase === "complete") {
+        // Only count robust if session is complete (hypothesis has "survived")
+        robust += 1;
+      }
+    }
+  }
+
+  return { falsified, robust, abandoned };
+}
+
+/**
+ * Count revisions triggered by evidence across all sessions.
+ * Looks at hypothesisEvolution entries with trigger === "evidence".
+ */
+function countRevisionsAfterEvidence(sessions: Session[]): number {
+  let count = 0;
+  for (const session of sessions) {
+    const evolutions = session.hypothesisEvolution;
+    if (!Array.isArray(evolutions)) continue;
+
+    for (const evolution of evolutions) {
+      if (evolution.trigger === "evidence") {
+        count += 1;
+      }
+    }
+  }
+  return count;
+}
+
 function computeAverageDurationMinutes(sessions: Session[]): number {
   const minutes = sessions
     .map((session) => {
@@ -215,6 +294,8 @@ function buildAchievements(params: {
   sessionsCompleted: number;
   operatorsUsedDistribution: Record<OperatorType, number>;
   sessionsTotal: number;
+  hypothesesFalsified: number;
+  hypothesesRobust: number;
 }): Achievement[] {
   const operatorsUsedCount = OPERATOR_KEYS.filter((op) => params.operatorsUsedDistribution[op] > 0).length;
 
@@ -249,13 +330,100 @@ function buildAchievements(params: {
       description: "Create at least ten sessions.",
       unlocked: params.sessionsTotal >= 10,
     },
+    {
+      id: "hypothesis-hunter",
+      title: "Hypothesis Hunter",
+      description: "Falsify at least 5 hypotheses through discriminative testing.",
+      unlocked: params.hypothesesFalsified >= 5,
+    },
+    {
+      id: "robust-thinker",
+      title: "Robust Thinker",
+      description: "Have at least 3 hypotheses survive rigorous testing.",
+      unlocked: params.hypothesesRobust >= 3,
+    },
   ];
+}
+
+/**
+ * Optional objection statistics computed externally (from localStorage).
+ * These are passed in because the analytics module doesn't have localStorage access.
+ */
+export interface ObjectionStats {
+  addressed: number;
+  accepted: number;
+}
+
+/**
+ * Load objection stats from localStorage for a list of session/thread IDs.
+ * This is a client-side helper that aggregates status counts across all threads.
+ *
+ * @param threadIds - List of thread IDs (typically derived from session IDs)
+ * @returns Aggregated objection statistics
+ */
+export function loadObjectionStatsFromStorage(threadIds: string[]): ObjectionStats {
+  if (typeof window === "undefined") {
+    return { addressed: 0, accepted: 0 };
+  }
+
+  let addressed = 0;
+  let accepted = 0;
+
+  for (const threadId of threadIds) {
+    const key = `brenner-objection-register:${threadId}`;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+
+      const parsed = JSON.parse(raw) as unknown;
+      if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) continue;
+
+      const statuses = parsed as Record<string, unknown>;
+      for (const status of Object.values(statuses)) {
+        if (status === "addressed") addressed += 1;
+        if (status === "accepted") accepted += 1;
+      }
+    } catch {
+      // Best-effort: localStorage issues should not break analytics
+    }
+  }
+
+  return { addressed, accepted };
+}
+
+/**
+ * Generate potential thread IDs from a session ID.
+ * Thread IDs follow the pattern: TRIBUNAL-{sessionId}-{suffix}
+ * Since we don't know the exact suffix, we search for matching keys.
+ */
+export function findThreadIdsForSession(sessionId: string): string[] {
+  if (typeof window === "undefined") return [];
+
+  const prefix = `brenner-objection-register:TRIBUNAL-${sessionId}`;
+  const threadIds: string[] = [];
+
+  try {
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (key?.startsWith(prefix)) {
+        // Extract thread ID from the storage key
+        const threadId = key.replace("brenner-objection-register:", "");
+        threadIds.push(threadId);
+      }
+    }
+  } catch {
+    // Best-effort
+  }
+
+  return threadIds;
 }
 
 export function computePersonalAnalytics(params: {
   sessions: Session[];
   userId?: string;
   now?: Date;
+  /** Optional objection stats from localStorage (computed by UI layer) */
+  objectionStats?: ObjectionStats;
 }): PersonalAnalytics {
   const now = params.now ?? new Date();
   const sessions = params.sessions;
@@ -296,10 +464,19 @@ export function computePersonalAnalytics(params: {
     hypothesesWithCompetitors,
   });
 
+  // Compute hypothesis outcomes
+  const hypothesisOutcomes = countHypothesisOutcomes(sessions);
+  const revisionsAfterEvidence = countRevisionsAfterEvidence(sessions);
+
+  // Objection stats from external source (localStorage)
+  const objectionStats = params.objectionStats ?? { addressed: 0, accepted: 0 };
+
   const achievements = buildAchievements({
     sessionsCompleted,
     operatorsUsedDistribution,
     sessionsTotal,
+    hypothesesFalsified: hypothesisOutcomes.falsified,
+    hypothesesRobust: hypothesisOutcomes.robust,
   });
 
   return {
@@ -321,13 +498,13 @@ export function computePersonalAnalytics(params: {
 
     operatorsUsedDistribution,
 
-    hypothesesFalsified: 0,
-    hypothesesRobust: 0,
-    hypothesesAbandoned: 0,
+    hypothesesFalsified: hypothesisOutcomes.falsified,
+    hypothesesRobust: hypothesisOutcomes.robust,
+    hypothesesAbandoned: hypothesisOutcomes.abandoned,
 
-    objectionsAddressed: 0,
-    objectionsAccepted: 0,
-    revisionsAfterEvidence: 0,
+    objectionsAddressed: objectionStats.addressed,
+    objectionsAccepted: objectionStats.accepted,
+    revisionsAfterEvidence,
 
     trendsOver30Days,
     trendsOver90Days,

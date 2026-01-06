@@ -708,8 +708,11 @@ export function SessionProvider({
       if (isDuplicate) return;
 
       const now = new Date();
+      const uuid = globalThis.crypto?.randomUUID?.();
+      const id = uuid ? `AQ-${uuid}` : `AQ-${now.getTime()}-${Math.random().toString(16).slice(2)}`;
+
       const next: AttachedQuote = {
-        id: `AQ-${now.getTime()}-${Math.random().toString(16).slice(2)}`,
+        id,
         attachedAt: now.toISOString(),
         ...quote,
       };

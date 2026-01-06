@@ -456,6 +456,9 @@ export interface EvidenceEntry {
   /** The observed outcome */
   observation: string;
 
+  /** Result of the evidence evaluation */
+  result?: "supports" | "challenges" | "inconclusive";
+
   /** Did the potency check pass? */
   potencyCheckPassed: boolean;
 
