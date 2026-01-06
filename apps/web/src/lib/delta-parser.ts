@@ -346,6 +346,28 @@ function extractDeltaBlocks(body: string): string[] {
 }
 
 /**
+ * Sanitize JSON string to handle common LLM errors.
+ * - Removes single-line comments (//)
+ * - Removes multi-line comments (/* ... *\/)
+ * - Removes trailing commas
+ */
+function sanitizeJson(str: string): string {
+  // 1. Remove comments while preserving strings
+  // Matches: "string" OR // comment OR /* comment */
+  const commentRegex = /("(?:[^"\\]|\\.)*")|(\/\/.*)|(\/\*[\s\S]*?\*\/)/g;
+  
+  let cleaned = str.replace(commentRegex, (match, strGroup) => {
+    if (strGroup) return match; // Preserved string
+    return ""; // Removed comment
+  });
+
+  // 2. Remove trailing commas before closing braces/brackets
+  cleaned = cleaned.replace(/,(\s*[}\]])/g, "$1");
+
+  return cleaned;
+}
+
+/**
  * Parse a single delta JSON string.
  *
  * @param jsonStr - Raw JSON string from a delta block
@@ -356,8 +378,15 @@ function parseDeltaBlock(jsonStr: string): ParsedDelta {
     const parsed: unknown = JSON.parse(jsonStr);
     return validateDelta(parsed, jsonStr);
   } catch (e) {
-    const error = e instanceof Error ? e.message : "Unknown JSON parse error";
-    return { valid: false, error: `Invalid JSON: ${error}`, raw: jsonStr };
+    // Try sanitizing common errors (trailing commas, comments)
+    try {
+      const sanitized = sanitizeJson(jsonStr);
+      const parsed = JSON.parse(sanitized);
+      return validateDelta(parsed, jsonStr); // Use original raw for debugging
+    } catch (e2) {
+      const error = e instanceof Error ? e.message : "Unknown JSON parse error";
+      return { valid: false, error: `Invalid JSON: ${error}`, raw: jsonStr };
+    }
   }
 }
 
