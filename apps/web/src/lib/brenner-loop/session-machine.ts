@@ -15,7 +15,16 @@
  * @module brenner-loop/session-machine
  */
 
-import type { SessionPhase, Session, HypothesisCard } from "./types";
+import type {
+  SessionPhase,
+  Session,
+  HypothesisCard,
+  LevelSplitResult,
+  ExclusionTestResult,
+  ObjectTransposeResult,
+  ScaleCheckResult,
+  EvidenceEntry,
+} from "./types";
 import { isValidTransition } from "./types";
 
 // ============================================================================
@@ -155,13 +164,13 @@ const completeOperatorAction: TransitionAction = (session, event) => {
   const apps = { ...session.operatorApplications };
 
   if (phase === "level_split") {
-    apps.levelSplit = [...apps.levelSplit, result as any];
+    apps.levelSplit = [...apps.levelSplit, result as LevelSplitResult];
   } else if (phase === "exclusion_test") {
-    apps.exclusionTest = [...apps.exclusionTest, result as any];
+    apps.exclusionTest = [...apps.exclusionTest, result as ExclusionTestResult];
   } else if (phase === "object_transpose") {
-    apps.objectTranspose = [...apps.objectTranspose, result as any];
+    apps.objectTranspose = [...apps.objectTranspose, result as ObjectTransposeResult];
   } else if (phase === "scale_check") {
-    apps.scaleCheck = [...apps.scaleCheck, result as any];
+    apps.scaleCheck = [...apps.scaleCheck, result as ScaleCheckResult];
   }
 
   return { ...session, operatorApplications: apps };
@@ -171,7 +180,7 @@ const addEvidenceAction: TransitionAction = (session, event) => {
   if (event.type !== "ADD_EVIDENCE") return session;
   return {
     ...session,
-    evidenceLedger: [...session.evidenceLedger, event.evidence as any],
+    evidenceLedger: [...session.evidenceLedger, event.evidence as EvidenceEntry],
   };
 };
 

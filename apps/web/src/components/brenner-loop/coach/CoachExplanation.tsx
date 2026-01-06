@@ -94,11 +94,7 @@ export function CoachExplanation({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const [showFull, setShowFull] = useState(effectiveLevel === "beginner");
 
-  // Don't render if coach is disabled or shouldn't show explanation
-  if (!isCoachActive || !shouldShowExplanation(conceptId)) {
-    return null;
-  }
-
+  // Hooks must be called unconditionally before any early returns
   const handleGotIt = useCallback(() => {
     markConceptSeen(conceptId);
     onDismiss?.();
@@ -112,6 +108,11 @@ export function CoachExplanation({
   const toggleExpanded = useCallback(() => {
     setIsExpanded((prev) => !prev);
   }, []);
+
+  // Don't render if coach is disabled or shouldn't show explanation
+  if (!isCoachActive || !shouldShowExplanation(conceptId)) {
+    return null;
+  }
 
   return (
     <motion.div
@@ -195,7 +196,7 @@ export function CoachExplanation({
               {/* Brenner quote */}
               {settings.showBrennerQuotes && brennerQuote && (
                 <blockquote className="border-l-2 border-amber-400 pl-3 italic text-sm text-amber-700 dark:text-amber-300">
-                  "{brennerQuote.text}"
+                  &ldquo;{brennerQuote.text}&rdquo;
                   <cite className="block text-xs not-italic mt-1 text-amber-600 dark:text-amber-400">
                     — {brennerQuote.section}
                   </cite>
@@ -280,14 +281,15 @@ export function CoachTip({
   const { isCoachActive, settings } = useCoach();
   const [dismissed, setDismissed] = useState(false);
 
-  if (!isCoachActive || !settings.showProgressTips || dismissed) {
-    return null;
-  }
-
+  // Hook must be called unconditionally before early return
   const handleDismiss = useCallback(() => {
     setDismissed(true);
     onDismiss?.();
   }, [onDismiss]);
+
+  if (!isCoachActive || !settings.showProgressTips || dismissed) {
+    return null;
+  }
 
   const variantStyles = {
     info: "border-blue-200 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/30 dark:text-blue-100",

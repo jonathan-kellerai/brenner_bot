@@ -108,11 +108,7 @@ export function QualityCheckpoint({
 
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  // Don't render if coach is disabled
-  if (!isCoachActive) {
-    return null;
-  }
-
+  // Hooks must be called unconditionally before any early returns
   const toggleExpanded = useCallback((issueId: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -134,6 +130,11 @@ export function QualityCheckpoint({
     recordMistakeCaught();
     onBypass?.();
   }, [recordMistakeCaught, onBypass]);
+
+  // Don't render if coach is disabled
+  if (!isCoachActive) {
+    return null;
+  }
 
   const errorCount = result.issues.filter((i) => i.severity === "error").length;
   const warningCount = result.issues.filter((i) => i.severity === "warning").length;
@@ -330,7 +331,7 @@ function IssueCard({ issue, expanded, onToggle }: IssueCardProps): React.ReactEl
           <p className={cn("text-sm font-medium", style.text)}>{issue.message}</p>
           {issue.highlightText && (
             <p className="text-xs opacity-70 mt-1 font-mono">
-              "{issue.highlightText}"
+              &ldquo;{issue.highlightText}&rdquo;
             </p>
           )}
         </div>
