@@ -573,6 +573,29 @@ export {
 } from "./artifacts/research-brief-template";
 
 // ============================================================================
+// Citation Manager (bead nu8g.3)
+// ============================================================================
+
+export type {
+  BrennerCitation,
+  ExternalCitation,
+  ExternalCitationType,
+  CitationIndex,
+  CitationIndexRenderOptions,
+} from "./artifacts/citations";
+
+export {
+  formatBrennerAnchor,
+  buildTranscriptSectionHref,
+  parseBrennerSectionIds,
+  extractBrennerSectionIdsFromText,
+  buildBrennerCitations,
+  formatExternalCitation,
+  buildCitationIndex,
+  renderCitationIndexSection,
+} from "./artifacts/citations";
+
+// ============================================================================
 // Research Brief Export (bead nu8g.2)
 // ============================================================================
 
