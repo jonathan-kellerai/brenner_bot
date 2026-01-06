@@ -785,16 +785,72 @@ export function generateLineageGraph(
     descendants.forEach((v) => relevantIds.add(v.id));
   }
 
-  // Generate full graph then filter
-  const fullGraph = generateEvolutionGraph(store);
+  const nodes: EvolutionGraphNode[] = [];
+  const edges: EvolutionGraphEdge[] = [];
+  const currentSet = new Set(store.current);
+  const abandonedSet = new Set(store.abandoned);
+  const relevantRoots = new Set<string>();
+  const relevantCurrent = new Set<string>();
+
+  for (const id of relevantIds) {
+    const version = store.versions[id];
+    if (!version) continue;
+
+    // Determine status
+    let status: EvolutionStatus = "ancestor";
+    if (currentSet.has(id)) {
+      status = "current";
+      relevantCurrent.add(id);
+    } else if (abandonedSet.has(id)) {
+      status = "abandoned";
+    }
+
+    // Create truncated label
+    let label = version.hypothesis.statement;
+    // 50 chars hardcoded or passed as arg? The original fn signature didn't take maxLabelLength.
+    // The previous implementation called generateEvolutionGraph which took maxLabelLength=50 default.
+    const maxLabelLength = 50; 
+    if (label.length > maxLabelLength) {
+      label = label.slice(0, maxLabelLength - 3) + "...";
+    }
+
+    nodes.push({
+      id,
+      label,
+      confidence: version.hypothesis.confidence,
+      status,
+      children: version.children,
+      parentId: version.parentId,
+      trigger: version.trigger,
+      timestamp: version.timestamp,
+      version: version.hypothesis.version,
+    });
+
+    if (!version.parentId) {
+        relevantRoots.add(id);
+    }
+
+    // Create edges to children IF they are in the relevant set
+    for (const childId of version.children) {
+      if (relevantIds.has(childId)) {
+        const childVersion = store.versions[childId];
+        if (childVersion) {
+          edges.push({
+            from: id,
+            to: childId,
+            trigger: childVersion.trigger,
+            label: childVersion.message.slice(0, 30),
+          });
+        }
+      }
+    }
+  }
 
   return {
-    nodes: fullGraph.nodes.filter((n) => relevantIds.has(n.id)),
-    edges: fullGraph.edges.filter(
-      (e) => relevantIds.has(e.from) && relevantIds.has(e.to)
-    ),
-    roots: fullGraph.roots.filter((id) => relevantIds.has(id)),
-    current: fullGraph.current.filter((id) => relevantIds.has(id)),
+    nodes,
+    edges,
+    roots: Array.from(relevantRoots),
+    current: Array.from(relevantCurrent),
   };
 }
 

@@ -802,6 +802,11 @@ export function composeUnifiedKickoff(config: KickoffConfig): {
     sections.push("");
   }
 
+  sections.push("## Response Format");
+  sections.push("Reply to this thread with subject `DELTA: <description>`.");
+  sections.push("Include your reasoning as prose, followed by ```delta blocks with your structured contributions.");
+  sections.push("");
+
   const subject = `KICKOFF: [${config.threadId}] ${config.researchQuestion.slice(0, 60)}${config.researchQuestion.length > 60 ? "..." : ""}`;
 
   return {

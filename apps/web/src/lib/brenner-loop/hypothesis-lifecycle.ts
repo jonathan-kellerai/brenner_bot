@@ -889,10 +889,9 @@ export function calculateLifecycleStats(
     const stateEnteredMs = getTimeMs(h.stateEnteredAt as Date | string);
     const createdMs = getTimeMs(h.createdAt as Date | string);
 
-    // Calculate time from creation to current state (approximates time in draft)
-    if (h.state !== "draft") {
-      // This is actually time from creation to current state entry,
-      // which equals time in draft only for direct draft→current transitions
+    // Calculate time from creation to activation (time in draft)
+    // Only count for 'active' state to avoid conflating time in subsequent states
+    if (h.state === "active") {
       const daysFromCreation = (stateEnteredMs - createdMs) / (1000 * 60 * 60 * 24);
       // Only count non-negative values (handles edge case of clock skew)
       if (daysFromCreation >= 0) {

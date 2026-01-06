@@ -730,7 +730,10 @@ export function buildComparisonMatrix(arena: HypothesisArena): ComparisonMatrix 
     const testResults: Record<string, TestResultType | "pending"> = {};
 
     for (const test of arena.tests) {
-      const result = test.results.find((r) => r.hypothesisId === competitor.hypothesisId);
+      // Find the latest result (search from end)
+      const results = [...test.results].reverse();
+      const result = results.find((r) => r.hypothesisId === competitor.hypothesisId);
+      
       if (result) {
         testResults[test.id] = result.result;
       } else if (test.targetHypotheses.includes(competitor.hypothesisId)) {

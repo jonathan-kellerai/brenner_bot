@@ -421,27 +421,24 @@ export async function dispatchAgentTask(
   const subject = `${DISPATCH_SUBJECT_PREFIX}${role}]: ${dispatch.hypothesis.id}`;
 
   try {
-    const result = await client.toolsCall("send_message", {
-      project_key: options.projectKey,
-      sender_name: options.senderName,
+    const result = await client.sendMessage({
+      projectKey: options.projectKey,
+      senderName: options.senderName,
       to: options.recipients,
       subject,
-      body_md: promptBody,
-      thread_id: dispatch.threadId || null,
+      bodyMd: promptBody,
+      threadId: dispatch.threadId || undefined,
       importance: "normal",
-      ack_required: false,
+      ackRequired: false,
     });
 
-    // Extract message ID from result
-    if (result && typeof result === "object" && "deliveries" in result) {
-      const deliveries = (result as { deliveries?: Array<{ payload?: { id?: number } }> }).deliveries;
-      const messageIds = deliveries
-        ?.map((delivery) => delivery.payload?.id)
-        .filter((id): id is number => typeof id === "number") ?? [];
+    const deliveries = result.deliveries;
+    const messageIds = deliveries
+      ?.map((delivery) => delivery.payload?.id)
+      .filter((id): id is number => typeof id === "number") ?? [];
 
-      if (messageIds.length > 0) {
-        return { messageId: messageIds[0], messageIds };
-      }
+    if (messageIds.length > 0) {
+      return { messageId: messageIds[0], messageIds };
     }
 
     return { error: "Failed to extract message IDs from response" };
