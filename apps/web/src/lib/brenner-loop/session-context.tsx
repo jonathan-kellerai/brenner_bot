@@ -708,17 +708,18 @@ export function SessionProvider({
       if (isDuplicate) return;
 
       const now = new Date();
-      const crypto = globalThis.crypto;
-      const uuid = crypto?.randomUUID?.();
       let id = "";
-      if (uuid) {
-        id = `AQ-${uuid}`;
-      } else if (crypto?.getRandomValues) {
+      
+      const crypto = globalThis.crypto;
+      if (crypto && typeof crypto.randomUUID === "function") {
+        id = `AQ-${crypto.randomUUID()}`;
+      } else if (crypto && typeof crypto.getRandomValues === "function") {
         const rnd = new Uint32Array(1);
         crypto.getRandomValues(rnd);
         id = `AQ-${now.getTime()}-${rnd[0].toString(16)}`;
       } else {
-        id = `AQ-${now.getTime()}-${Math.random().toString(16).slice(2)}`;
+        // Should not happen in modern environments
+        throw new Error("Crypto API not available");
       }
 
       const next: AttachedQuote = {
