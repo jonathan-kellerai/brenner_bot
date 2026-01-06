@@ -74,10 +74,11 @@ function createMockHypothesis(overrides: Partial<HypothesisCard> = {}): Hypothes
     confounds: [
       {
         id: "CF-001",
+        name: "Reverse Causation",
         description: "Pre-existing depression predisposes to social media use",
-        status: "active",
         likelihood: 0.6,
-        addressedAt: undefined,
+        domain: "psychology",
+        addressed: false,
       },
     ],
     assumptions: ["Social media usage is measurable and quantifiable"],
@@ -177,7 +178,7 @@ describe("generateSearchQueries", () => {
 
   it("includes mechanism-related queries when available", () => {
     const hypothesis = createMockHypothesis({
-      mechanismPath: "Algorithm amplifies negative content",
+      mechanism: "Algorithm amplifies negative content",
     });
     const suggestions = generateSearchQueries(hypothesis);
 

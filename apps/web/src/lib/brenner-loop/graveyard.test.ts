@@ -65,12 +65,15 @@ function makeEvidence(sessionId = "TEST-SESSION"): EvidenceEntry {
       type: "mechanism_block",
       discriminativePower: 5,
     },
-    result: "eliminates",
-    confidenceDelta: -40,
+    predictionIfTrue: "Expected outcome if hypothesis correct",
+    predictionIfFalse: "Expected outcome if hypothesis wrong",
+    result: "challenges",
+    observation: "Observed the falsifying result",
     confidenceBefore: 60,
     confidenceAfter: 20,
+    interpretation: "Evidence strongly challenges the hypothesis",
     notes: "Test result notes",
-    collectedAt: new Date().toISOString(),
+    recordedAt: new Date(),
   };
 }
 

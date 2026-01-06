@@ -245,29 +245,31 @@ describe("operator-library", () => {
       NODE_ENV: process.env.NODE_ENV,
     };
 
+    // Cast to mutable record for test manipulation
+    const env = process.env as Record<string, string | undefined>;
     try {
-      process.env.BRENNER_PUBLIC_BASE_URL = "https://example.com/path?x=1#y";
-      delete process.env.VERCEL_URL;
-      delete process.env.NODE_ENV;
+      env.BRENNER_PUBLIC_BASE_URL = "https://example.com/path?x=1#y";
+      delete env.VERCEL_URL;
+      delete env.NODE_ENV;
       expect(__private.getTrustedPublicBaseUrl()).toBe("https://example.com");
 
-      delete process.env.BRENNER_PUBLIC_BASE_URL;
-      process.env.VERCEL_URL = "brennerbot-example.vercel.app";
+      delete env.BRENNER_PUBLIC_BASE_URL;
+      env.VERCEL_URL = "brennerbot-example.vercel.app";
       expect(__private.getTrustedPublicBaseUrl()).toBe("https://brennerbot-example.vercel.app");
 
-      delete process.env.VERCEL_URL;
-      process.env.NODE_ENV = "development";
+      delete env.VERCEL_URL;
+      env.NODE_ENV = "development";
       expect(__private.getTrustedPublicBaseUrl()).toBe("http://localhost:3000");
 
-      process.env.NODE_ENV = "production";
+      env.NODE_ENV = "production";
       expect(__private.getTrustedPublicBaseUrl()).toBe("https://brennerbot.org");
     } finally {
-      if (saved.BRENNER_PUBLIC_BASE_URL === undefined) delete process.env.BRENNER_PUBLIC_BASE_URL;
-      else process.env.BRENNER_PUBLIC_BASE_URL = saved.BRENNER_PUBLIC_BASE_URL;
-      if (saved.VERCEL_URL === undefined) delete process.env.VERCEL_URL;
-      else process.env.VERCEL_URL = saved.VERCEL_URL;
-      if (saved.NODE_ENV === undefined) delete process.env.NODE_ENV;
-      else process.env.NODE_ENV = saved.NODE_ENV;
+      if (saved.BRENNER_PUBLIC_BASE_URL === undefined) delete env.BRENNER_PUBLIC_BASE_URL;
+      else env.BRENNER_PUBLIC_BASE_URL = saved.BRENNER_PUBLIC_BASE_URL;
+      if (saved.VERCEL_URL === undefined) delete env.VERCEL_URL;
+      else env.VERCEL_URL = saved.VERCEL_URL;
+      if (saved.NODE_ENV === undefined) delete env.NODE_ENV;
+      else env.NODE_ENV = saved.NODE_ENV;
     }
   });
 
