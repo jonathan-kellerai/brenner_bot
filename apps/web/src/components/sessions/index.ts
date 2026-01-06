@@ -10,3 +10,4 @@ export { SessionActions } from "./SessionActions";
 export { OperatorSelector, DEFAULT_OPERATORS, type OperatorSelection } from "./OperatorSelector";
 export { RosterAssignment, applyDefaultRoles, type RosterEntry } from "./RosterAssignment";
 export { FirstRunOnboarding } from "./FirstRunOnboarding";
+export { DemoSessionsView, type DemoSessionsViewProps } from "./DemoSessionsView";
