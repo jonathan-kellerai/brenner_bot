@@ -81,6 +81,18 @@ Deployed on Vercel with Cloudflare DNS at **`brennerbot.org`**.
 - [Specification Reference](#specification-reference)
 - [Storage & Schema Architecture](#storage--schema-architecture)
 - [JSON Output Mode](#json-output-mode)
+- [Session Replay Infrastructure](#session-replay-infrastructure)
+- [Coach Mode: Guided Learning System](#coach-mode-guided-learning-system)
+- [Domain-Aware Confound Detection](#domain-aware-confound-detection)
+- [Hypothesis Similarity Search](#hypothesis-similarity-search)
+- [Agent Debate Mode](#agent-debate-mode)
+- [What-If Scenario Exploration](#what-if-scenario-exploration)
+- [Session State Machine](#session-state-machine)
+- [Undo/Redo System](#undoredo-system)
+- [Prediction Lock & Calibration](#prediction-lock--calibration)
+- [The Operator Framework](#the-operator-framework)
+- [Offline Resilience](#offline-resilience)
+- [Citation System](#citation-system)
 
 ---
 
@@ -3190,4 +3202,898 @@ if (result.valid) {
 if (isReplayable(record)) {
   console.log("Session can be replayed");
 }
+```
+
+---
+
+## Coach Mode: Guided Learning System
+
+The Coach Mode provides progressive scaffolding for researchers new to the Brenner method. Instead of throwing users into a complex methodology, it introduces concepts gradually, provides inline explanations, and catches common mistakes before they become problematic.
+
+### Design Philosophy
+
+Traditional scientific method tutorials are passive—you read, then try to apply. Coach Mode inverts this: **learn by doing with guardrails**. The system watches what you're doing, explains concepts when they become relevant, and gently corrects methodological errors in real-time.
+
+This mirrors how Brenner himself taught—through conversation and working examples rather than lectures. The coach doesn't tell you "what is a discriminative test"; it waits until you're designing a test and then explains why your current approach may or may not have discriminative power.
+
+### Coaching Levels
+
+| Level | Explanation Verbosity | Confirmations | Auto-Pause |
+|-------|----------------------|---------------|------------|
+| `beginner` | Full explanations with examples and Brenner quotes | Required for major actions | Yes, at each phase |
+| `intermediate` | Brief explanations, examples on request | Optional | Only at decision points |
+| `advanced` | Tooltips only, no interruptions | Rare | Never |
+
+The system auto-promotes users based on their progress: sessions completed, hypotheses formulated, operators used, and quality checkpoints passed.
+
+### Progress Tracking
+
+Coach Mode tracks learning progress across sessions:
+
+```typescript
+interface LearningProgress {
+  seenConcepts: Set<ConceptId>;      // Concepts with explanations viewed
+  sessionsCompleted: number;          // Total sessions finished
+  hypothesesFormulated: number;       // Hypotheses created
+  operatorsUsed: Set<string>;         // Brenner operators applied
+  mistakesCaught: number;             // Quality checkpoint failures
+  checkpointsPassed: number;          // Quality checkpoint successes
+  firstSessionDate?: string;
+  lastSessionDate?: string;
+}
+```
+
+### Quality Checkpoints
+
+At critical moments (hypothesis formulation, test design, assumption logging), Coach Mode validates user input against Brenner-style quality criteria:
+
+**Hypothesis Quality Checks:**
+- Statement length (too short = too vague)
+- Vague causal language without mechanism
+- Missing mechanism specification
+- Missing predictions
+- Missing falsification conditions
+- Unfalsifiable hedging language ("might", "could possibly")
+
+Each check returns a severity (`error`, `warning`, `info`), an explanation of why it matters, and a specific suggestion for improvement.
+
+### Concept Explanations
+
+Explanations are keyed to specific concepts and phases:
+
+```typescript
+type ConceptId =
+  // Phases
+  | "phase_intake"
+  | "phase_sharpening"
+  | "phase_level_split"
+  | "phase_exclusion_test"
+  // ... operators, agents, methodology concepts
+```
+
+Each explanation includes:
+- **Brief**: Always-visible short explanation
+- **Full**: Detailed explanation for beginners
+- **Key Points**: Bulleted takeaways
+- **Brenner Quote**: Relevant quote from the transcripts
+- **Example**: Concrete worked example
+
+### Usage
+
+```typescript
+import { CoachProvider, useCoach } from "@/lib/brenner-loop/coach-context";
+
+function MyComponent() {
+  const {
+    isCoachActive,
+    effectiveLevel,
+    shouldShowExplanation,
+    markConceptSeen,
+    recordCheckpointPassed,
+    recordMistakeCaught,
+  } = useCoach();
+
+  if (isCoachActive && shouldShowExplanation("phase_level_split")) {
+    // Show level-split explanation
+  }
+}
+```
+
+---
+
+## Domain-Aware Confound Detection
+
+The Confound Detection system automatically identifies likely confounds based on the research domain of a hypothesis. This addresses a key weakness in hypothesis-driven research: **confounds are easier to see when you know where to look**.
+
+### Why This Matters
+
+Brenner was explicit about the importance of identifying confounds before experimenting:
+
+> "What's the third alternative? Both could be wrong."
+
+But humans are bad at generating confounds spontaneously—we tend to see what we expect to see. The confound detector provides domain-specific libraries of common threats to validity, prompting researchers to consider issues they might otherwise miss.
+
+### Supported Domains
+
+| Domain | Example Confounds |
+|--------|-------------------|
+| `psychology` | Selection bias, demand characteristics, social desirability, reverse causation, maturation effects, regression to the mean |
+| `epidemiology` | Healthy user bias, confounding by indication, temporal ambiguity, surveillance bias, immortal time bias, recall bias |
+| `economics` | Endogeneity, omitted variable bias, survivorship bias, simultaneity, measurement error |
+| `biology` | Batch effects, genetic background confounding, environmental variation, off-target effects |
+| `sociology` | Ecological fallacy, period effects, social network confounding (homophily vs influence) |
+| `computer_science` | Data leakage, benchmark overfitting, training data selection bias |
+| `neuroscience` | Reverse inference, motion artifacts |
+| `general` | Publication bias, multiple comparisons, Hawthorne effect, third variable problem |
+
+### How It Works
+
+1. **Domain Classification**: The system analyzes hypothesis text (statement, mechanism, predictions, domains) using keyword matching to classify the research domain
+2. **Library Selection**: Domain-specific confounds plus general confounds are loaded
+3. **Pattern Matching**: Each confound template is matched against hypothesis text using keywords and regex patterns
+4. **Likelihood Scoring**: Matches are scored based on keyword frequency and pattern matches
+5. **Result Ranking**: Confounds are ranked by likelihood and returned with prompting questions
+
+### Confound Template Structure
+
+Each confound in the library includes:
+
+```typescript
+interface ConfoundTemplate {
+  id: string;                    // Unique identifier
+  name: string;                  // Human-readable name
+  description: string;           // Explanation of the confounding mechanism
+  domain: ResearchDomain;        // Primary domain
+  keywords: string[];            // Terms suggesting this confound applies
+  patterns?: RegExp[];           // Structural patterns in hypothesis text
+  promptQuestions: string[];     // Questions to prompt user consideration
+  baseLikelihood: number;        // Default likelihood when detected (0-1)
+}
+```
+
+### Usage
+
+```typescript
+import { detectConfounds, classifyDomain } from "@/lib/brenner-loop/confound-detection";
+
+// Detect confounds for a hypothesis
+const result = detectConfounds(hypothesis, {
+  threshold: 0.3,      // Minimum likelihood to include
+  maxConfounds: 10,    // Max results
+  forceDomain: undefined, // Auto-detect domain
+});
+
+// Result includes:
+// - confounds: IdentifiedConfound[]
+// - detectedDomain: ResearchDomain
+// - domainConfidence: number
+// - summary: string
+
+// Get prompting questions for a specific confound
+const questions = getConfoundQuestions("selection_bias", "psychology");
+```
+
+---
+
+## Hypothesis Similarity Search
+
+The Similarity Search system finds related hypotheses across sessions using semantic embeddings. This surfaces prior work, identifies potential duplicates, and reveals clusters of related research questions.
+
+### The Problem
+
+Research sessions generate hypotheses that may overlap with previous work—sometimes intentionally (refinement), sometimes accidentally (duplication). Without similarity search:
+- Researchers waste time re-investigating killed hypotheses
+- Related work in other sessions goes undiscovered
+- Duplicate effort fragments institutional memory
+
+### Hash-Based Embeddings
+
+The similarity system uses **hash-based embeddings** for client-side computation without external API calls. This approach:
+- Works offline (no network required)
+- Has no usage limits or costs
+- Is deterministic (same input → same embedding)
+- Is fast (< 1ms per embedding)
+
+The trade-off: hash-based embeddings capture lexical similarity rather than deep semantic meaning. For research hypotheses with technical vocabulary, this is often sufficient.
+
+### Similarity Components
+
+Similarity between hypotheses is computed across three dimensions:
+
+| Component | Weight | What It Measures |
+|-----------|--------|------------------|
+| Statement | 0.5 | Core hypothesis claim similarity |
+| Mechanism | 0.3 | Proposed causal pathway similarity |
+| Domain | 0.2 | Research domain overlap (Jaccard) |
+
+The combined score uses cosine similarity for text components and Jaccard similarity for domain overlap.
+
+### Key Functions
+
+```typescript
+import {
+  findSimilarHypotheses,
+  searchHypothesesByText,
+  clusterSimilarHypotheses,
+  findDuplicates,
+  getSimilarityStats,
+} from "@/lib/brenner-loop/search/hypothesis-similarity";
+
+// Find hypotheses similar to a query hypothesis
+const matches = findSimilarHypotheses(query, candidates, {
+  minScore: 0.3,
+  maxResults: 10,
+  excludeQuery: true,
+  sessionFilter: ["RS-20251230", "RS-20251231"],
+});
+
+// Search by free-form text
+const results = searchHypothesesByText(
+  "morphogen gradient signaling",
+  candidates
+);
+
+// Cluster similar hypotheses (e.g., for deduplication)
+const clusters = clusterSimilarHypotheses(hypotheses, 0.5);
+
+// Find potential duplicates (high threshold)
+const duplicates = findDuplicates(hypotheses, 0.8);
+```
+
+### Match Results
+
+Each match includes a breakdown of similarity components:
+
+```typescript
+interface SimilarityMatch {
+  hypothesis: IndexedHypothesis;
+  score: number;                    // Overall similarity (0-1)
+  breakdown: {
+    statement: number;              // Statement similarity
+    mechanism: number;              // Mechanism similarity
+    domain: number;                 // Domain overlap
+    content: number;                // Combined content similarity
+  };
+  reason: string;                   // Human-readable explanation
+}
+```
+
+---
+
+## Agent Debate Mode
+
+Agent Debate Mode enables multi-round adversarial dialogue between tribunal agents. Instead of single-round responses, agents engage in structured debates that sharpen arguments through opposition.
+
+### Why Debate?
+
+Single-round agent responses are shallow. The agent states a position and stops. Debate forces:
+- **Clarification**: Vague claims get challenged
+- **Steel-manning**: Each side must represent opponents fairly
+- **Convergence**: Points of genuine agreement emerge
+- **Sharpening**: Arguments get refined through opposition
+
+This mirrors Brenner's own practice—he credited conversation with Crick as essential to his thinking:
+
+> "We didn't work together on experiments... But we had lunch together every day for thirty years. And that was where we talked."
+
+### Debate Formats
+
+| Format | Structure | Best For |
+|--------|-----------|----------|
+| `oxford_style` | Proposition vs Opposition with Judge | Testing hypothesis strength |
+| `socratic` | Probing questions reveal weaknesses | Finding hidden assumptions |
+| `steelman_contest` | Each agent builds and attacks strongest version | Exploring hypothesis space |
+
+### Debate Structure
+
+```typescript
+interface AgentDebate {
+  id: string;                    // DEB-RS20251230-1704067200
+  sessionId: string;             // Parent session
+  hypothesisId: string;          // Hypothesis under debate
+  format: DebateFormat;
+  status: DebateStatus;
+  config: DebateConfig;          // Max rounds, timeouts, etc.
+  participants: DebateParticipant[];
+  rounds: DebateRound[];
+  userInjections: UserInjection[];  // Human questions during debate
+  conclusion?: DebateConclusion;
+}
+```
+
+### Round Analysis
+
+Each debate round is analyzed for:
+- **New points made**: Arguments introduced this round
+- **Objections raised**: Challenges to previous statements
+- **Concessions given**: Agreements with opponents
+- **Key quotes**: Extractable insights
+
+### Debate Flow
+
+1. **Setup**: Create debate with hypothesis, format, and participants
+2. **Opening**: Each participant states initial position
+3. **Rounds**: Agents respond to each other (max N rounds)
+4. **Injections**: Users can inject questions at any point
+5. **Conclusion**: System synthesizes consensus, unresolved points, and key insights
+
+### Usage
+
+```typescript
+import {
+  createDebate,
+  addRound,
+  addUserInjection,
+  generateConclusion,
+} from "@/lib/brenner-loop/agents/debate";
+
+// Create a debate
+const debate = createDebate(
+  sessionId,
+  hypothesisId,
+  "oxford_style",
+  [
+    { role: "devils_advocate", position: "opposition" },
+    { role: "hypothesis_generator", position: "proposition" },
+    { role: "test_designer", position: "judge" },
+  ]
+);
+
+// Add rounds as agents respond
+const round = addRound(debate, "devils_advocate", responseContent);
+
+// User can inject questions
+addUserInjection(debate, {
+  content: "What if the gradient is non-linear?",
+  targetAgent: "proposition",
+  injectedAt: new Date().toISOString(),
+});
+
+// Generate conclusion when debate ends
+const conclusion = generateConclusion(debate);
+```
+
+---
+
+## What-If Scenario Exploration
+
+The What-If system enables simulation of evidence impact before running tests. Users can explore how different test outcomes would affect hypothesis confidence, helping prioritize which tests to pursue first.
+
+### The Problem
+
+Researchers often have multiple possible tests they could run. Without simulation:
+- They pick tests arbitrarily or based on convenience
+- High-impact tests may be deferred in favor of easier ones
+- The test that would most discriminate between hypotheses isn't identified
+
+### Scenario Building
+
+A scenario is a collection of assumed test results with their projected impact:
+
+```typescript
+interface WhatIfScenario {
+  id: string;
+  name: string;                      // "Best case for H1"
+  sessionId: string;
+  hypothesisId: string;
+  startingConfidence: number;        // Current confidence
+  assumedTests: AssumedTestResult[]; // List of assumed outcomes
+  projectedConfidence: number;       // Confidence after all tests
+  confidenceDelta: number;           // Total change
+}
+```
+
+### Test Comparison
+
+The system computes expected information gain for each test:
+
+```typescript
+interface TestComparison {
+  testId: string;
+  testName: string;
+  discriminativePower: DiscriminativePower;
+  analysis: WhatIfAnalysis;
+  maxImpact: number;           // Maximum potential confidence change
+  expectedInformationGain: number;
+  rank: number;
+}
+```
+
+Tests are ranked by expected information gain—how much the test reduces uncertainty about the hypothesis regardless of outcome.
+
+### Usage
+
+```typescript
+import {
+  createScenario,
+  addTestToScenario,
+  compareTests,
+  recommendNextTest,
+} from "@/lib/brenner-loop/what-if";
+
+// Create a scenario
+const scenario = createScenario(
+  sessionId,
+  hypothesisId,
+  "Best case scenario",
+  currentConfidence
+);
+
+// Add assumed test results
+addTestToScenario(scenario, {
+  testId: "T-RS20251230-001",
+  testName: "Gradient perturbation",
+  assumedResult: "supports",
+  discriminativePower: 4,
+});
+
+// Compare multiple tests
+const comparisons = compareTests(hypothesisId, testQueue, currentConfidence);
+
+// Get recommendation for next test
+const recommendation = recommendNextTest(comparisons);
+// Returns: { testId, reason, expectedGain }
+```
+
+---
+
+## Session State Machine
+
+The Session State Machine orchestrates Brenner Loop sessions through a deterministic finite state machine. Built on XState, it ensures sessions follow the proper methodology and can be replayed, debugged, and audited.
+
+### Why a State Machine?
+
+Research sessions are complex workflows with many possible paths. Without formal state management:
+- Sessions can skip required steps
+- Transitions happen in invalid orders
+- State becomes inconsistent after errors
+- Replay and debugging are difficult
+
+The state machine makes session flow explicit, enforceable, and debuggable.
+
+### Session Phases
+
+| Phase | Purpose | Entry Conditions |
+|-------|---------|------------------|
+| `idle` | Initial state | Session created |
+| `intake` | Research question formulation | User starts session |
+| `sharpening` | Hypothesis refinement | Intake complete |
+| `level_split` | Program/interpreter separation | Hypothesis formulated |
+| `exclusion_test` | Discriminative test design | Level-split applied |
+| `object_transpose` | Organism/system selection | Tests designed |
+| `scale_check` | Physics/scale constraint validation | System selected |
+| `agent_dispatch` | Multi-agent tribunal convened | Scale check passed |
+| `synthesis` | Agent outputs merged | Agents responded |
+| `evidence_gathering` | External evidence collected | Synthesis complete |
+| `revision` | Hypothesis updated based on evidence | Evidence gathered |
+| `complete` | Session finished | Revision complete |
+| `error` | Error state | Any unrecoverable error |
+
+### State Machine Structure
+
+```typescript
+const sessionMachine = createMachine({
+  id: "brennerSession",
+  initial: "idle",
+  context: {
+    session: Session,
+    hypothesis: HypothesisCard | null,
+    operatorResults: OperatorResults,
+    agentResponses: AgentResponse[],
+    evidence: EvidenceEntry[],
+    errors: ErrorEntry[],
+  },
+  states: {
+    idle: { on: { START: "intake" } },
+    intake: { on: { SUBMIT_QUESTION: "sharpening" } },
+    // ... full state definition
+  },
+});
+```
+
+### Transitions and Actions
+
+Each transition can trigger actions:
+
+```typescript
+// Example: transitioning from sharpening to level_split
+sharpening: {
+  on: {
+    SUBMIT_HYPOTHESIS: {
+      target: "level_split",
+      actions: [
+        "saveHypothesis",
+        "recordTimestamp",
+        "notifyTransition",
+      ],
+      guard: "hypothesisValid",
+    },
+  },
+}
+```
+
+### Usage
+
+```typescript
+import { useSessionMachine } from "@/lib/brenner-loop/use-session-machine";
+
+function SessionComponent() {
+  const {
+    state,           // Current state name
+    context,         // Session context (hypothesis, results, etc.)
+    send,            // Dispatch events
+    canTransition,   // Check if transition is valid
+    getAvailableTransitions,  // List valid next events
+  } = useSessionMachine(sessionId);
+
+  // Check current phase
+  if (state === "level_split") {
+    // Show level-split UI
+  }
+
+  // Dispatch transition
+  const handleSubmit = () => {
+    send({ type: "SUBMIT_OPERATOR_RESULT", result: levelSplitResult });
+  };
+}
+```
+
+---
+
+## Undo/Redo System
+
+The Undo/Redo system implements a command pattern for reversible operations within sessions. Every significant action can be undone, supporting exploratory research without fear of losing work.
+
+### Command Pattern
+
+Operations are encapsulated as commands with `execute` and `undo` methods:
+
+```typescript
+interface Command<TState, TResult = void> {
+  id: string;
+  type: string;
+  description: string;
+  execute: (state: TState) => TResult;
+  undo: (state: TState) => void;
+  canUndo: () => boolean;
+}
+```
+
+### Supported Operations
+
+| Operation | Undoable? | Notes |
+|-----------|-----------|-------|
+| Add hypothesis | ✅ | Removes hypothesis |
+| Edit hypothesis | ✅ | Restores previous state |
+| Kill hypothesis | ✅ | Resurrects hypothesis |
+| Add evidence | ✅ | Removes evidence |
+| Change confidence | ✅ | Restores previous confidence |
+| Apply operator | ✅ | Removes operator results |
+| External API calls | ❌ | Cannot undo side effects |
+
+### Stack Management
+
+```typescript
+interface UndoManagerState<T> {
+  history: Command<T>[];      // Executed commands
+  redoStack: Command<T>[];    // Undone commands available for redo
+  currentState: T;            // Current session state
+  maxHistory: number;         // Maximum undo depth (default: 50)
+}
+```
+
+### Usage
+
+```typescript
+import { createUndoManager, executeCommand, undo, redo } from "@/lib/brenner-loop/undoManager";
+
+// Create manager for session
+const manager = createUndoManager<SessionState>(initialState, { maxHistory: 100 });
+
+// Execute a command
+const editCommand = createEditHypothesisCommand(hypothesisId, newData);
+const newState = executeCommand(manager, editCommand);
+
+// Undo last operation
+const previousState = undo(manager);
+
+// Redo if available
+if (canRedo(manager)) {
+  const restoredState = redo(manager);
+}
+
+// Get history for display
+const history = getHistory(manager);
+// Returns: [{ description: "Edit H1", timestamp: "...", canUndo: true }, ...]
+```
+
+---
+
+## Prediction Lock & Calibration
+
+The Prediction Lock system prevents hindsight bias by locking predictions before test results are known. The Calibration system tracks researcher confidence accuracy over time.
+
+### Prediction Lock
+
+When a test is designed, predictions for each hypothesis must be locked before the test is run. This prevents the common failure mode of "predicting" results that were already known.
+
+```typescript
+interface PredictionLock {
+  testId: string;
+  lockedAt: string;             // Timestamp when locked
+  predictions: {
+    hypothesisId: string;
+    predictedOutcome: string;   // What would happen if H is true
+    confidence: number;         // How confident in this prediction
+  }[];
+  lockedBy: string;             // Who locked the predictions
+  unlockable: boolean;          // Can predictions be changed?
+}
+```
+
+**Lock lifecycle:**
+1. Test designed → predictions unlocked
+2. Predictions entered → user locks predictions
+3. Lock active → predictions cannot be changed
+4. Test executed → results compared to locked predictions
+5. Calibration updated based on accuracy
+
+### Calibration Tracking
+
+The calibration system compares predicted vs actual outcomes over time:
+
+```typescript
+interface CalibrationRecord {
+  userId: string;
+  domain: ResearchDomain;
+  predictions: CalibrationDataPoint[];
+  calibrationScore: number;     // How well-calibrated (0-1)
+  overconfidenceBias: number;   // Positive = overconfident
+  brier: number;                // Brier score for probabilistic accuracy
+}
+```
+
+### Usage
+
+```typescript
+import { lockPredictions, checkCalibration } from "@/lib/brenner-loop/prediction-lock";
+import { updateCalibration, getCalibrationSummary } from "@/lib/brenner-loop/calibration";
+
+// Lock predictions before running test
+const lock = lockPredictions(testId, predictions, userId);
+
+// After test completes, update calibration
+updateCalibration(userId, testId, actualResult, lock);
+
+// Get calibration summary
+const summary = getCalibrationSummary(userId);
+// Returns: { calibrationScore, overconfidenceBias, totalPredictions, accuracy }
+```
+
+---
+
+## The Operator Framework
+
+The Operator Framework implements Brenner's cognitive operators as composable, reusable functions. Each operator transforms the research state in a specific way, and operators can be composed into pipelines.
+
+### Core Operators
+
+| Operator | Symbol | Function |
+|----------|--------|----------|
+| Level-Split | ⊘ | Separate program from interpreter; message from machine |
+| Exclusion-Test | ✂ | Design tests that eliminate hypotheses via forbidden patterns |
+| Object-Transpose | ⟂ | Change organism/system until decisive test becomes cheap |
+| Scale-Check | ⊞ | Validate against physical/scale constraints |
+
+### Operator Interface
+
+```typescript
+interface Operator<TInput, TOutput> {
+  id: string;                    // Unique operator identifier
+  name: string;                  // Human-readable name
+  symbol: string;                // Mathematical symbol (⊘, ✂, etc.)
+  description: string;           // What this operator does
+  brennerQuote?: string;         // Relevant Brenner quote
+  apply: (input: TInput, context: OperatorContext) => TOutput;
+  validate: (input: TInput) => ValidationResult;
+  templates: OperatorTemplate[]; // Starter templates for this operator
+}
+```
+
+### Level-Split Operator
+
+Separates levels of description to avoid confusing program with interpreter:
+
+```typescript
+interface LevelSplitResult {
+  programLevel: {
+    description: string;         // What the program/message specifies
+    variables: string[];         // Information-bearing variables
+  };
+  interpreterLevel: {
+    description: string;         // How the program is executed
+    mechanisms: string[];        // Physical implementation mechanisms
+  };
+  chastityVsImpotence?: {
+    scenario: string;
+    chastityExplanation: string; // No signal was sent
+    impotenceExplanation: string; // Signal sent but not received
+    discriminatingTest?: string;
+  };
+}
+```
+
+### Exclusion-Test Operator
+
+Designs tests based on forbidden patterns:
+
+```typescript
+interface ExclusionTestResult {
+  forbiddenPatterns: {
+    pattern: string;             // What cannot occur if H is true
+    hypothesesRuledOut: string[]; // Which hypotheses this eliminates
+    observationType: string;     // How to observe this pattern
+  }[];
+  discriminativePower: DiscriminativePower;
+  testDesign: {
+    procedure: string;
+    expectedOutcomes: {
+      hypothesisId: string;
+      prediction: string;
+    }[];
+  };
+}
+```
+
+### Operator Composition
+
+Operators can be composed into pipelines:
+
+```typescript
+import { compose, pipe } from "@/lib/brenner-loop/operators/framework";
+
+// The signature Brenner move:
+// (⌂ ∘ ✂ ∘ ≡ ∘ ⊘) powered by (↑ ∘ ⟂ ∘ 🔧) constrained by (⊞)
+
+const brennerPipeline = pipe(
+  levelSplit,        // Separate levels
+  invariantExtract,  // Find what survives
+  exclusionTest,     // Design killing experiments
+  materialize,       // Compile to decision procedure
+);
+
+const result = brennerPipeline(hypothesis, context);
+```
+
+### Usage
+
+```typescript
+import { applyLevelSplit } from "@/lib/brenner-loop/operators/level-split";
+import { applyExclusionTest } from "@/lib/brenner-loop/operators/exclusion-test";
+import { applyScaleCheck } from "@/lib/brenner-loop/operators/scale-check";
+
+// Apply level-split to a hypothesis
+const splitResult = applyLevelSplit(hypothesis, {
+  sessionId,
+  previousResults: [],
+});
+
+// Design exclusion tests
+const testResult = applyExclusionTest(hypothesis, {
+  sessionId,
+  levelSplitResult: splitResult,
+});
+
+// Validate against scale constraints
+const scaleResult = applyScaleCheck(hypothesis, {
+  sessionId,
+  domain: "biology",
+  constraints: [
+    { type: "spatial", min: "1nm", max: "1mm" },
+    { type: "temporal", min: "1ms", max: "1hr" },
+  ],
+});
+```
+
+---
+
+## Offline Resilience
+
+The system is designed for offline-first operation with network resilience built into the storage layer.
+
+### Offline Queue
+
+Operations that require network access are queued when offline and replayed when connectivity returns:
+
+```typescript
+interface OfflineQueue {
+  operations: QueuedOperation[];
+  status: "idle" | "flushing" | "offline";
+  lastFlushAttempt?: string;
+  failedOperations: FailedOperation[];
+}
+```
+
+### Storage Architecture
+
+Local-first storage with sync:
+
+1. **Primary**: IndexedDB for structured data (hypotheses, tests, evidence)
+2. **Fallback**: localStorage for small data and queue state
+3. **Sync**: Background sync when connectivity restored
+4. **Conflict Resolution**: Last-write-wins with audit trail
+
+### File Locking
+
+For filesystem operations, the system uses advisory file locks to prevent concurrent modification:
+
+```typescript
+import { acquireLock, releaseLock, isLocked } from "@/lib/storage/file-lock";
+
+// Acquire exclusive lock
+const lock = await acquireLock(filePath, {
+  ttl: 30000,        // Lock expires after 30 seconds
+  retries: 3,        // Retry 3 times if locked
+  retryDelay: 1000,  // Wait 1 second between retries
+});
+
+try {
+  // Perform file operations
+  await writeFile(filePath, data);
+} finally {
+  await releaseLock(lock);
+}
+```
+
+---
+
+## Citation System
+
+The Citation System provides parsing and formatting for Brenner transcript references, enabling precise anchoring of claims to primary sources.
+
+### Section ID Format
+
+Brenner transcript sections are referenced as `§n` where n is the section number (1-236):
+
+```typescript
+// Parse section IDs from text
+const ids = parseBrennerSectionIds("§58, §78-82, §161");
+// Returns: [58, 78, 79, 80, 81, 82, 161]
+
+// Extract from free-form text
+const extracted = extractBrennerSectionIdsFromText(
+  "As Brenner noted in §58 and later expanded in §78..."
+);
+// Returns: [58, 78]
+```
+
+### Citation Formatting
+
+```typescript
+import { formatCitation, formatCitationRange } from "@/lib/brenner-loop/artifacts/citations";
+
+// Format single citation
+formatCitation(58);  // "§58"
+
+// Format range
+formatCitationRange([58, 59, 60, 78, 79]);  // "§58-60, §78-79"
+
+// Format with verbatim/inference marker
+formatCitation(58, { verbatim: true });   // "§58 [verbatim]"
+formatCitation(58, { verbatim: false });  // "§58 [inference]"
+```
+
+### Anchor Validation
+
+Citations are validated against the actual transcript:
+
+```typescript
+import { validateAnchors } from "@/lib/brenner-loop/artifacts/citations";
+
+const result = validateAnchors(["§58", "§300", "§invalid"]);
+// Returns: {
+//   valid: ["§58"],
+//   invalid: ["§300", "§invalid"],
+//   errors: ["§300 exceeds transcript length (236)", "Invalid format: §invalid"]
+// }
 ```
