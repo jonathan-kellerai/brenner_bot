@@ -233,6 +233,16 @@ export function generateDebateId(sessionId: string): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return `DEBATE-${sessionId}-${crypto.randomUUID().slice(0, 8)}`;
   }
+  
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const rnd = new Uint32Array(1);
+    crypto.getRandomValues(rnd);
+    // Use first 32 bits for randomness
+    const randomHex = rnd[0].toString(16).toUpperCase().padStart(8, '0');
+    return `DEBATE-${sessionId}-${randomHex}`;
+  }
+
+  // Fallback for very old environments (unlikely in this stack)
   const timestamp = Date.now().toString(36).toUpperCase();
   const random = Math.random().toString(36).substring(2, 6).toUpperCase();
   return `DEBATE-${sessionId}-${timestamp}-${random}`;

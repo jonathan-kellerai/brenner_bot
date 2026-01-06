@@ -147,7 +147,12 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const [toasts, setToasts] = React.useState<Toast[]>([]);
 
   const addToast = React.useCallback((toast: Omit<Toast, "id">) => {
-    const id = Math.random().toString(36).slice(2, 9);
+    let id = "";
+    if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+      id = crypto.randomUUID();
+    } else {
+      id = Math.random().toString(36).slice(2, 9);
+    }
     setToasts((prev) => [...prev, { ...toast, id }]);
   }, []);
 
@@ -182,7 +187,12 @@ export function Toaster() {
   // Listen for custom toast events
   React.useEffect(() => {
     const handleToast = (event: CustomEvent<Omit<Toast, "id">>) => {
-      const id = Math.random().toString(36).slice(2, 9);
+      let id = "";
+      if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+        id = crypto.randomUUID();
+      } else {
+        id = Math.random().toString(36).slice(2, 9);
+      }
       setToasts((prev) => [...prev, { ...event.detail, id }]);
     };
 
