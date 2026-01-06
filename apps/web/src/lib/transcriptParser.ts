@@ -54,7 +54,7 @@ export interface ParseStats {
 // Constants
 // ============================================================================
 
-const SECTION_HEADER_REGEX = /^## (\d+)\. (.+)$/;
+const SECTION_HEADER_REGEX = /^##\s+(\d+)\.\s+(.+)$/;
 const EXPECTED_SECTION_COUNT = 236;
 const SOURCE_ID = "transcript";
 const SOURCE_TITLE = "Complete Transcript Collection";
