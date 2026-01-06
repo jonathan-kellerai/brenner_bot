@@ -833,3 +833,73 @@ export {
   // Constants
   RECOMMENDATION_LABELS,
 } from "./what-if";
+
+// ============================================================================
+// Literature Integration (bead njjo.7)
+// ============================================================================
+
+export type {
+  // Source types
+  LiteratureSource,
+
+  // Search types
+  LiteratureSearchFilters,
+  LiteratureSearch,
+  PaperResult,
+
+  // Import types
+  DOIImportInput,
+  BibTeXEntry,
+
+  // Evidence recording types
+  RecordPaperAsEvidenceInput,
+  SuggestedSearches,
+} from "./literature";
+
+export {
+  // Constants
+  LITERATURE_SOURCE_LABELS,
+  LITERATURE_SEARCH_ID_PATTERN,
+  DOI_PATTERN,
+  MAX_SEARCH_RESULTS,
+  RELEVANCE_THRESHOLDS,
+
+  // ID generation
+  generateSearchId,
+  generatePaperId,
+
+  // Search query generation
+  generateSearchQueries,
+
+  // Relevance scoring
+  calculateRelevance,
+  rankByRelevance,
+  getRelevanceLabel,
+  getRelevanceColor,
+
+  // Citation parsing
+  parseBibTeX,
+  bibTeXToPaperResult,
+
+  // DOI utilities
+  isValidDOI,
+  extractDOI,
+  doiToUrl,
+
+  // Evidence recording
+  formatCitation,
+  formatPaperSource,
+  preparePaperEvidenceData,
+
+  // Factory functions
+  createLiteratureSearch,
+  createPaperResult,
+
+  // Utility functions
+  summarizePaper,
+  getPaperAgeCategory,
+
+  // Type guards
+  isPaperResult,
+  isLiteratureSearch,
+} from "./literature";
