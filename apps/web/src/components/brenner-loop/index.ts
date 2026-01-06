@@ -58,3 +58,6 @@ export type { DomainSelectorProps, CompactDomainSelectorProps } from "./DomainSe
 
 export { HypothesisTemplateSelector, CompactTemplatePicker } from "./HypothesisTemplateSelector";
 export type { HypothesisTemplateSelectorProps, CompactTemplatePickerProps } from "./HypothesisTemplateSelector";
+
+export { SessionTemplateSelector, CompactTemplateSelector, TemplateDropdown } from "./SessionTemplateSelector";
+export type { SessionTemplateSelectorProps, CompactTemplateSelectorProps, TemplateDropdownProps } from "./SessionTemplateSelector";

@@ -949,3 +949,50 @@ export {
   searchTemplates,
   templateToPartialCard,
 } from "./hypothesis-templates";
+
+// ============================================================================
+// Session Templates (bead reew.7)
+// ============================================================================
+
+export type {
+  // Core types
+  SessionTemplate,
+  SessionTemplateSettings,
+  SessionDepth,
+  AgentRole as SessionAgentRole,
+} from "./session-templates";
+
+export {
+  // Template registry
+  SESSION_TEMPLATES,
+  TEMPLATE_BY_ID as SESSION_TEMPLATE_BY_ID,
+
+  // Query functions
+  getSessionTemplate,
+  getFeaturedSessionTemplates,
+  getSortedSessionTemplates,
+  getTemplatesByDepth,
+  getTemplateForTimeConstraint,
+
+  // Phase helpers
+  isPhaseRequired,
+  isPhaseOptional,
+  isPhaseSkipped,
+  isPhaseEnabled,
+  getActivePhases,
+  getPhaseOrderForTemplate,
+
+  // Settings functions
+  createTemplateSettings,
+  customizeTemplateSettings,
+  getEffectivePhases,
+  getEffectiveAgents,
+
+  // Validation
+  validateTemplate,
+
+  // Agent role helpers
+  AGENT_ROLE_INFO,
+  getAgentRoleName,
+  getAgentRoleDescription,
+} from "./session-templates";
