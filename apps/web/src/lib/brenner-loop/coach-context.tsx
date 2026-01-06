@@ -1041,11 +1041,10 @@ export function CoachProvider({ children }: CoachProviderProps): React.ReactElem
     }
 
     // Auto-adjust based on progress
-    const { sessionsCompleted } = state.progress;
-    if (sessionsCompleted >= LEVEL_THRESHOLDS.advanced) {
+    if (state.progress.sessionsCompleted >= LEVEL_THRESHOLDS.advanced) {
       return "advanced";
     }
-    if (sessionsCompleted >= LEVEL_THRESHOLDS.intermediate) {
+    if (state.progress.sessionsCompleted >= LEVEL_THRESHOLDS.intermediate) {
       return "intermediate";
     }
     return "beginner";

@@ -63,6 +63,12 @@ export const transitions = {
     ease: EASING.easeOut,
   } satisfies Transition,
 
+  /** Fast transitions for quick actions */
+  fast: {
+    duration: TIMING.fast,
+    ease: EASING.easeOut,
+  } satisfies Transition,
+
   /** Standard content animations */
   normal: {
     duration: TIMING.normal,
