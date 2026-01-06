@@ -329,12 +329,14 @@ function ThreadCard({ thread, index }: { thread: ThreadSummary; index: number })
 
 export default async function SessionsListPage() {
   const labModeEnabled = isLabModeEnabled();
-  const isDemoMode = !labModeEnabled;
-
-  // Check auth (only relevant if lab mode is enabled)
   const reqHeaders = await headers();
+  const hostHeader = reqHeaders.get("x-forwarded-host") ?? reqHeaders.get("host") ?? "";
+  const isPublicHost = hostHeader.includes("brennerbot.org");
+  const isDemoMode = isPublicHost || !labModeEnabled;
+
+  // Check auth (only relevant if lab mode is enabled and not on the public site)
   const reqCookies = await cookies();
-  const pageAuth = labModeEnabled ? checkOrchestrationAuth(reqHeaders, reqCookies) : null;
+  const pageAuth = labModeEnabled && !isPublicHost ? checkOrchestrationAuth(reqHeaders, reqCookies) : null;
 
   // Only set labLockedReason for auth failures when lab mode IS enabled
   // (when lab mode is disabled, we show demo mode instead of locked state)
