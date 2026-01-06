@@ -81,7 +81,7 @@ function formatCliDebug(result: CliResult): string {
  */
 async function runCli(
   args: string[],
-  options?: { timeout?: number; env?: Record<string, string>; cwd?: string }
+  options?: { timeout?: number; env?: Record<string, string>; cwd?: string; stdin?: string }
 ): Promise<CliResult> {
   const timeoutMs = options?.timeout ?? 5000;
   const env = {
@@ -98,8 +98,26 @@ async function runCli(
     const proc = spawn(argv[0], argv.slice(1), {
       env,
       cwd: options?.cwd,
-      stdio: ["ignore", "pipe", "pipe"],
+      stdio: [options?.stdin !== undefined ? "pipe" : "ignore", "pipe", "pipe"],
     });
+
+    // Write stdin if provided (write lines with delays to work with readline)
+    if (options?.stdin !== undefined && proc.stdin) {
+      const lines = options.stdin.split("\n");
+      let lineIndex = 0;
+      const writeNextLine = () => {
+        if (proc.stdin && !proc.stdin.destroyed && lineIndex < lines.length) {
+          const line = lines[lineIndex++];
+          proc.stdin.write(line + "\n");
+          if (lineIndex < lines.length) {
+            setTimeout(writeNextLine, 50);
+          } else {
+            proc.stdin.end();
+          }
+        }
+      };
+      setTimeout(writeNextLine, 300);
+    }
 
     let stdout = "";
     let stderr = "";
@@ -3414,6 +3432,86 @@ describe("test CLI", () => {
     expect(bindViolatedParsed.hypothesis.id).toBe(hypothesisBId);
     expect(bindViolatedParsed.hypothesis.state).toBe("refuted");
 
+    const hypothesesPath = join(projectDir, ".research", "hypotheses", `${sessionId}-hypotheses.json`);
+    const hypothesesJson = JSON.parse(readFileSync(hypothesesPath, "utf8")) as {
+      hypotheses: Array<{ id: string; state: string }>;
+    };
+    const stateById = new Map(hypothesesJson.hypotheses.map((h) => [h.id, h.state]));
+    expect(stateById.get(hypothesisAId)).toBe("confirmed");
+    expect(stateById.get(hypothesisBId)).toBe("refuted");
+  });
+
+  it("execute --interactive accepts stdin input for prompts", async () => {
+    const { projectDir, testId, hypothesisAId, hypothesisBId } = setupTestProjectFixture({ sessionId: "RS-INTERACT" });
+
+    // Provide stdin input for the interactive prompts:
+    // 1. Observed result (text) - "positive"
+    // 2. Potency check (pass/fail) - "pass"
+    // 3. Confidence (high/medium/low/speculative) - "high"
+    // 4. Executed by (optional) - empty
+    // 5. Notes (optional) - empty
+    // 6. Potency notes (optional) - empty
+    // 7. Apply suggestions (y/N) - "n"
+    const stdinInput = "positive\npass\nhigh\n\n\n\nn\n";
+
+    const execute = await runCli(
+      ["test", "execute", testId, "--project-key", projectDir, "--json", "--interactive"],
+      { stdin: stdinInput, timeout: 15000 }
+    );
+
+    expect(execute.exitCode).toBe(0);
+    const parsed = JSON.parse(execute.stdout) as {
+      ok: boolean;
+      test: { id: string; status: string; execution?: { observedOutcome: string; potencyCheckPassed?: boolean } };
+      suggestions: Array<{ hypothesisId: string; suggestedAction: string }>;
+      applied: unknown;
+    };
+
+    expect(parsed.ok).toBe(true);
+    expect(parsed.test.id).toBe(testId);
+    expect(parsed.test.status).toBe("completed");
+    expect(parsed.test.execution?.observedOutcome).toBe("positive");
+    expect(parsed.test.execution?.potencyCheckPassed).toBe(true);
+    // Applied is null because we said 'n' to apply
+    expect(parsed.applied).toBeNull();
+    // Should still have suggestions
+    expect(parsed.suggestions.some((s) => s.hypothesisId === hypothesisAId && s.suggestedAction === "validate")).toBe(true);
+    expect(parsed.suggestions.some((s) => s.hypothesisId === hypothesisBId && s.suggestedAction === "kill")).toBe(true);
+  });
+
+  it("execute --interactive with apply transitions hypotheses", async () => {
+    const { projectDir, sessionId, testId, hypothesisAId, hypothesisBId } = setupTestProjectFixture({
+      sessionId: "RS-INTERACT-APPLY",
+    });
+
+    // Provide stdin input including 'y' to apply suggestions:
+    // 1. Observed result (text) - "positive"
+    // 2. Potency check (pass/fail) - "pass"
+    // 3. Confidence (high/medium/low/speculative) - "medium"
+    // 4. Executed by (optional) - empty
+    // 5. Notes (optional) - "Test observation notes"
+    // 6. Potency notes (optional) - empty
+    // 7. Apply suggestions (y/N) - "y"
+    const stdinInput = "positive\npass\nmedium\n\nTest observation notes\n\ny\n";
+
+    const execute = await runCli(
+      ["test", "execute", testId, "--project-key", projectDir, "--json", "--interactive"],
+      { stdin: stdinInput, timeout: 15000 }
+    );
+
+    expect(execute.exitCode).toBe(0);
+    const parsed = JSON.parse(execute.stdout) as {
+      ok: boolean;
+      test: { id: string; execution?: { notes?: string; potencyCheckPassed?: boolean } };
+      applied: { saved: number; applied: Array<{ hypothesisId: string; ok: boolean }> } | null;
+    };
+    expect(parsed.ok).toBe(true);
+    expect(parsed.test.execution?.notes).toBe("Test observation notes");
+    expect(parsed.test.execution?.potencyCheckPassed).toBe(true);
+    expect(parsed.applied).not.toBeNull();
+    expect(parsed.applied?.saved).toBe(2);
+
+    // Verify hypothesis states were updated
     const hypothesesPath = join(projectDir, ".research", "hypotheses", `${sessionId}-hypotheses.json`);
     const hypothesesJson = JSON.parse(readFileSync(hypothesesPath, "utf8")) as {
       hypotheses: Array<{ id: string; state: string }>;
