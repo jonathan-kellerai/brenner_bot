@@ -280,6 +280,16 @@ describe("confidence", () => {
     expect(getAsymmetryExplanation()).toContain("twice the impact");
   });
 
+  it("keeps delta consistent when confidence is clamped", () => {
+    const cappedSupport = computeConfidenceUpdate(99, { discriminativePower: 5 }, "supports");
+    expect(cappedSupport.newConfidence).toBe(99);
+    expect(cappedSupport.delta).toBe(0);
+
+    const flooredChallenge = computeConfidenceUpdate(1, { discriminativePower: 5 }, "challenges");
+    expect(flooredChallenge.newConfidence).toBe(1);
+    expect(flooredChallenge.delta).toBe(0);
+  });
+
   it("throws on invalid discriminativePower", () => {
     expect(() =>
       computeConfidenceUpdate(50, { discriminativePower: 0 as never }, "supports")

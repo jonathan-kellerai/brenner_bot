@@ -196,8 +196,9 @@ export function computeConfidenceUpdate(
     // Weak update toward 100
     // Supporting evidence is inherently weaker than challenging evidence
     // because many things can be consistent with a hypothesis
-    delta = (100 - currentConfidence) * power * cfg.supportMultiplier;
-    newConfidence = Math.min(currentConfidence + delta, cfg.maxConfidence);
+    const rawDelta = (100 - currentConfidence) * power * cfg.supportMultiplier;
+    newConfidence = Math.min(currentConfidence + rawDelta, cfg.maxConfidence);
+    delta = newConfidence - currentConfidence;
 
     explanation = `${stars} ${powerLabel} test supports hypothesis. ` +
       `Confidence ${currentConfidence.toFixed(1)}% \u2192 ${newConfidence.toFixed(1)}% ` +
@@ -207,8 +208,9 @@ export function computeConfidenceUpdate(
     // Strong update toward 0
     // Discriminative tests that challenge are very informative
     // because they can rule out possibilities
-    delta = -(currentConfidence * power * cfg.challengeMultiplier);
-    newConfidence = Math.max(currentConfidence + delta, cfg.minConfidence);
+    const rawDelta = -(currentConfidence * power * cfg.challengeMultiplier);
+    newConfidence = Math.max(currentConfidence + rawDelta, cfg.minConfidence);
+    delta = newConfidence - currentConfidence;
 
     explanation = `${stars} ${powerLabel} test challenges hypothesis. ` +
       `Confidence ${currentConfidence.toFixed(1)}% \u2192 ${newConfidence.toFixed(1)}% ` +
