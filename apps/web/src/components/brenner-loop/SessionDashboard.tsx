@@ -954,10 +954,6 @@ export function SessionDashboard({
   const [isCorpusSearchOpen, setIsCorpusSearchOpen] = React.useState(false);
   const [isKeyboardHelpOpen, setIsKeyboardHelpOpen] = React.useState(false);
   const lastSaveErrorRef = React.useRef<string | null>(null);
-  const evidenceEntries = React.useMemo<FullEvidenceEntry[]>(() => {
-    const ledger = session?.evidenceLedger ?? [];
-    return (ledger as unknown[]).filter(isEvidenceEntry);
-  }, [session?.evidenceLedger]);
 
   // useSessionMachine provides computed values (reachablePhases, isComplete, etc.)
   const machine = useSessionMachine(session);

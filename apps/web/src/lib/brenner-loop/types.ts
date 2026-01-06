@@ -111,14 +111,14 @@ export function isValidTransition(from: SessionPhase, to: SessionPhase): boolean
   const transitions: Record<SessionPhase, SessionPhase[]> = {
     intake: ["sharpening"],
     sharpening: ["level_split", "exclusion_test", "agent_dispatch"],
-    level_split: ["exclusion_test", "object_transpose", "scale_check", "agent_dispatch"],
-    exclusion_test: ["object_transpose", "scale_check", "agent_dispatch"],
-    object_transpose: ["scale_check", "agent_dispatch"],
-    scale_check: ["agent_dispatch"],
-    agent_dispatch: ["synthesis", "evidence_gathering"],
-    synthesis: ["evidence_gathering", "revision", "complete"],
+    level_split: ["sharpening", "exclusion_test", "object_transpose", "scale_check", "agent_dispatch"],
+    exclusion_test: ["level_split", "object_transpose", "scale_check", "agent_dispatch"],
+    object_transpose: ["exclusion_test", "scale_check", "agent_dispatch"],
+    scale_check: ["object_transpose", "agent_dispatch"],
+    agent_dispatch: ["scale_check", "synthesis", "evidence_gathering"],
+    synthesis: ["agent_dispatch", "evidence_gathering", "revision", "complete"],
     evidence_gathering: ["revision", "synthesis"],
-    revision: ["agent_dispatch", "synthesis", "complete"],
+    revision: ["level_split", "agent_dispatch", "synthesis", "complete"],
     complete: [], // Terminal state
   };
 

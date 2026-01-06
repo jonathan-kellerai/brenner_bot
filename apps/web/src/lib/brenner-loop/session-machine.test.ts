@@ -959,6 +959,9 @@ describe("types utilities", () => {
     expect(toSimplifiedPhase("complete")).toBe("synthesis");
 
     expect(isValidTransition("intake", "sharpening")).toBe(true);
+    expect(isValidTransition("level_split", "sharpening")).toBe(true);
+    expect(isValidTransition("exclusion_test", "level_split")).toBe(true);
+    expect(isValidTransition("revision", "level_split")).toBe(true);
     expect(isValidTransition("intake", "complete")).toBe(false);
     expect(isValidTransition("complete", "intake")).toBe(false);
   });

@@ -58,10 +58,6 @@ function repoRootFromWebCwd(): string {
   return resolve(process.cwd(), "../..");
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
-
 function resolveProjectKey(rawProjectKey?: string): { ok: true; projectKey: string } | { ok: false; error: string; code: "VALIDATION_ERROR" | "SERVER_ERROR" } {
   const fallback = process.env.BRENNER_PROJECT_KEY || repoRootFromWebCwd();
   const trimmed = rawProjectKey?.trim();
@@ -77,52 +73,6 @@ function resolveProjectKey(rawProjectKey?: string): { ok: true; projectKey: stri
   const isWindowsPath = win32.isAbsolute(candidate) && !candidate.startsWith("/");
   const projectKey = isWindowsPath ? win32.normalize(candidate) : resolve(candidate);
   return { ok: true, projectKey };
-}
-
-function parseEnsureProjectSlug(result: unknown): string | null {
-  if (!isRecord(result)) return null;
-
-  const structuredContent = result.structuredContent;
-  if (isRecord(structuredContent) && typeof structuredContent.slug === "string") {
-    return structuredContent.slug;
-  }
-
-  const maybeContent = result.content;
-  if (Array.isArray(maybeContent) && maybeContent.length > 0) {
-    const first = maybeContent[0];
-    const text = isRecord(first) && typeof first.text === "string" ? first.text : undefined;
-    if (text) {
-      try {
-        const parsed = JSON.parse(text) as unknown;
-        return isRecord(parsed) && typeof parsed.slug === "string" ? parsed.slug : null;
-      } catch {
-        return null;
-      }
-    }
-  }
-
-  return null;
-}
-
-function extractMessageId(result: unknown): number | undefined {
-  if (!isRecord(result)) return undefined;
-
-  // Check structuredContent first
-  const sc = result.structuredContent;
-  if (isRecord(sc)) {
-    const deliveries = sc.deliveries;
-    if (Array.isArray(deliveries) && deliveries.length > 0) {
-      const first = deliveries[0];
-      if (isRecord(first)) {
-        const payload = first.payload;
-        if (isRecord(payload) && typeof payload.id === "number") {
-          return payload.id;
-        }
-      }
-    }
-  }
-
-  return undefined;
 }
 
 function normalizeKickoffSubject(threadId: string, rawSubject?: string): string {
@@ -229,11 +179,9 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
     // Check if using role-separated mode with explicit roster
     const useRoleSeparated = body.rosterMode === "role_separated" && body.roster && body.roster.length > 0;
 
-    // Ensure project exists (tools expect project_key to be the human_key / absolute path).
-    // NOTE: Treat Windows absolute paths as absolute even on non-Windows runtimes.
-    const ensured = await client.toolsCall("ensure_project", { human_key: projectKey });
-    const ensuredSlug = parseEnsureProjectSlug(ensured);
-    if (!ensuredSlug) {
+    // Ensure project exists
+    const ensured = await client.ensureProject({ humanKey: projectKey });
+    if (!ensured.slug) {
       return NextResponse.json(
         { success: false, error: "Agent Mail: could not resolve project slug", code: "NETWORK_ERROR" },
         { status: 502 }
@@ -241,12 +189,12 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
     }
 
     // Register sender agent
-    await client.toolsCall("register_agent", {
-      project_key: projectKey,
-      name: cleanSender,
+    await client.registerAgent({
+      projectKey,
       program: "brenner-web",
       model: "nextjs",
-      task_description: `Brenner Bot session: ${cleanThreadId}`,
+      name: cleanSender,
+      taskDescription: `Brenner Bot session: ${cleanThreadId}`,
     });
 
     let messageId: number | undefined;
@@ -272,18 +220,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
 
       // Send role-specific message to each recipient
       for (const msg of kickoffMessages) {
-        const sendResult = await client.toolsCall("send_message", {
-          project_key: projectKey,
-          sender_name: cleanSender,
+        const result = await client.sendMessage({
+          projectKey,
+          senderName: cleanSender,
           to: [msg.to],
           subject: msg.subject,
-          body_md: msg.body,
-          thread_id: cleanThreadId,
-          ack_required: Boolean(body.ackRequired),
+          bodyMd: msg.body,
+          threadId: cleanThreadId,
+          ackRequired: Boolean(body.ackRequired),
         });
+        
         // Capture first message ID
-        if (messageId === undefined) {
-          messageId = extractMessageId(sendResult);
+        if (messageId === undefined && result.deliveries.length > 0) {
+          messageId = result.deliveries[0]?.payload.id;
         }
       }
     } else {
@@ -297,16 +246,19 @@ export async function POST(request: NextRequest): Promise<NextResponse<SessionKi
       });
 
       // Unified mode: send same message to all recipients
-      const sendResult = await client.toolsCall("send_message", {
-        project_key: projectKey,
-        sender_name: cleanSender,
+      const result = await client.sendMessage({
+        projectKey,
+        senderName: cleanSender,
         to: normalizedRecipients,
         subject,
-        body_md: composedBody,
-        thread_id: cleanThreadId,
-        ack_required: Boolean(body.ackRequired),
+        bodyMd: composedBody,
+        threadId: cleanThreadId,
+        ackRequired: Boolean(body.ackRequired),
       });
-      messageId = extractMessageId(sendResult);
+      
+      if (result.deliveries.length > 0) {
+        messageId = result.deliveries[0]?.payload.id;
+      }
     }
 
     return NextResponse.json({

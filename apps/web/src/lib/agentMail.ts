@@ -278,6 +278,13 @@ export class AgentMailClient {
     return this.call("resources/read", { uri });
   }
 
+  private unwrapResult<T>(result: JsonValue): T {
+    if (result && typeof result === "object" && "structuredContent" in result) {
+      return (result as Record<string, unknown>).structuredContent as T;
+    }
+    return result as T;
+  }
+
   private resourceUri(path: string, query?: Record<string, string | number | boolean | null | undefined>): string {
     const url = new URL(`resource://${path}`);
     for (const [key, value] of Object.entries(query ?? {})) {
@@ -316,11 +323,12 @@ export class AgentMailClient {
   }
 
   async markMessageRead(args: { projectKey: string; agentName: string; messageId: number }): Promise<JsonValue> {
-    return this.toolsCall("mark_message_read", {
+    const result = await this.toolsCall("mark_message_read", {
       project_key: args.projectKey,
       agent_name: args.agentName,
       message_id: args.messageId,
     });
+    return this.unwrapResult(result);
   }
 
   async acknowledgeMessage(args: {
@@ -328,11 +336,12 @@ export class AgentMailClient {
     agentName: string;
     messageId: number;
   }): Promise<JsonValue> {
-    return this.toolsCall("acknowledge_message", {
+    const result = await this.toolsCall("acknowledge_message", {
       project_key: args.projectKey,
       agent_name: args.agentName,
       message_id: args.messageId,
     });
+    return this.unwrapResult(result);
   }
 
   // ============================================================================
@@ -347,7 +356,7 @@ export class AgentMailClient {
     const result = await this.toolsCall("ensure_project", {
       human_key: args.humanKey,
     });
-    return result as AgentMailProject;
+    return this.unwrapResult<AgentMailProject>(result);
   }
 
   /**
@@ -368,7 +377,7 @@ export class AgentMailClient {
       ...(args.name && { name: args.name }),
       ...(args.taskDescription && { task_description: args.taskDescription }),
     });
-    return result as AgentMailAgent;
+    return this.unwrapResult<AgentMailAgent>(result);
   }
 
   // ============================================================================
@@ -402,7 +411,7 @@ export class AgentMailClient {
       ...(args.importance && { importance: args.importance }),
       ...(args.ackRequired !== undefined && { ack_required: args.ackRequired }),
     });
-    return result as AgentMailSendResult;
+    return this.unwrapResult<AgentMailSendResult>(result);
   }
 
   /**
@@ -426,7 +435,7 @@ export class AgentMailClient {
       ...(args.cc && { cc: args.cc }),
       ...(args.bcc && { bcc: args.bcc }),
     });
-    return result as AgentMailSendResult;
+    return this.unwrapResult<AgentMailSendResult>(result);
   }
 
   /**
@@ -452,7 +461,7 @@ export class AgentMailClient {
     });
     // The call() method already extracts the JSON-RPC result field,
     // so we receive the tool output directly
-    return (result ?? []) as AgentMailMessage[];
+    return this.unwrapResult<AgentMailMessage[]>(result);
   }
 
   /**
@@ -468,7 +477,7 @@ export class AgentMailClient {
       query: args.query,
       limit: args.limit ?? 20,
     });
-    return result as AgentMailMessage[];
+    return this.unwrapResult<AgentMailMessage[]>(result);
   }
 
   /**
@@ -484,7 +493,7 @@ export class AgentMailClient {
       thread_id: args.threadId,
       include_examples: args.includeExamples ?? false,
     });
-    return result as AgentMailThreadSummary;
+    return this.unwrapResult<AgentMailThreadSummary>(result);
   }
 
   /**
@@ -507,7 +516,7 @@ export class AgentMailClient {
       ...(args.taskDescription && { task_description: args.taskDescription }),
       inbox_limit: args.inboxLimit ?? 10,
     });
-    return result as AgentMailSessionStart;
+    return this.unwrapResult<AgentMailSessionStart>(result);
   }
 }
 
