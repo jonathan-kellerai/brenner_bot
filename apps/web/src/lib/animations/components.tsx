@@ -104,7 +104,8 @@ export function AnimateOnScroll({
   });
 
   const selectedVariants = customVariants || variantMap[variant];
-  const MotionComponent = motion.create(as);
+  const MotionComponent =
+    (motion as Record<string, React.ComponentType<MotionProps>>)[as] ?? motion.div;
 
   // Apply delay to visible state
   const variantsWithDelay = React.useMemo(() => {

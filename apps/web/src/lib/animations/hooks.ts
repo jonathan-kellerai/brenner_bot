@@ -290,8 +290,6 @@ export function useIntersectionAnimation<T extends HTMLElement = HTMLDivElement>
 
   useEffect(() => {
     if (shouldSkipAnimation) {
-      setIsInView(true);
-      setHasAnimated(true);
       return;
     }
 
