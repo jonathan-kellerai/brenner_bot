@@ -573,6 +573,26 @@ export {
 } from "./artifacts/research-brief-template";
 
 // ============================================================================
+// Research Brief Export (bead nu8g.2)
+// ============================================================================
+
+export type {
+  ResearchBriefExportFormat,
+  ResearchBriefExportOptions,
+  ResearchBriefExportResult,
+  ResearchBriefJSONExport,
+} from "./artifacts/research-brief-export";
+
+export {
+  exportToMarkdown,
+  exportToJSON,
+  exportToPDF,
+  downloadResearchBrief,
+  printResearchBrief,
+  importResearchBrief,
+} from "./artifacts/research-brief-export";
+
+// ============================================================================
 // Robustness Score (bead an1n.4)
 // ============================================================================
 
