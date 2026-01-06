@@ -116,6 +116,10 @@ function resolveProjectKey(rawProjectKey?: string): { ok: true; projectKey: stri
 function parseEnsureProjectSlug(result: unknown): string | null {
   if (!isRecord(result)) return null;
 
+  if (typeof result.slug === "string") {
+    return result.slug;
+  }
+
   const structuredContent = result.structuredContent;
   if (isRecord(structuredContent) && typeof structuredContent.slug === "string") {
     return structuredContent.slug;
@@ -140,6 +144,17 @@ function parseEnsureProjectSlug(result: unknown): string | null {
 
 function extractMessageId(result: unknown): number | undefined {
   if (!isRecord(result)) return undefined;
+
+  const directDeliveries = result.deliveries;
+  if (Array.isArray(directDeliveries) && directDeliveries.length > 0) {
+    const first = directDeliveries[0];
+    if (isRecord(first)) {
+      const payload = first.payload;
+      if (isRecord(payload) && typeof payload.id === "number") {
+        return payload.id;
+      }
+    }
+  }
 
   const sc = result.structuredContent;
   if (isRecord(sc)) {
