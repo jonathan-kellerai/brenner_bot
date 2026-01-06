@@ -648,10 +648,7 @@ export function identifyCalibrationStrengths(
   for (const [domain, data] of Object.entries(metrics.domainAccuracy)) {
     if (data.total < MIN_PREDICTIONS_PER_BIN) continue;
 
-    // Compare accuracy to average
-    const avgExpectedConfidence = 0.5; // Rough estimate
-    const diff = data.accuracy - avgExpectedConfidence;
-
+    // Classify based on accuracy thresholds
     if (data.accuracy >= 0.7) {
       strengths.push(domain);
     } else if (data.accuracy < 0.3) {
