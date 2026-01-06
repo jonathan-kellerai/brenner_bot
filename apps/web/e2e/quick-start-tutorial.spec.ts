@@ -75,7 +75,7 @@ async function getTutorialProgress(page: import("@playwright/test").Page) {
 
 async function clickNextButton(
   page: import("@playwright/test").Page,
-  logger: import("./utils/e2e-logging").E2ELogEntry["logger"]
+  logger: ReturnType<typeof import("./utils/e2e-logging").createE2ELogger>
 ) {
   const nextButton = page.locator(
     'button:has-text("Next"), button:has-text("Continue"), a:has-text("Next")'

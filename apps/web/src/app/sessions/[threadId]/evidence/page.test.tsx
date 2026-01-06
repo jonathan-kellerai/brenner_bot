@@ -76,10 +76,10 @@ const VALID_EVIDENCE_TYPES = new Set<string>([
 
 const VALID_ACCESS_METHODS = new Set<string>(["url", "doi", "file", "session", "manual"]);
 
-function omitField<T extends Record<string, unknown>, K extends keyof T>(value: T, field: K): Omit<T, K> {
-  const { [field]: _discard, ...rest } = value;
+function omitField<T extends object, K extends keyof T>(value: T, field: K): Omit<T, K> {
+  const { [field]: _discard, ...rest } = value as Record<string, unknown>;
   void _discard;
-  return rest;
+  return rest as Omit<T, K>;
 }
 
 function validateEvidencePack(data: unknown): EvidencePack {

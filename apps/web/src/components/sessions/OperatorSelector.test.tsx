@@ -132,6 +132,11 @@ describe("OperatorSelector", () => {
         hypothesis_generator: ["⊘ Level-Split"],
         test_designer: [...DEFAULT_OPERATORS.test_designer],
         adversarial_critic: [...DEFAULT_OPERATORS.adversarial_critic],
+        devils_advocate: [...DEFAULT_OPERATORS.devils_advocate],
+        experiment_designer: [...DEFAULT_OPERATORS.experiment_designer],
+        statistician: [...DEFAULT_OPERATORS.statistician],
+        brenner_channeler: [...DEFAULT_OPERATORS.brenner_channeler],
+        synthesis: [...DEFAULT_OPERATORS.synthesis],
       };
 
       renderOperatorSelector({ value, onChange });
@@ -212,6 +217,11 @@ describe("OperatorSelector", () => {
         hypothesis_generator: ["⊘ Level-Split"],
         test_designer: [...DEFAULT_OPERATORS.test_designer],
         adversarial_critic: [...DEFAULT_OPERATORS.adversarial_critic],
+        devils_advocate: [...DEFAULT_OPERATORS.devils_advocate],
+        experiment_designer: [...DEFAULT_OPERATORS.experiment_designer],
+        statistician: [...DEFAULT_OPERATORS.statistician],
+        brenner_channeler: [...DEFAULT_OPERATORS.brenner_channeler],
+        synthesis: [...DEFAULT_OPERATORS.synthesis],
       };
 
       renderOperatorSelector({ value: customValue });
@@ -237,6 +247,11 @@ describe("OperatorSelector", () => {
         hypothesis_generator: ["⊘ Level-Split"],
         test_designer: ["✂ Exclusion-Test"],
         adversarial_critic: ["† Theory-Kill"],
+        devils_advocate: [...DEFAULT_OPERATORS.devils_advocate],
+        experiment_designer: [...DEFAULT_OPERATORS.experiment_designer],
+        statistician: [...DEFAULT_OPERATORS.statistician],
+        brenner_channeler: [...DEFAULT_OPERATORS.brenner_channeler],
+        synthesis: [...DEFAULT_OPERATORS.synthesis],
       };
 
       renderOperatorSelector({ value: customValue, onChange });

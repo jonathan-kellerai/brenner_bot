@@ -35,6 +35,11 @@ const DEFAULT_OPERATORS: OperatorSelection = {
   hypothesis_generator: ["⊘ Level-Split", "⊕ Cross-Domain", "◊ Paradox-Hunt"],
   test_designer: ["✂ Exclusion-Test", "⌂ Materialize", "⟂ Object-Transpose", "🎭 Potency-Check"],
   adversarial_critic: ["ΔE Exception-Quarantine", "† Theory-Kill", "⊞ Scale-Check"],
+  devils_advocate: [],
+  experiment_designer: [],
+  statistician: [],
+  brenner_channeler: [],
+  synthesis: [],
 };
 
 /** All available operators that can be assigned */
@@ -71,6 +76,31 @@ const ROLE_CONFIG: Record<AgentRole, { label: string; color: string; description
     label: "Adversarial Critic",
     color: "from-cyan-500/10 to-teal-500/10 border-cyan-500/30",
     description: "Gemini 3",
+  },
+  devils_advocate: {
+    label: "Devil's Advocate",
+    color: "from-red-500/10 to-rose-500/10 border-red-500/30",
+    description: "Challenges assumptions",
+  },
+  experiment_designer: {
+    label: "Experiment Designer",
+    color: "from-green-500/10 to-emerald-500/10 border-green-500/30",
+    description: "Designs tests",
+  },
+  statistician: {
+    label: "Statistician",
+    color: "from-purple-500/10 to-violet-500/10 border-purple-500/30",
+    description: "Statistical analysis",
+  },
+  brenner_channeler: {
+    label: "Brenner Channeler",
+    color: "from-amber-500/10 to-yellow-500/10 border-amber-500/30",
+    description: "Brenner methodology",
+  },
+  synthesis: {
+    label: "Synthesis",
+    color: "from-indigo-500/10 to-blue-500/10 border-indigo-500/30",
+    description: "Integrates perspectives",
   },
 };
 

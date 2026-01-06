@@ -607,7 +607,7 @@ test.describe("Artifact Viewing", () => {
 
       const pageText = await page.locator("body").textContent();
       const hasBody = pageText?.includes("No message body") ||
-                      pageText?.length > 500; // Some content visible
+                      (pageText?.length ?? 0) > 500; // Some content visible
 
       logger.info(`Message expanded, has body: ${hasBody}`);
       await takeScreenshot(page, logger, "session-message-expanded");

@@ -1102,3 +1102,36 @@ export {
   getAgentRoleName,
   getAgentRoleDescription,
 } from "./session-templates";
+
+// ============================================================================
+// Coach Mode (bead reew.8)
+// ============================================================================
+
+export type {
+  // Settings types
+  CoachLevel,
+  CoachSettings,
+  LearningProgress,
+  ConceptCategory,
+  ConceptId,
+  PhaseCoachingContent,
+
+  // Context value
+  CoachContextValue,
+} from "./coach-context";
+
+export {
+  // Provider
+  CoachProvider,
+  CoachContext,
+
+  // Hooks
+  useCoach,
+  useCoachActive,
+  usePhaseCoaching,
+  useCoachProgress,
+
+  // Constants
+  PHASE_COACHING,
+  LEVEL_THRESHOLDS,
+} from "./coach-context";

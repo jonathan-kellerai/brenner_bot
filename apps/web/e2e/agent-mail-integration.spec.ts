@@ -27,7 +27,7 @@ import {
   createSessionWithDeltas,
   createSessionWithArtifact,
 } from "./utils";
-import { withStep } from "./utils/e2e-logging";
+import { withStep, createE2ELogger } from "./utils/e2e-logging";
 
 declare global {
   interface Window {
@@ -56,7 +56,7 @@ function getCookieDomain(): string {
 
 async function preflightAgentMailTestServer(params: {
   page: import("@playwright/test").Page;
-  logger: { info: (msg: string) => void; warn: (msg: string) => void };
+  logger: ReturnType<typeof createE2ELogger>;
   context: import("@playwright/test").BrowserContext;
   testSession: { getServerUrl: () => string };
 }): Promise<boolean> {
