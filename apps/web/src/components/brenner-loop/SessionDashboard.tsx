@@ -50,6 +50,7 @@ import type {
   AlternativeExplanation as UiAlternativeExplanation,
 } from "@/lib/brenner-loop/operators/object-transpose";
 import type { ScaleCheckResult as UiScaleCheckResult } from "@/lib/brenner-loop/operators/scale-check";
+import { isEvidenceEntry, type EvidenceEntry as FullEvidenceEntry } from "@/lib/brenner-loop/evidence";
 import {
   PHASE_ORDER,
   useSession,
@@ -859,8 +860,8 @@ function PhaseContent({ phase, className }: PhaseContentProps) {
 
         {phase === "evidence_gathering" ? (
           <div className="space-y-6">
-            <ConfidenceChart entries={[]} initialConfidence={primaryHypothesis?.confidence ?? 0} />
-            <EvidenceTimeline entries={[]} />
+            <ConfidenceChart entries={evidenceEntries} initialConfidence={primaryHypothesis?.confidence ?? 0} />
+            <EvidenceTimeline entries={evidenceEntries} />
           </div>
         ) : null}
 
@@ -947,6 +948,10 @@ export function SessionDashboard({
   const [isCorpusSearchOpen, setIsCorpusSearchOpen] = React.useState(false);
   const [isKeyboardHelpOpen, setIsKeyboardHelpOpen] = React.useState(false);
   const lastSaveErrorRef = React.useRef<string | null>(null);
+  const evidenceEntries = React.useMemo<FullEvidenceEntry[]>(() => {
+    const ledger = session?.evidenceLedger ?? [];
+    return (ledger as unknown[]).filter(isEvidenceEntry);
+  }, [session?.evidenceLedger]);
 
   // useSessionMachine provides computed values (reachablePhases, isComplete, etc.)
   const machine = useSessionMachine(session);
