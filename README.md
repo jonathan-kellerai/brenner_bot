@@ -93,6 +93,11 @@ Deployed on Vercel with Cloudflare DNS at **`brennerbot.org`**.
 - [The Operator Framework](#the-operator-framework)
 - [Offline Resilience](#offline-resilience)
 - [Citation System](#citation-system)
+- [Demo Mode for Public Website](#demo-mode-for-public-website)
+- [Server-Side Analytics](#server-side-analytics)
+- [API Security Architecture](#api-security-architecture)
+- [Parser Robustness](#parser-robustness)
+- [Storage Performance Optimizations](#storage-performance-optimizations)
 
 ---
 
@@ -4097,3 +4102,284 @@ const result = validateAnchors(["§58", "§300", "§invalid"]);
 //   errors: ["§300 exceeds transcript length (236)", "Invalid format: §invalid"]
 // }
 ```
+
+---
+
+## Demo Mode for Public Website
+
+The public website at brennerbot.org serves visitors who want to explore Brenner Loop sessions without running local infrastructure. Demo mode provides static fixture data that showcases the full workflow.
+
+### How Demo Mode Works
+
+When Lab Mode is disabled (the default for public deployments), session pages automatically detect the public context and display demo content:
+
+1. **Public host detection**: Pages check `window.location.hostname` against known public domains
+2. **Demo thread routing**: Thread IDs starting with `demo-` serve fixture data instead of Agent Mail queries
+3. **Feature previews**: Locked features display explanatory overlays with "Coming Soon" messaging
+
+### Demo Sessions
+
+Demo sessions are pre-built examples that demonstrate the complete Brenner Loop workflow:
+
+| Demo Session | Phase | Description |
+|--------------|-------|-------------|
+| `demo-bio-nanochat-001` | `compiled` | Bio-Inspired Nanochat research: vesicle depletion vs frequency penalty |
+
+Each demo session includes:
+- **KICKOFF message**: Research question with working hypotheses and Brenner anchors
+- **Agent DELTAs**: Structured contributions from hypothesis generator, test designer, and adversarial critic
+- **COMPILED artifact**: Final merged artifact with all sections complete
+
+### Usage Patterns
+
+```typescript
+import { isDemoThreadId } from "@/lib/demo-mode";
+import { getDemoSession, getDemoThreads } from "@/lib/fixtures/demo-sessions";
+
+// Check if viewing demo content
+if (isDemoThreadId(threadId)) {
+  const session = getDemoSession(threadId);
+  // Render with fixture data
+} else {
+  // Fetch from Agent Mail
+}
+
+// List all demo sessions
+const demoThreads = getDemoThreads();
+```
+
+### File Layout
+
+```
+apps/web/src/
+├── lib/
+│   ├── demo-mode.ts              # Demo detection utilities
+│   └── fixtures/
+│       └── demo-sessions.ts      # Static session fixtures
+└── components/sessions/
+    ├── DemoSessionsView.tsx      # Demo-aware session list
+    └── DemoFeaturePreview.tsx    # Feature preview overlays
+```
+
+---
+
+## Server-Side Analytics
+
+The system includes server-side event tracking via the GA4 Measurement Protocol, enabling reliable conversion tracking that bypasses client-side ad blockers.
+
+### Architecture
+
+```
+Client Event → POST /api/track → Server Validation → GA4 Measurement Protocol
+```
+
+The tracking API provides:
+- **Rate limiting**: 60 requests/minute per IP with automatic cleanup
+- **Payload validation**: Schema enforcement with size limits
+- **Sanitization**: Input cleaning for GA4 compliance
+- **Timeout handling**: 3-second abort for external calls
+
+### Rate Limiting
+
+```typescript
+// Rate limit configuration
+const RATE_LIMIT_WINDOW_MS = 60 * 1000;  // 1 minute window
+const RATE_LIMIT_MAX_REQUESTS = 60;       // 60 requests per window
+const MAX_MAP_SIZE = 10000;               // Max tracked IPs
+```
+
+Rate limiting uses the `X-Real-IP` header (set by Vercel edge, not spoofable by clients) rather than `X-Forwarded-For` which can be manipulated.
+
+### Event Schema
+
+```typescript
+// POST /api/track
+interface TrackRequest {
+  client_id: string;  // GA client ID (max 100 chars)
+  events: Array<{
+    name: string;     // Event name (alphanumeric, max 40 chars)
+    params?: Record<string, string | number | boolean>;
+  }>;
+  user_id?: string;
+  user_properties?: Record<string, string | number | boolean>;
+}
+```
+
+### Security Measures
+
+| Measure | Implementation |
+|---------|----------------|
+| Payload size | Max 32KB |
+| Events per request | Max 10 |
+| Parameter count | Max 25 per event |
+| String truncation | Max 100 chars |
+| Prototype pollution | Blocked (`__proto__`, `constructor`, `prototype`) |
+
+---
+
+## API Security Architecture
+
+The system implements defense-in-depth security across all API endpoints.
+
+### Experiments API Command Whitelist
+
+The experiments endpoint (`/api/experiments`) executes commands for test runs. A strict whitelist prevents arbitrary code execution:
+
+```typescript
+const ALLOWED_COMMANDS = new Set([
+  // Package managers / runners
+  "bun", "bunx", "npm", "npx", "yarn", "pnpm", "node", "deno",
+  // Python
+  "python", "python3", "pip", "pip3", "poetry", "uv",
+  // Testing frameworks
+  "pytest", "vitest", "jest", "mocha",
+  // Build tools
+  "make", "cargo", "go", "rustc",
+  // Version control
+  "git",
+  // Shell (requires lab mode auth)
+  "bash", "sh",
+  // Safe utilities
+  "echo", "cat", "ls", "pwd", "which", "env", "printenv",
+  "date", "wc", "head", "tail", "grep", "find", "diff", "sort", "uniq",
+]);
+```
+
+**Path injection prevention**: Commands containing `/` or `\` are rejected, preventing bypass via `./malicious` or `/path/to/evil`.
+
+### Timing-Safe Secret Comparison
+
+Lab secrets are compared using HMAC-based constant-time comparison to prevent timing attacks:
+
+```typescript
+function safeEquals(a: string, b: string): boolean {
+  // HMAC normalizes both inputs to fixed-length buffers,
+  // eliminating timing leaks from length differences
+  const hmacKey = "brenner-auth-compare";
+  const hmacA = createHmac("sha256", hmacKey).update(a).digest();
+  const hmacB = createHmac("sha256", hmacKey).update(b).digest();
+  return timingSafeEqual(hmacA, hmacB);
+}
+```
+
+### Information Hiding
+
+Failed authentication returns HTTP 404 (not 401/403) to prevent endpoint enumeration and reduce information leakage about protected resources.
+
+---
+
+## Parser Robustness
+
+The delta parser and related utilities are designed to be tolerant of format variations while maintaining correctness.
+
+### Lenient Delta Parsing
+
+The delta parser accepts common agent "hallucinations" rather than rejecting entire contributions:
+
+| Scenario | Handling |
+|----------|----------|
+| `target_id` in ADD operation | Silently ignored (normalized to null) |
+| Extra whitespace in anchors | Trimmed (`§ 42` → `§42`) |
+| Missing optional fields | Defaults applied |
+
+```typescript
+// ADD operations: target_id is normalized to null regardless of input
+// This tolerates agents that hallucinate IDs for new entities
+target_id: operation === "ADD" ? null : (typeof target_id === "string" ? target_id : null)
+```
+
+### Flexible Operator Card Parsing
+
+The operator library parser handles markdown format variations:
+
+- **Section boundaries**: Lookahead patterns instead of exact `\n\n`
+- **Case insensitivity**: `**Definition**` and `**definition**` both work
+- **Optional backticks**: Canonical tags accept `\`tag\`` or `tag`
+
+### Anchor Format Flexibility
+
+Transcript anchors support optional whitespace:
+
+```typescript
+// Matches: §42, § 42, §42-45, § 42 - 45
+const anchorPattern = /§\s*(\d+)(?:-(\d+))?/g;
+```
+
+---
+
+## Storage Performance Optimizations
+
+The storage layer implements several optimizations for large session histories.
+
+### Incremental Index Updates
+
+Instead of rebuilding the entire cross-session index on every mutation, storage modules perform targeted updates:
+
+```typescript
+// When saving to a specific session, only that session's entries are refreshed
+async updateIndexForSessionUnlocked(sessionId: string, items: T[]): Promise<void> {
+  // 1. Read existing index
+  const index = await this.loadIndex();
+
+  // 2. Filter out entries for this session
+  const otherEntries = index.entries.filter(e => e.sessionId !== sessionId);
+
+  // 3. Create new entries from saved items
+  const newEntries = items.map(item => this.toIndexEntry(item));
+
+  // 4. Merge and write
+  index.entries = [...otherEntries, ...newEntries];
+  await this.writeIndex(index);
+}
+```
+
+Falls back to full rebuild if the index is missing or corrupt.
+
+### Flexible ID Format Support
+
+All storage modules support both compound and simple ID formats:
+
+| Format | Pattern | Example | Use Case |
+|--------|---------|---------|----------|
+| Compound | `{prefix}-{session}-{seq}` | `H-RS20251230-001` | Cross-session uniqueness |
+| Simple | `{prefix}{n}` | `H1`, `T2` | Artifact-merge generation, quick references |
+
+The compound format includes the session ID, enabling fast lookups without scanning all files. The simple format supports backwards compatibility and quick artifact references.
+
+### Optimized Deletion
+
+Delete operations extract session IDs from compound IDs when possible:
+
+```typescript
+async deleteHypothesis(id: string): Promise<boolean> {
+  // Fast path: extract session from compound ID
+  const match = id.match(/^H-(.+)-\d+$/);
+  if (match) {
+    const sessionId = match[1];
+    // Load only the relevant session file
+    const hypotheses = await this.loadSessionHypotheses(sessionId);
+    // ...
+  }
+
+  // Slow path: scan all sessions
+  const hypothesis = await this.getHypothesisById(id);
+  // ...
+}
+```
+
+### Cross-Process File Locking
+
+For filesystem operations, advisory file locks prevent concurrent modification:
+
+```typescript
+import { withFileLock } from "@/lib/storage/file-lock";
+
+await withFileLock(baseDir, "hypotheses", async () => {
+  // Safe to read-modify-write
+  const data = await loadFile();
+  data.items.push(newItem);
+  await saveFile(data);
+});
+```
+
+Lock implementation uses atomic file operations with TTL-based expiry for crash recovery.
