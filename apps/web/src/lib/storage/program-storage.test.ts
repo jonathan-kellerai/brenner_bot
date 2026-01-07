@@ -1,4 +1,4 @@
-import { describe, expect, it, beforeEach } from "vitest";
+import { describe, expect, it, beforeEach, afterEach } from "vitest";
 import { join } from "node:path";
 import { promises as fs } from "node:fs";
 import { tmpdir } from "node:os";
@@ -12,6 +12,13 @@ describe("ProgramStorage", () => {
   beforeEach(async () => {
     baseDir = join(tmpdir(), `program-storage-test-${randomUUID()}`);
     await fs.mkdir(baseDir, { recursive: true });
+  });
+
+  afterEach(async () => {
+    // Clean up temp directory to avoid inode exhaustion
+    if (baseDir) {
+      await fs.rm(baseDir, { recursive: true, force: true }).catch(() => {});
+    }
   });
 
   const makeProgram = (

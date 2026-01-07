@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
@@ -44,6 +44,13 @@ describe("AnomalyStorage", () => {
   beforeEach(async () => {
     tempDir = await createTempDir();
     storage = new AnomalyStorage({ baseDir: tempDir });
+  });
+
+  afterEach(async () => {
+    // Clean up temp directory to avoid inode exhaustion
+    if (tempDir) {
+      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
   });
 
   // ============================================================================

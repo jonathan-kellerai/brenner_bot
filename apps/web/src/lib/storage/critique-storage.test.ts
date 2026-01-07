@@ -1,4 +1,4 @@
-import { describe, test, expect, beforeEach } from "vitest";
+import { describe, test, expect, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
@@ -77,7 +77,12 @@ beforeEach(async () => {
   storage = new CritiqueStorage({ baseDir: testDir, autoRebuildIndex: false });
 });
 
-// Note: No cleanup. Repo invariant: do not delete files/dirs without explicit approval.
+afterEach(async () => {
+  // Clean up temp directory to avoid inode exhaustion
+  if (testDir) {
+    await fs.rm(testDir, { recursive: true, force: true }).catch(() => {});
+  }
+});
 
 // ============================================================================
 // Session File Operations Tests

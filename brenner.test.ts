@@ -7,10 +7,10 @@
  * Run with: bun test brenner.test.ts
  */
 
-import { describe, expect, it } from "bun:test";
+import { afterAll, describe, expect, it } from "bun:test";
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
@@ -21,6 +21,37 @@ import { AgentMailTestServer } from "./apps/web/src/test-utils/agent-mail-test-s
 // ============================================================================
 
 const CLI_PATH = resolve(__dirname, "brenner.ts");
+
+// Track temp paths for cleanup to avoid inode exhaustion
+const tempPathsToCleanup: string[] = [];
+
+afterAll(() => {
+  for (const p of tempPathsToCleanup) {
+    try {
+      rmSync(p, { recursive: true, force: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+  tempPathsToCleanup.length = 0;
+});
+
+function trackTempPath(path: string): string {
+  tempPathsToCleanup.push(path);
+  return path;
+}
+
+function createTempDir(prefix: string): string {
+  const dir = join(tmpdir(), `${prefix}-${randomUUID()}`);
+  mkdirSync(dir, { recursive: true });
+  return trackTempPath(dir);
+}
+
+function createTempFile(prefix: string, content: string): string {
+  const filePath = join(tmpdir(), `${prefix}-${randomUUID()}`);
+  writeFileSync(filePath, content, "utf8");
+  return trackTempPath(filePath);
+}
 
 const CLI_TEST_TRACE = process.env.BRENNER_CLI_TEST_TRACE === "1";
 const CLI_TEST_LOG_MAX_CHARS = (() => {
@@ -33,13 +64,13 @@ const CLI_TEST_LOG_MAX_CHARS = (() => {
 function writeTempConfig(config: unknown): string {
   const configPath = join(tmpdir(), `brenner-test-config-${randomUUID()}.json`);
   writeFileSync(configPath, JSON.stringify(config, null, 2), "utf8");
-  return configPath;
+  return trackTempPath(configPath);
 }
 
 function writeTempConfigText(text: string): string {
   const configPath = join(tmpdir(), `brenner-test-config-${randomUUID()}.json`);
   writeFileSync(configPath, text, "utf8");
-  return configPath;
+  return trackTempPath(configPath);
 }
 
 interface CliResult {

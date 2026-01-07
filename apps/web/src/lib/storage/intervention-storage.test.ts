@@ -5,7 +5,7 @@
  * @see brenner_bot-mqg7 (bead)
  */
 
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach } from "vitest";
 import { randomUUID } from "node:crypto";
 import { promises as fs } from "fs";
 import { join } from "path";
@@ -52,6 +52,13 @@ describe("InterventionStorage", () => {
   beforeEach(async () => {
     tempDir = await createTempDir();
     storage = new InterventionStorage({ baseDir: tempDir });
+  });
+
+  afterEach(async () => {
+    // Clean up temp directory to avoid inode exhaustion
+    if (tempDir) {
+      await fs.rm(tempDir, { recursive: true, force: true }).catch(() => {});
+    }
   });
 
   describe("Session File Operations", () => {
