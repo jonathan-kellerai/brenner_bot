@@ -178,7 +178,7 @@ This repository provides everything needed to run "Brenner-style" research workf
 ### Unix/macOS (curl one-liner)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh | bash
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh?$(date +%s)" | bash
 ```
 
 Options:
@@ -187,7 +187,7 @@ Options:
 - `--system` — Install to `/usr/local/bin` (requires sudo)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh | bash -s -- --easy-mode --verify
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh?$(date +%s)" | bash -s -- --easy-mode --verify
 ```
 
 ### Windows (PowerShell)
@@ -445,7 +445,7 @@ BRENNER_VERSION="0.0.0-dev" \
 #### Quick install (recommended)
 
 ```bash
-curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh" \
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/main/install.sh?$(date +%s)" \
   | bash -s -- --easy-mode --verify
 ```
 
@@ -455,7 +455,7 @@ For a safer, reproducible install, pin to a tag (avoid installing from `main`):
 
 ```bash
 export VERSION="0.1.0" # example
-curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/v${VERSION}/install.sh" \
+curl -fsSL "https://raw.githubusercontent.com/Dicklesworthstone/brenner_bot/v${VERSION}/install.sh?$(date +%s)" \
   | bash -s -- --version "${VERSION}" --easy-mode --verify
 ```
 
