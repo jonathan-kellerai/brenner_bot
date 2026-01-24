@@ -43,14 +43,9 @@ export function AnimatedCounter({
     return () => observer.disconnect();
   }, [hasStarted]);
 
-  // Animate the counter
+  // Animate the counter using requestAnimationFrame (external system callback)
   useEffect(() => {
     if (!hasStarted) return;
-
-    if (prefersReducedMotion) {
-      setDisplayValue(value);
-      return;
-    }
 
     const startTime = performance.now() + delay;
     let animationFrame: number;
@@ -64,6 +59,12 @@ export function AnimatedCounter({
 
       if (elapsed < 0) {
         animationFrame = requestAnimationFrame(animate);
+        return;
+      }
+
+      // For reduced motion, skip to final value immediately
+      if (prefersReducedMotion) {
+        setDisplayValue(value);
         return;
       }
 

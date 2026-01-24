@@ -43,15 +43,19 @@ export function useLocalStorage<T>(
   const [storedValue, setStoredValue] = useState<T>(initialValue);
 
   // Read from localStorage on mount
+  // Use requestAnimationFrame to defer setState and avoid synchronous call in effect body
   useEffect(() => {
-    try {
-      const item = window.localStorage.getItem(key);
-      if (item) {
-        setStoredValue(JSON.parse(item) as T);
+    const frameId = requestAnimationFrame(() => {
+      try {
+        const item = window.localStorage.getItem(key);
+        if (item) {
+          setStoredValue(JSON.parse(item) as T);
+        }
+      } catch (error) {
+        console.warn(`Error reading localStorage key "${key}":`, error);
       }
-    } catch (error) {
-      console.warn(`Error reading localStorage key "${key}":`, error);
-    }
+    });
+    return () => cancelAnimationFrame(frameId);
   }, [key]);
 
   // Setter with debounced persistence
