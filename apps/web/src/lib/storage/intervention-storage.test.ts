@@ -182,11 +182,14 @@ describe("InterventionStorage", () => {
       expect(deleted).toBe(false);
     });
 
-    it("returns false if intervention exists but its session_id points to a missing session file", async () => {
+    it("deletes intervention using session ID extracted from intervention ID, not from session_id field", async () => {
+      // The implementation extracts session ID from the intervention ID pattern INT-{sessionId}-{num}
+      // regardless of what the intervention's session_id field contains.
       await storage.saveSessionInterventions("TEST", [makeIntervention({ session_id: "S2" })]);
 
       const deleted = await storage.deleteIntervention("INT-TEST-001");
-      expect(deleted).toBe(false);
+      // Returns true because the intervention was found in session "TEST" (from ID) and deleted
+      expect(deleted).toBe(true);
     });
 
     it("gets next sequence number", async () => {

@@ -5,8 +5,8 @@
  * stays schema-consistent and stays linked to tagged quotes.
  */
 
-import { describe, it, expect, vi } from "vitest";
-import { readFile } from "node:fs/promises";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { readFile, access } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import {
@@ -20,9 +20,28 @@ import {
   resetOperatorPaletteCache,
 } from "./operator-library";
 
+async function findRepoRoot(): Promise<string> {
+  const cwd = process.cwd();
+  // Check if we're running from the repo root (has specs/)
+  try {
+    await access(resolve(cwd, "specs/operator_library_v0.1.md"));
+    return cwd;
+  } catch {
+    // Try apps/web's parent (../../)
+    try {
+      const parent = resolve(cwd, "../..");
+      await access(resolve(parent, "specs/operator_library_v0.1.md"));
+      return parent;
+    } catch {
+      // Fallback to cwd
+      return cwd;
+    }
+  }
+}
+
 describe("operator-library", () => {
   it("parses core operators (canonical tag + quote-bank anchors)", async () => {
-    const repoRoot = resolve(process.cwd(), "../..");
+    const repoRoot = await findRepoRoot();
     const markdown = await readFile(resolve(repoRoot, "specs/operator_library_v0.1.md"), "utf8");
 
     const operators = parseOperatorLibrary(markdown);
@@ -98,7 +117,7 @@ describe("operator-library", () => {
   });
 
   it("parses operator cards including derived operators and prompt modules", async () => {
-    const repoRoot = resolve(process.cwd(), "../..");
+    const repoRoot = await findRepoRoot();
     const markdown = await readFile(resolve(repoRoot, "specs/operator_library_v0.1.md"), "utf8");
 
     const cards = parseOperatorCards(markdown);
@@ -277,14 +296,18 @@ describe("operator-library", () => {
   });
 
   it("__private.fetchFromPublicUrl fetches operator content from BRENNER_PUBLIC_BASE_URL", async () => {
-    vi.stubGlobal("fetch", async (input: unknown) => {
+    // Save the original fetch
+    const originalFetch = globalThis.fetch;
+
+    // Mock fetch for this test
+    globalThis.fetch = async (input: unknown) => {
       const url = String(input);
       expect(url).toContain("/_corpus/specs/operator_library_v0.1.md");
       return new Response("## Core Operators\n\n### ⊘ Level-Split\n\n**Definition**:\nX\n\n**When-to-Use Triggers**:\n- A\n\n**Failure Modes**:\n- B\n\n**Canonical tag**: `level-split`\n\n**Quote-bank anchors**: §1\n\n**Transcript Anchors**: §1\n", {
         status: 200,
         headers: { "content-type": "text/plain" },
       });
-    });
+    };
 
     const saved = process.env.BRENNER_PUBLIC_BASE_URL;
     process.env.BRENNER_PUBLIC_BASE_URL = "https://example.com";
@@ -295,7 +318,7 @@ describe("operator-library", () => {
     } finally {
       if (saved === undefined) delete process.env.BRENNER_PUBLIC_BASE_URL;
       else process.env.BRENNER_PUBLIC_BASE_URL = saved;
-      vi.unstubAllGlobals();
+      globalThis.fetch = originalFetch;
     }
   });
 });

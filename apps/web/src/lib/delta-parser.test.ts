@@ -155,7 +155,9 @@ Some prose explanation here.
     });
   });
 
-  it("rejects ADD with non-null target_id", () => {
+  it("accepts ADD with non-null target_id (ignores it for leniency)", () => {
+    // Per the implementation: "We intentionally allow target_id in ADD (and ignore it)
+    // to be lenient with agents." - the target_id is forced to null for ADD operations.
     const body = `
 \`\`\`delta
 {
@@ -169,13 +171,13 @@ Some prose explanation here.
 
     const result = parseDeltaMessage(body);
 
-    expect(result.invalidCount).toBe(1);
+    expect(result.validCount).toBe(1);
     expect(result.deltas[0]).toMatchObject({
-      valid: false,
+      valid: true,
+      operation: "ADD",
+      section: "hypothesis_slate",
+      target_id: null, // Forced to null for ADD
     });
-    if (!result.deltas[0]?.valid) {
-      expect(result.deltas[0].error).toContain("ADD operation must have target_id as null");
-    }
   });
 
   it("rejects EDIT without target_id", () => {

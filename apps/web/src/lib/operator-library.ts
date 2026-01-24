@@ -188,7 +188,11 @@ function parseOperatorCardsFromSection(args: {
     const promptModule = parsePromptModule(block);
 
     // Allow optional backticks for canonical tag
-    const canonicalTagMatch = block.match(/\*\*Canonical tag\*\*:\s*`?([^`\n]+)`?/i);
+    // Match value on same line OR next line (but not spanning to next section)
+    // Pattern: **Canonical tag**: [optional content on same line]\n[content on next line if not a section header]
+    const canonicalTagMatch = block.match(
+      /\*\*Canonical tag\*\*:[ \t]*`?([^`\n]*)`?(?:\r?\n(?!\*\*)([^\n]+))?/i
+    );
     const quoteBankAnchorsMatch = block.match(/\*\*Quote-bank anchors\*\*:\s*([^\n]+)/i);
     const transcriptAnchorsMatch = block.match(/\*\*Transcript Anchors\*\*:\s*([^\n]+)/i);
 
@@ -208,8 +212,10 @@ function parseOperatorCardsFromSection(args: {
       throw new Error(`Operator library: missing Transcript Anchors for ${headerLine}`);
     }
 
+    // Group 1 is same-line content, group 2 is next-line content
+    // Prefer same-line content if non-empty, otherwise use next-line
     const canonicalTag = canonicalTagMatch
-      ? canonicalTagMatch[1].trim()
+      ? (canonicalTagMatch[1]?.trim() || canonicalTagMatch[2]?.trim())
       : DERIVED_CANONICAL_TAG_BY_SYMBOL[symbol] ?? null;
 
     if (!canonicalTag) {
