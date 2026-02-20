@@ -262,9 +262,9 @@ export const DEFAULT_3_AGENT_PRESET: RosterPreset = {
   name: "Default 3-Agent Setup",
   description: "Standard Brenner Protocol with Codex/Opus/Gemini",
   entries: [
-    { role: "hypothesis_generator", program: "codex-cli", model: "GPT-5.2" },
-    { role: "test_designer", program: "claude-code", model: "Opus 4.5" },
-    { role: "adversarial_critic", program: "gemini-cli", model: "Gemini 3" },
+    { role: "hypothesis_generator", program: "codex-cli", model: "GPT-5.3" },
+    { role: "test_designer", program: "claude-code", model: "Opus 4.6" },
+    { role: "adversarial_critic", program: "gemini-cli", model: "Gemini 3.2" },
   ],
 };
 
@@ -274,8 +274,8 @@ export const HYPOTHESIS_CRITIQUE_PRESET: RosterPreset = {
   name: "Hypothesis + Critique",
   description: "Two-agent loop: generate then attack",
   entries: [
-    { role: "hypothesis_generator", program: "codex-cli", model: "GPT-5.2" },
-    { role: "adversarial_critic", program: "gemini-cli", model: "Gemini 3" },
+    { role: "hypothesis_generator", program: "codex-cli", model: "GPT-5.3" },
+    { role: "adversarial_critic", program: "gemini-cli", model: "Gemini 3.2" },
   ],
 };
 
